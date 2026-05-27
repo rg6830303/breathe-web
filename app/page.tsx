@@ -1,6 +1,7 @@
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { NoticeBoard } from "@/components/notice-board";
+import { getSupabaseService, hasSupabaseEnv } from "@/lib/supabase";
 import type { Notice } from "@/lib/types";
 
 async function getNotices(): Promise<Notice[]> {
@@ -9,11 +10,14 @@ async function getNotices(): Promise<Notice[]> {
     { id: 2, title: "Weekly ladder", content: "Registration closes Friday.", type: "weekly" as const, created_at: "", updated_at: "" },
     { id: 3, title: "Monthly neon cup", content: "Early bird passes are available.", type: "monthly" as const, created_at: "", updated_at: "" },
   ];
-  if (!process.env.VERCEL_URL) return fallback;
-  const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
+  if (!hasSupabaseEnv()) return fallback;
   try {
-    const response = await fetch(`${baseUrl}/api/notice-board`, { next: { revalidate: 60 } });
-    return response.json();
+    const { data, error } = await getSupabaseService()
+      .from("notice_board")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data?.length ? data : fallback;
   } catch {
     return fallback;
   }
