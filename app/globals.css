@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --font-display: "Arial Black", Impact, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #0a0f1d;
+  color: #d4e4fa;
+  min-height: 100vh;
+}
+
+.glass {
+  background: rgba(5, 20, 36, 0.72);
+  border: 1px solid rgba(42, 102, 255, 0.22);
+  backdrop-filter: blur(18px);
+}
+
+.court-perspective {
+  transform: rotateX(58deg) rotateZ(-38deg);
+  transform-style: preserve-3d;
+}
+
+.slot-cell {
+  min-height: 54px;
+}

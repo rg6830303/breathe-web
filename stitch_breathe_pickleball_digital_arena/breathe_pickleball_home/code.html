@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Breathe Pickleball - Home</title>
+<link href="https://fonts.googleapis.com/css2?family=Anybody:ital,wght@0,100..900;1,100..900&amp;family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary-fixed": "#dce1ff",
+                        "on-surface-variant": "#c3c5d8",
+                        "surface-tint": "#b5c4ff",
+                        "inverse-on-surface": "#233143",
+                        "surface-container-lowest": "#010f1f",
+                        "primary-container": "#2a66ff",
+                        "on-tertiary-fixed": "#161b2a",
+                        "surface": "#051424",
+                        "inverse-surface": "#d4e4fa",
+                        "error": "#ffb4ab",
+                        "secondary-fixed-dim": "#add500",
+                        "on-secondary-fixed-variant": "#3d4d00",
+                        "outline-variant": "#434655",
+                        "background": "#051424",
+                        "on-primary": "#00287d",
+                        "on-primary-container": "#fcfaff",
+                        "surface-variant": "#273647",
+                        "on-surface": "#d4e4fa",
+                        "surface-bright": "#2c3a4c",
+                        "tertiary": "#c2c6da",
+                        "surface-container-highest": "#273647",
+                        "on-secondary-fixed": "#171e00",
+                        "inverse-primary": "#0050e3",
+                        "tertiary-fixed-dim": "#c2c6da",
+                        "surface-container-high": "#1c2b3c",
+                        "surface-container": "#122131",
+                        "secondary": "#ecffad",
+                        "primary": "#b5c4ff",
+                        "on-primary-fixed": "#00164e",
+                        "error-container": "#93000a",
+                        "secondary-container": "#bfea00",
+                        "secondary-fixed": "#c7f317",
+                        "tertiary-fixed": "#dee2f6",
+                        "tertiary-container": "#6e7385",
+                        "on-primary-fixed-variant": "#003baf",
+                        "surface-container-low": "#0d1c2d",
+                        "outline": "#8d90a1",
+                        "on-tertiary-fixed-variant": "#424657",
+                        "surface-dim": "#051424",
+                        "on-secondary": "#293500",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary": "#2b303f",
+                        "on-tertiary-container": "#fcfaff",
+                        "primary-fixed-dim": "#b5c4ff",
+                        "on-background": "#d4e4fa",
+                        "on-secondary-container": "#526700",
+                        "on-error": "#690005",
+                        "neon-volt": "#D2FF2A",
+                        "court-blue": "#2A66FF"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "margin-mobile": "16px",
+                        "gutter": "20px",
+                        "md": "24px",
+                        "base": "8px",
+                        "xs": "4px",
+                        "xl": "80px",
+                        "sm": "12px",
+                        "lg": "48px",
+                        "margin-desktop": "64px"
+                    },
+                    fontFamily: {
+                        "headline-md": ["Anybody", "sans-serif"],
+                        "label-bold": ["Plus Jakarta Sans", "sans-serif"],
+                        "display-xl": ["Anybody", "sans-serif"],
+                        "body-md": ["Plus Jakarta Sans", "sans-serif"],
+                        "headline-lg": ["Anybody", "sans-serif"],
+                        "body-lg": ["Plus Jakarta Sans", "sans-serif"],
+                        "headline-lg-mobile": ["Anybody", "sans-serif"]
+                    },
+                    fontSize: {
+                        "headline-md": ["24px", { lineHeight: "1.3", fontWeight: "700" }],
+                        "label-bold": ["14px", { lineHeight: "1", letterSpacing: "0.05em", fontWeight: "700" }],
+                        "display-xl": ["64px", { lineHeight: "1.1", letterSpacing: "-0.04em", fontWeight: "800" }],
+                        "body-md": ["16px", { lineHeight: "1.6", fontWeight: "400" }],
+                        "headline-lg": ["40px", { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "700" }],
+                        "body-lg": ["18px", { lineHeight: "1.6", fontWeight: "400" }],
+                        "headline-lg-mobile": ["32px", { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "700" }]
+                    },
+                    keyframes: {
+                        ticker: {
+                            '0%': { transform: 'translateX(100%)' },
+                            '100%': { transform: 'translateX(-100%)' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' }
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { boxShadow: '0 0 10px rgba(42,102,255,0.5)' },
+                            '50%': { boxShadow: '0 0 30px rgba(42,102,255,0.8)' }
+                        }
+                    },
+                    animation: {
+                        'ticker': 'ticker 20s linear infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-glow': 'pulseGlow 2s ease-in-out infinite'
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0A0F1D;
+            color: #d4e4fa;
+            overflow-x: hidden;
+        }
+        .glass-panel {
+            background: rgba(42, 102, 255, 0.05);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(42, 102, 255, 0.2);
+            border-radius: 16px;
+        }
+        .neon-text {
+            color: #D2FF2A;
+            text-shadow: 0 0 10px rgba(210, 255, 42, 0.5);
+        }
+        .primary-glow {
+            box-shadow: 0 0 20px rgba(42, 102, 255, 0.3);
+        }
+        .accent-glow:hover {
+            box-shadow: 0 0 30px rgba(210, 255, 42, 0.6);
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col font-body-md text-body-md selection:bg-neon-volt selection:text-background">
+<!-- Alert Ticker -->
+<div class="bg-secondary-container text-on-secondary-container overflow-hidden whitespace-nowrap py-2 border-b border-secondary-fixed/50 sticky top-0 z-[60]">
+<div class="inline-block animate-ticker font-label-bold text-label-bold tracking-widest uppercase">
+            Location: Kaikhali, Kolkata | Contact: +91 74390 10356 • Location: Kaikhali, Kolkata | Contact: +91 74390 10356 • Location: Kaikhali, Kolkata | Contact: +91 74390 10356
+        </div>
+</div>
+<!-- TopAppBar -->
+<header class="fixed top-10 w-full z-50 bg-surface/10 backdrop-blur-xl border-b border-primary/20 shadow-[0_0_20px_rgba(42,102,255,0.1)] transition-all duration-300 ease-in-out">
+<div class="flex justify-between items-center px-margin-mobile md:px-margin-desktop py-4 max-w-full mx-auto">
+<div class="flex items-center gap-4">
+<img alt="BREATHE PB Logo" class="h-8 md:h-12 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWZWkOGz-mLAxgq7m_aLqm_mHdXa6_ZECK8jdNCoJuz_wwdqf1mQU84lf89PpCDcm8hQU3aJzNgGwuEjG9z6fTBOrtM2zacj4napYU1imQIkm1pdF4KO7x0HEqwaOx1rVA39lH080m4h4MUOx3vRuo6Qjf5vJOu2XjXV7EJBL71TlxF_Tap4CY2rDcBd2RCAoaVw2EZLNPPbyc3oxJlvbRLRl30BvGHf-TdCelIfawqT4XkTy9gzB_uVhU-Wbam0p2z01XO7WVcw"/>
+<span class="font-headline-md text-headline-md font-black italic text-primary hidden md:block tracking-tighter">BREATHE PB</span>
+</div>
+<nav class="hidden md:flex gap-8 items-center">
+<a class="font-label-bold text-label-bold text-secondary font-bold border-b-2 border-secondary pb-1 uppercase" href="#">Home</a>
+<a class="font-label-bold text-label-bold text-on-surface-variant hover:text-secondary hover:glow-secondary transition-colors uppercase" href="#">About</a>
+<a class="font-label-bold text-label-bold text-on-surface-variant hover:text-secondary hover:glow-secondary transition-colors uppercase" href="#">Book Court</a>
+<a class="font-label-bold text-label-bold text-on-surface-variant hover:text-secondary hover:glow-secondary transition-colors uppercase" href="#">Rates</a>
+<a class="font-label-bold text-label-bold text-on-surface-variant hover:text-secondary hover:glow-secondary transition-colors uppercase" href="#">Gallery</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="hidden md:flex items-center justify-center bg-transparent border-2 border-neon-volt text-neon-volt font-label-bold text-label-bold py-2 px-6 rounded-full italic hover:bg-neon-volt/10 transition-colors uppercase">Contact Us</button>
+<button class="md:hidden text-primary">
+<span class="material-symbols-outlined text-3xl">menu</span>
+</button>
+</div>
+</div>
+</header>
+<main class="flex-grow pt-32">
+<!-- Hero Section -->
+<section class="relative min-h-[80vh] flex items-center justify-center px-margin-mobile md:px-margin-desktop overflow-hidden">
+<!-- Background Elements -->
+<div class="absolute inset-0 z-0">
+<div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-container/20 rounded-full blur-[100px]"></div>
+<div class="absolute bottom-1/4 right-1/4 w-64 h-64 bg-secondary-container/20 rounded-full blur-[80px]"></div>
+</div>
+<div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-12 items-center w-full max-w-7xl mx-auto">
+<!-- Hero Text -->
+<div class="space-y-8">
+<h1 class="font-display-xl text-display-xl md:text-[80px] text-on-surface uppercase tracking-tighter leading-none drop-shadow-2xl">
+                        Engineered<br/>
+<span class="text-transparent bg-clip-text bg-gradient-to-r from-court-blue to-neon-volt italic">For Competition</span>
+</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-lg">
+                        Experience the ultimate cyber-athletic pickleball arena. High-octane courts, premium tracking, and a community built for winners.
+                    </p>
+<div class="flex gap-4">
+<button class="bg-primary-container text-white font-label-bold text-label-bold py-4 px-8 rounded-full uppercase tracking-wider accent-glow shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2">
+                            Book Slot Now
+                            <span class="material-symbols-outlined">sports_tennis</span>
+</button>
+</div>
+</div>
+<!-- Hero Visual (Pseudo 3D) -->
+<div class="relative h-[500px] w-full flex justify-center items-center perspective-1000">
+<div class="relative w-full h-full glass-panel flex flex-col justify-between p-8 transform rotate-y-[-10deg] rotate-x-[5deg] hover:rotate-y-0 hover:rotate-x-0 transition-transform duration-700 ease-out shadow-2xl overflow-hidden group">
+<!-- Floating Elements -->
+<div class="absolute top-10 right-10 animate-float opacity-50 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-neon-volt drop-shadow-[0_0_15px_rgba(210,255,42,0.8)]">sports_baseball</span>
+</div>
+<div class="absolute bottom-20 left-10 animate-float" style="animation-delay: 1s;">
+<span class="material-symbols-outlined text-8xl text-court-blue drop-shadow-[0_0_20px_rgba(42,102,255,0.8)]">sports_tennis</span>
+</div>
+<!-- Content inside glass -->
+<div class="z-10 relative h-full flex flex-col justify-end">
+<div class="bg-surface/80 backdrop-blur-md p-6 rounded-xl border border-primary/20 transform translate-z-[50px]">
+<h3 class="font-headline-md text-headline-md text-primary uppercase italic mb-2">Live Status</h3>
+<div class="flex items-center gap-3">
+<div class="w-3 h-3 rounded-full bg-neon-volt animate-pulse-glow"></div>
+<span class="font-label-bold text-label-bold text-on-surface tracking-widest uppercase">Courts Active</span>
+</div>
+</div>
+</div>
+<!-- Diagonal lines graphic -->
+<div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, #2A66FF 10px, #2A66FF 11px);"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Stats Section (Bento Grid Style) -->
+<section class="py-xl px-margin-mobile md:px-margin-desktop bg-surface-container-low/50 relative z-20 border-y border-primary/10">
+<div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Stat Card 1 -->
+<div class="glass-panel p-md flex flex-col justify-center items-center text-center hover:bg-surface-variant/30 transition-colors group">
+<span class="material-symbols-outlined text-4xl text-primary mb-4 group-hover:scale-110 transition-transform">scoreboard</span>
+<h4 class="font-display-xl text-headline-lg md:text-display-xl text-on-surface mb-2" id="stat-matches">0</h4>
+<p class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-widest">Matches Played</p>
+</div>
+<!-- Stat Card 2 -->
+<div class="glass-panel p-md flex flex-col justify-center items-center text-center hover:bg-surface-variant/30 transition-colors group relative overflow-hidden">
+<div class="absolute top-0 right-0 w-16 h-16 bg-neon-volt/20 blur-xl rounded-full"></div>
+<span class="material-symbols-outlined text-4xl text-neon-volt mb-4 group-hover:scale-110 transition-transform drop-shadow-[0_0_10px_rgba(210,255,42,0.5)]">stadium</span>
+<h4 class="font-display-xl text-headline-lg md:text-display-xl text-neon-text mb-2" id="stat-courts">0</h4>
+<p class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-widest">Active Courts</p>
+</div>
+<!-- Stat Card 3 -->
+<div class="glass-panel p-md flex flex-col justify-center items-center text-center hover:bg-surface-variant/30 transition-colors group">
+<span class="material-symbols-outlined text-4xl text-primary mb-4 group-hover:scale-110 transition-transform">how_to_reg</span>
+<h4 class="font-display-xl text-headline-lg md:text-display-xl text-on-surface mb-2" id="stat-checkins">0</h4>
+<p class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-widest">Player Check-ins</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest w-full mt-lg border-t border-primary/30 flex flex-col md:flex-row justify-between items-center px-margin-desktop py-12 gap-8 z-20 relative">
+<div class="font-headline-lg text-headline-lg italic text-secondary tracking-tighter">BREATHE PB</div>
+<div class="flex gap-6">
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-200 opacity-80 hover:opacity-100" href="#">Privacy Policy</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-200 opacity-80 hover:opacity-100" href="#">Terms of Service</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-200 opacity-80 hover:opacity-100" href="#">Facility Rules</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-200 opacity-80 hover:opacity-100" href="#">Support</a>
+</div>
+<div class="font-body-md text-body-md text-on-surface-variant text-sm">
+            © 2024 BREATHE PICKLEBALL. ENGINEERED FOR COMPETITION.
+        </div>
+</footer>
+<script>
+        // Simple counter animation script
+        function animateValue(id, start, end, duration) {
+            if (start === end) return;
+            var range = end - start;
+            var current = start;
+            var increment = end > start? 1 : -1;
+            var stepTime = Math.abs(Math.floor(duration / range));
+            var obj = document.getElementById(id);
+            var timer = setInterval(function() {
+                current += increment;
+                obj.innerHTML = current + (id === 'stat-matches' ? '+' : '');
+                if (current == end) {
+                    clearInterval(timer);
+                }
+            }, stepTime);
+        }
+
+        // Trigger animations when elements are visible (simplified for example)
+        setTimeout(() => {
+            animateValue("stat-matches", 0, 500, 2000);
+            animateValue("stat-courts", 0, 8, 1500);
+            animateValue("stat-checkins", 0, 1250, 2500);
+        }, 500);
+    </script>
+</body></html>
