@@ -1,6 +1,7 @@
 # Supabase Setup
 
 Run the migration in `supabase/migrations/001_initial_schema.sql`, then run `supabase/seed.sql`.
+Run `supabase/migrations/002_owner_finance_controls.sql` after the initial schema to add owner pricing and finance controls.
 
 To enable the outbound Google Sheets mirror from Postgres, set the custom database setting used by the trigger:
 

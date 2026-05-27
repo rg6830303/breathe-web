@@ -1,5 +1,5 @@
-import type { Booking, Court, Slot } from "@/lib/types";
-import { priceForSlot } from "@/lib/pricing";
+import type { Booking, Court, PricingRule, Slot } from "@/lib/types";
+import { fallbackPricingRules, priceForSlot } from "@/lib/pricing";
 import { getSupabaseService, hasSupabaseEnv } from "@/lib/supabase";
 
 const fallbackCourts: Court[] = [
@@ -37,10 +37,11 @@ export async function getSlotsForDate(dateText: string): Promise<Slot[]> {
 
   let courts = fallbackCourts;
   let bookings = fallbackBookings;
+  let pricingRules: PricingRule[] = fallbackPricingRules;
 
   if (hasSupabaseEnv()) {
     const supabase = getSupabaseService();
-    const [courtsResult, bookingsResult] = await Promise.all([
+    const [courtsResult, bookingsResult, pricingResult] = await Promise.all([
       supabase.from("courts").select("*").in("id", [1, 2]).order("id"),
       supabase
         .from("bookings")
@@ -48,11 +49,14 @@ export async function getSlotsForDate(dateText: string): Promise<Slot[]> {
         .lt("start_time", to.toISOString())
         .gt("end_time", from.toISOString())
         .neq("status", "cancelled"),
+      supabase.from("pricing_rules").select("*").eq("active", true).order("start_time"),
     ]);
     if (courtsResult.error) throw courtsResult.error;
     if (bookingsResult.error) throw bookingsResult.error;
+    if (pricingResult.error && pricingResult.error.code !== "42P01") throw pricingResult.error;
     courts = courtsResult.data?.length ? courtsResult.data : fallbackCourts;
     bookings = bookingsResult.data ?? [];
+    pricingRules = pricingResult.data?.length ? pricingResult.data : fallbackPricingRules;
   }
 
   const slots: Slot[] = [];
@@ -72,7 +76,7 @@ export async function getSlotsForDate(dateText: string): Promise<Slot[]> {
         startTime: t.toISOString(),
         endTime: end.toISOString(),
         booked,
-        price: priceForSlot(t),
+        price: priceForSlot(t, pricingRules, court.id),
       });
     }
   }

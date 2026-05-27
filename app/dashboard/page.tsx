@@ -1,19 +1,23 @@
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 
+export const dynamic = "force-dynamic";
+
 async function getDashboard() {
+  const fallback = {
+    profile: { full_name: "Dinker Pro", current_streak: 12, current_xp: 8450 },
+    metrics: { level: 24, nextLevelXp: 10000, winRate: 68, matches: 142, courtHours: 32 },
+    badges: [
+      { name: "Dinker", progress: 100, unlocked: true },
+      { name: "Rallier", progress: 60, unlocked: false },
+      { name: "Pro-Smasher", progress: 0, unlocked: false },
+    ],
+  };
+  if (!process.env.VERCEL_URL && process.env.NODE_ENV === "production") return fallback;
   const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
   const response = await fetch(`${baseUrl}/api/player/dashboard`, { cache: "no-store" }).catch(() => null);
   if (!response?.ok) {
-    return {
-      profile: { full_name: "Dinker Pro", current_streak: 12, current_xp: 8450 },
-      metrics: { level: 24, nextLevelXp: 10000, winRate: 68, matches: 142, courtHours: 32 },
-      badges: [
-        { name: "Dinker", progress: 100, unlocked: true },
-        { name: "Rallier", progress: 60, unlocked: false },
-        { name: "Pro-Smasher", progress: 0, unlocked: false },
-      ],
-    };
+    return fallback;
   }
   return response.json();
 }

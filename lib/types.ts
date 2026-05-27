@@ -17,6 +17,34 @@ export type Booking = {
   status: string;
 };
 
+export type BookingLedgerRow = Booking & {
+  player_name?: string;
+  player_email?: string;
+  base_amount: number;
+  tax_amount: number;
+  operating_cost: number;
+  gross_profit: number;
+};
+
+export type PricingRule = {
+  id: number;
+  label: string;
+  court_id: number | null;
+  start_time: string;
+  end_time: string;
+  price: number;
+  active: boolean;
+};
+
+export type FinanceEntry = {
+  id: number;
+  entry_date: string;
+  category: "revenue" | "expense" | "adjustment";
+  label: string;
+  amount: number;
+  notes: string | null;
+};
+
 export type Slot = {
   courtId: number;
   courtName: string;
