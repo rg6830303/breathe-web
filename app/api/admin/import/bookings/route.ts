@@ -6,7 +6,12 @@ import { getSupabaseService, hasSupabaseEnv } from "@/lib/supabase";
 async function authorize(request: NextRequest, formUserId?: string) {
   const key = request.headers.get("x-integration-key");
   if (process.env.SHEETS_INTEGRATION_KEY && key === process.env.SHEETS_INTEGRATION_KEY) return;
-  if (formUserId && hasSupabaseEnv()) return assertAdmin(formUserId);
+  try {
+    await assertAdmin(formUserId);
+    return;
+  } catch {
+    // fall through to demo allowance below
+  }
   if (!hasSupabaseEnv()) return;
   throw new Error("Admin authorization required.");
 }

@@ -67,6 +67,81 @@ body {
   min-height: 56px;
 }
 
+/* ---------- 3D + motion ---------- */
+
+/* 3D stage + slowly rotating paddle used on auth screens */
+.scene {
+  perspective: 1000px;
+}
+.paddle-3d {
+  transform-style: preserve-3d;
+  animation: paddle-spin 9s ease-in-out infinite;
+}
+@keyframes paddle-spin {
+  0% { transform: rotateY(-22deg) rotateX(8deg) translateY(0); }
+  50% { transform: rotateY(22deg) rotateX(-6deg) translateY(-12px); }
+  100% { transform: rotateY(-22deg) rotateX(8deg) translateY(0); }
+}
+
+/* Interactive tilt card (CSS-only hover) */
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease;
+  will-change: transform;
+}
+.card-3d:hover {
+  transform: perspective(900px) rotateX(6deg) rotateY(-6deg) translateY(-6px);
+}
+.card-3d > * {
+  transform: translateZ(28px);
+}
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Ambient floating blobs */
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(18px, -22px) scale(1.08); }
+  66% { transform: translate(-16px, 14px) scale(0.96); }
+}
+.animate-blob {
+  animation: blob 14s ease-in-out infinite;
+}
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 26s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paddle-3d,
+  .animate-blob,
+  .animate-spin-slow,
+  .animate-float,
+  .animate-ticker {
+    animation: none !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .card-3d:hover {
+    transform: translateY(-4px);
+  }
+}
+
 /* Hide horizontal scrollbar on the nav ticker */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

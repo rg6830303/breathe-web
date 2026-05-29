@@ -3,14 +3,33 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, MapPin, Menu, Phone, X } from "lucide-react";
+import { ArrowRight, LayoutDashboard, LogOut, MapPin, Menu, Phone, Shield, User, X } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { logout } from "@/app/actions/auth";
 import { navLinks, site } from "@/lib/site";
+
+type Account = { email: string; name: string; role: "player" | "admin" } | null;
 
 export function Nav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [account, setAccount] = useState<Account>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (active) setAccount(d.user ?? null);
+      })
+      .catch(() => {})
+      .finally(() => active && setLoaded(true));
+    return () => {
+      active = false;
+    };
+  }, [pathname]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -79,6 +98,34 @@ export function Nav() {
           </div>
 
           <div className="flex items-center gap-2">
+            {loaded && account ? (
+              <div className="hidden items-center gap-2 lg:flex">
+                <Link
+                  href={account.role === "admin" ? "/admin" : "/dashboard"}
+                  className="inline-flex items-center gap-2 rounded-full border border-brand/15 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-brand/5"
+                >
+                  {account.role === "admin" ? <Shield className="h-4 w-4 text-brand" /> : <User className="h-4 w-4 text-brand" />}
+                  <span className="max-w-[120px] truncate">{account.name}</span>
+                </Link>
+                <form action={logout}>
+                  <button
+                    aria-label="Log out"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand/15 text-ink transition hover:bg-brand/5"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </form>
+              </div>
+            ) : (
+              loaded && (
+                <Link
+                  href="/login"
+                  className="hidden rounded-full px-4 py-2.5 text-sm font-semibold text-ink/70 transition hover:text-brand lg:inline-flex"
+                >
+                  Log in
+                </Link>
+              )
+            )}
             <Link
               href="/book"
               className="hidden items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 active:scale-[0.98] sm:inline-flex"
@@ -126,6 +173,38 @@ export function Nav() {
             >
               Book a Slot <ArrowRight className="h-4 w-4" />
             </Link>
+
+            <div className="mt-3 grid gap-2 border-t border-brand/10 pt-3">
+              {account ? (
+                <>
+                  <Link
+                    href={account.role === "admin" ? "/admin" : "/dashboard"}
+                    className="flex items-center justify-between rounded-2xl bg-brand/5 px-4 py-3 text-sm font-semibold text-ink"
+                  >
+                    <span className="flex items-center gap-2">
+                      {account.role === "admin" ? <Shield className="h-4 w-4 text-brand" /> : <LayoutDashboard className="h-4 w-4 text-brand" />}
+                      {account.role === "admin" ? "Owner console" : "My dashboard"}
+                    </span>
+                    <ArrowRight className="h-4 w-4 opacity-50" />
+                  </Link>
+                  <form action={logout}>
+                    <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand">
+                      <LogOut className="h-4 w-4" /> Log out ({account.name})
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <Link href="/login" className="flex items-center justify-center rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand">
+                    Log in
+                  </Link>
+                  <Link href="/signup" className="flex items-center justify-center rounded-2xl bg-ink px-4 py-3 text-sm font-bold text-white">
+                    Sign up
+                  </Link>
+                </div>
+              )}
+            </div>
+
             <a
               href={site.phoneHref}
               className="mt-2 flex items-center justify-center gap-2 rounded-2xl border border-brand/20 px-5 py-3 text-sm font-bold text-brand"

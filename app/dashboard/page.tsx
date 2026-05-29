@@ -2,6 +2,8 @@ import { Award, Clock, Flame, Trophy, Zap } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { Container, Eyebrow } from "@/components/ui";
+import { requireUser } from "@/lib/guards";
+import { logout } from "@/app/actions/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,9 @@ async function getDashboard() {
 }
 
 export default async function DashboardPage() {
+  const user = await requireUser();
   const data = await getDashboard();
+  data.profile.full_name = user.name || data.profile.full_name;
   const xpPct = Math.min(100, Math.round((data.profile.current_xp / data.metrics.nextLevelXp) * 100));
   const stats = [
     { icon: Trophy, value: `${data.metrics.winRate}%`, label: "Win rate" },
@@ -37,16 +41,28 @@ export default async function DashboardPage() {
       <main>
         <section className="brand-gradient brand-mesh relative overflow-hidden text-white">
           <div className="court-lines absolute inset-0 opacity-25" />
-          <Container className="relative py-12 sm:py-14">
-            <Eyebrow light>Player dashboard</Eyebrow>
-            <div className="mt-4 flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 font-display text-2xl font-extrabold">
-                {String(data.profile.full_name).charAt(0)}
+          <Container className="relative flex flex-col gap-4 py-12 sm:py-14 md:flex-row md:items-center md:justify-between">
+            <div>
+              <Eyebrow light>Player dashboard</Eyebrow>
+              <div className="mt-4 flex items-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 font-display text-2xl font-extrabold uppercase">
+                  {String(data.profile.full_name).charAt(0)}
+                </div>
+                <div>
+                  <h1 className="font-display text-2xl font-extrabold sm:text-3xl">{data.profile.full_name}</h1>
+                  <p className="text-sm font-semibold text-ball">Level {data.metrics.level} Athlete</p>
+                </div>
               </div>
-              <div>
-                <h1 className="font-display text-2xl font-extrabold sm:text-3xl">{data.profile.full_name}</h1>
-                <p className="text-sm font-semibold text-ball">Level {data.metrics.level} Athlete</p>
-              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <a href="/book" className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand transition hover:bg-ball hover:text-ink">
+                Book a court
+              </a>
+              <form action={logout}>
+                <button className="rounded-full border border-white/40 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/10">
+                  Log out
+                </button>
+              </form>
             </div>
           </Container>
         </section>

@@ -3,6 +3,8 @@ import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { Container, Eyebrow } from "@/components/ui";
 import { getAdminOverview } from "@/lib/admin-data";
+import { requireAdmin } from "@/lib/guards";
+import { logout } from "@/app/actions/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +23,7 @@ function dateTimeInput(value: string) {
 }
 
 export default async function AdminPage() {
+  const admin = await requireAdmin();
   const overview = await getAdminOverview();
   const today = new Date().toISOString().slice(0, 10);
 
@@ -30,12 +33,24 @@ export default async function AdminPage() {
       <main>
         <section className="brand-gradient brand-mesh relative overflow-hidden text-white">
           <div className="court-lines absolute inset-0 opacity-25" />
-          <Container className="relative py-12 sm:py-14">
-            <Eyebrow light>Owner console</Eyebrow>
-            <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">Bookings, pricing & finance</h1>
-            <p className="mt-3 max-w-2xl text-white/85">
-              Daily operating controls for court reservations, rates, exports, imports, and profit tracking.
-            </p>
+          <Container className="relative flex flex-col gap-4 py-12 sm:py-14 md:flex-row md:items-end md:justify-between">
+            <div>
+              <Eyebrow light>Owner console</Eyebrow>
+              <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">Bookings, pricing & finance</h1>
+              <p className="mt-3 max-w-2xl text-white/85">
+                Daily operating controls for court reservations, rates, exports, imports, and profit tracking.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="rounded-full bg-white/12 px-4 py-2 text-xs font-semibold text-white">
+                Signed in as {admin.email}
+              </span>
+              <form action={logout}>
+                <button className="rounded-full bg-white px-5 py-2 text-sm font-bold text-brand transition hover:bg-ball hover:text-ink">
+                  Log out
+                </button>
+              </form>
+            </div>
           </Container>
         </section>
 
@@ -57,7 +72,6 @@ export default async function AdminPage() {
           <section className="mt-6 grid gap-4 lg:grid-cols-3">
             <form action="/api/admin/export/bookings" method="get" className={`${card} grid gap-3`}>
               <h2 className="font-display text-lg font-extrabold text-ink">Download bookings</h2>
-              <input name="userId" placeholder="Admin user UUID" className={field} />
               <div className="grid grid-cols-2 gap-2">
                 <input name="from" type="date" defaultValue={today} className={field} />
                 <input name="to" type="date" defaultValue={today} className={field} />
@@ -67,7 +81,6 @@ export default async function AdminPage() {
 
             <form action="/api/admin/export/finances" method="get" className={`${card} grid gap-3`}>
               <h2 className="font-display text-lg font-extrabold text-ink">Download finance</h2>
-              <input name="userId" placeholder="Admin user UUID" className={field} />
               <div className="grid grid-cols-2 gap-2">
                 <input name="from" type="date" defaultValue={today} className={field} />
                 <input name="to" type="date" defaultValue={today} className={field} />
@@ -77,7 +90,6 @@ export default async function AdminPage() {
 
             <form action={importBookingsCsv} className={`${card} grid gap-3`}>
               <h2 className="font-display text-lg font-extrabold text-ink">Load sheet edits</h2>
-              <input name="userId" placeholder="Admin user UUID" className={field} required />
               <input name="file" type="file" accept=".csv,text/csv" className={field} />
               <textarea name="csv" rows={3} placeholder="Or paste CSV rows from Google Sheets / Excel" className={field} />
               <button className={btnPrimary}>Import booking CSV</button>
@@ -122,7 +134,6 @@ export default async function AdminPage() {
                       <td className="p-3">
                         <form action={updateBookingAdmin} className="grid grid-cols-2 gap-2">
                           <input type="hidden" name="id" value={booking.id} />
-                          <input name="userId" placeholder="Admin UUID" className={`col-span-2 ${fieldSm}`} required />
                           <input name="courtId" type="number" defaultValue={booking.court_id} className={fieldSm} />
                           <select name="status" defaultValue={booking.status} className={fieldSm}>
                             <option value="confirmed">confirmed</option>
@@ -151,7 +162,6 @@ export default async function AdminPage() {
                 {overview.pricingRules.map((rule) => (
                   <form key={rule.id} action={upsertPricingRule} className="grid grid-cols-2 gap-2 rounded-2xl border border-brand/10 bg-brand/[0.03] p-3 md:grid-cols-6">
                     <input type="hidden" name="id" value={rule.id} />
-                    <input name="userId" placeholder="Admin UUID" className={`${fieldSm} md:col-span-2`} required />
                     <input name="label" defaultValue={rule.label} className={`${fieldSm} md:col-span-2`} />
                     <input name="courtId" placeholder="Court or blank" defaultValue={rule.court_id ?? ""} className={fieldSm} />
                     <input name="price" type="number" defaultValue={rule.price} className={fieldSm} />
@@ -168,7 +178,6 @@ export default async function AdminPage() {
               <p className="text-xs font-bold uppercase tracking-wide text-brand">Finance ledger</p>
               <h2 className="mb-4 font-display text-xl font-extrabold text-ink">Expenses and adjustments</h2>
               <form action={addFinanceEntry} className="grid gap-2 rounded-2xl border border-brand/10 bg-brand/[0.03] p-3">
-                <input name="userId" placeholder="Admin user UUID" className={field} required />
                 <div className="grid grid-cols-2 gap-2">
                   <input name="entryDate" type="date" defaultValue={today} className={field} />
                   <select name="category" className={field}>
@@ -188,7 +197,6 @@ export default async function AdminPage() {
           <section className="mt-6 grid gap-6 lg:grid-cols-2">
             <form action={createNotice} className={`${card} grid gap-3`}>
               <h2 className="font-display text-xl font-extrabold text-ink">Notice board editorial</h2>
-              <input name="userId" placeholder="Admin user UUID" className={field} required />
               <input name="title" placeholder="Notice title" className={field} required />
               <textarea name="content" placeholder="Announcement content" rows={5} className={field} required />
               <select name="type" className={field}>
@@ -200,7 +208,6 @@ export default async function AdminPage() {
             </form>
             <form action={deleteNotice} className={`${card} flex flex-col gap-3`}>
               <h2 className="font-display text-xl font-extrabold text-ink">Purge notice</h2>
-              <input name="userId" placeholder="Admin user UUID" className={field} required />
               <input name="id" placeholder="Notice ID to purge" type="number" className={field} required />
               <button className="rounded-xl border border-red-300 px-4 py-3 text-sm font-bold text-red-500 transition hover:bg-red-50">Purge</button>
             </form>

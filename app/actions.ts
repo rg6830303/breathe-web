@@ -7,8 +7,7 @@ import { getSupabaseService } from "@/lib/supabase";
 import type { NoticeType } from "@/lib/types";
 
 export async function createNotice(formData: FormData) {
-  const userId = formData.get("userId")?.toString();
-  await assertAdmin(userId);
+  await assertAdmin();
   const payload = {
     title: formData.get("title")?.toString() ?? "",
     content: formData.get("content")?.toString() ?? "",
@@ -21,8 +20,7 @@ export async function createNotice(formData: FormData) {
 }
 
 export async function updateNotice(formData: FormData) {
-  const userId = formData.get("userId")?.toString();
-  await assertAdmin(userId);
+  await assertAdmin();
   const id = Number(formData.get("id"));
   const { error } = await getSupabaseService()
     .from("notice_board")
@@ -39,8 +37,7 @@ export async function updateNotice(formData: FormData) {
 }
 
 export async function deleteNotice(formData: FormData) {
-  const userId = formData.get("userId")?.toString();
-  await assertAdmin(userId);
+  await assertAdmin();
   const id = Number(formData.get("id"));
   const { error } = await getSupabaseService().from("notice_board").delete().eq("id", id);
   if (error) throw error;
@@ -49,8 +46,7 @@ export async function deleteNotice(formData: FormData) {
 }
 
 export async function updateBookingAdmin(formData: FormData) {
-  const userId = formData.get("userId")?.toString();
-  await assertAdmin(userId);
+  await assertAdmin();
   const id = Number(formData.get("id"));
   const payload = {
     court_id: Number(formData.get("courtId")),
@@ -66,8 +62,7 @@ export async function updateBookingAdmin(formData: FormData) {
 }
 
 export async function upsertPricingRule(formData: FormData) {
-  const userId = formData.get("userId")?.toString();
-  await assertAdmin(userId);
+  await assertAdmin();
   const id = Number(formData.get("id") || 0);
   const court = formData.get("courtId")?.toString();
   const payload = {
@@ -88,8 +83,7 @@ export async function upsertPricingRule(formData: FormData) {
 }
 
 export async function addFinanceEntry(formData: FormData) {
-  const userId = formData.get("userId")?.toString();
-  await assertAdmin(userId);
+  await assertAdmin();
   const { error } = await getSupabaseService().from("finance_entries").insert({
     entry_date: formData.get("entryDate")?.toString(),
     category: formData.get("category")?.toString(),
@@ -102,8 +96,7 @@ export async function addFinanceEntry(formData: FormData) {
 }
 
 export async function importBookingsCsv(formData: FormData) {
-  const userId = formData.get("userId")?.toString();
-  await assertAdmin(userId);
+  await assertAdmin();
   const file = formData.get("file");
   const pasted = formData.get("csv")?.toString();
   const csv = file instanceof File && file.size > 0 ? await file.text() : pasted;

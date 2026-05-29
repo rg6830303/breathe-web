@@ -8,7 +8,12 @@ async function authorize(request: NextRequest) {
   const key = request.headers.get("x-integration-key") ?? request.nextUrl.searchParams.get("key");
   const userId = request.nextUrl.searchParams.get("userId");
   if (process.env.SHEETS_INTEGRATION_KEY && key === process.env.SHEETS_INTEGRATION_KEY) return;
-  if (userId && hasSupabaseEnv()) return assertAdmin(userId);
+  try {
+    await assertAdmin(userId);
+    return;
+  } catch {
+    // fall through to demo allowance below
+  }
   if (!hasSupabaseEnv()) return;
   throw new Error("Admin authorization required.");
 }

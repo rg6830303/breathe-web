@@ -13,11 +13,25 @@ Production-grade Next.js App Router build for Breathe Pickleball: public site, l
 
 ## Routes
 
-- `/` - branded home page and filtered notice board
-- `/book` - live Court 1/Court 2 half-hour slot matrix using `GET /api/slots`
-- `/dashboard` - player metrics using `GET /api/player/dashboard`
-- `/admin` - notice-board editorial forms backed by secured server actions
-- `/admin` - owner console for bookings, pricing rules, CSV import/export, and daily finance tracking
+### Public site
+- `/` - branded home page (hero, features, how-it-works, testimonials, notice board)
+- `/about` - club story, culture, and growth
+- `/coaching` - coaching programs for all ages
+- `/tournaments` - tournament formats and cash-prize events
+- `/gallery` - photo gallery + Instagram CTA
+- `/contact` - address, hours, map, and contact channels
+- `/book` - live half-hour slot matrix across all courts using `GET /api/slots`
+
+### Accounts (separated player / owner auth)
+- `/signup`, `/login` - player account create / sign in
+- `/admin/login` - owner-only console login
+- `/dashboard` - player metrics (requires player session) using `GET /api/player/dashboard`
+- `/admin` - owner console for bookings, pricing, CSV import/export, finance (requires admin session)
+
+Sessions use a signed (HMAC-SHA256) httpOnly cookie. Player auth integrates with
+Supabase Auth when `NEXT_PUBLIC_SUPABASE_*` env vars are present, otherwise runs in
+demo mode. Owner login validates against `ADMIN_EMAIL` / `ADMIN_PASSWORD`
+(demo password `breathe-admin` when none are configured).
 - `/api/bookings/checkout` - verifies and inserts bookings through an atomic Supabase RPC
 - `/api/admin/export/bookings` - Excel/Google Sheets friendly booking ledger CSV export
 - `/api/admin/export/finances` - finance and profit/loss CSV export

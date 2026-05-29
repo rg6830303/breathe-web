@@ -17,6 +17,8 @@ import {
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { NoticeBoard } from "@/components/notice-board";
+import { Reveal } from "@/components/reveal";
+import { PaddleMark } from "@/components/logo";
 import { CTABand, Container, Eyebrow, SectionHeading } from "@/components/ui";
 import { getSupabaseService, hasSupabaseEnv } from "@/lib/supabase";
 import { site } from "@/lib/site";
@@ -69,6 +71,11 @@ export default async function Home() {
         {/* Hero */}
         <section className="brand-gradient brand-mesh relative overflow-hidden text-white">
           <div className="court-lines absolute inset-0 opacity-30" />
+          <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-ball/15 blur-3xl animate-blob" />
+          <div className="pointer-events-none absolute -right-16 bottom-0 h-80 w-80 rounded-full bg-white/10 blur-3xl animate-blob [animation-delay:3s]" />
+          <div className="scene pointer-events-none absolute right-6 top-24 hidden xl:block">
+            <PaddleMark className="paddle-3d h-24 w-24 text-white/80 drop-shadow-[0_18px_30px_rgba(0,0,0,0.25)]" />
+          </div>
           <Container className="relative grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
             <div className="animate-fade-up">
               <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-white">
@@ -183,17 +190,16 @@ export default async function Home() {
               description="From the surface under your feet to the snacks after match point, every detail is built for players."
             />
             <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {features.map(({ icon: Icon, title, text }) => (
-                <div
-                  key={title}
-                  className="group rounded-3xl border border-brand/10 bg-white p-6 shadow-soft transition hover:-translate-y-1 hover:border-brand/30 hover:shadow-card"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand transition group-hover:bg-brand group-hover:text-white">
-                    <Icon className="h-6 w-6" />
+              {features.map(({ icon: Icon, title, text }, i) => (
+                <Reveal key={title} delay={(i % 3) * 90}>
+                  <div className="card-3d group h-full rounded-3xl border border-brand/10 bg-white p-6 shadow-soft hover:border-brand/30 hover:shadow-card">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand transition group-hover:bg-brand group-hover:text-white">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <h3 className="mt-5 font-display text-lg font-bold text-ink">{title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slatey">{text}</p>
                   </div>
-                  <h3 className="mt-5 font-display text-lg font-bold text-ink">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slatey">{text}</p>
-                </div>
+                </Reveal>
               ))}
             </div>
           </Container>
@@ -265,8 +271,8 @@ export default async function Home() {
           <Container className="!px-0">
             <SectionHeading center eyebrow="From our community" title="Loved by players across Kolkata" />
             <div className="mt-12 grid gap-5 md:grid-cols-3">
-              {testimonials.map((t) => (
-                <figure key={t.name} className="rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
+              {testimonials.map((t, i) => (
+                <Reveal key={t.name} as="figure" delay={i * 90} className="card-3d rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
                   <div className="flex gap-1 text-ball">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star key={i} className="h-4 w-4 fill-current" />
@@ -277,7 +283,7 @@ export default async function Home() {
                     <span className="font-bold text-ink">{t.name}</span>
                     <span className="block text-slatey">{t.role}</span>
                   </figcaption>
-                </figure>
+                </Reveal>
               ))}
             </div>
           </Container>
