@@ -1,9 +1,16 @@
 import { addFinanceEntry, createNotice, deleteNotice, importBookingsCsv, updateBookingAdmin, upsertPricingRule } from "@/app/actions";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
+import { Container, Eyebrow } from "@/components/ui";
 import { getAdminOverview } from "@/lib/admin-data";
 
 export const dynamic = "force-dynamic";
+
+const field = "rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand";
+const fieldSm = "rounded-lg border border-brand/15 bg-white px-2 py-1.5 text-sm text-ink outline-none focus:border-brand";
+const card = "rounded-3xl border border-brand/10 bg-white p-6 shadow-soft";
+const btnPrimary = "rounded-xl bg-brand px-4 py-3 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600";
+const btnGhost = "rounded-xl border border-brand/30 px-4 py-3 text-sm font-bold text-brand transition hover:bg-brand/5";
 
 function money(value: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
@@ -20,178 +27,185 @@ export default async function AdminPage() {
   return (
     <>
       <Nav />
-      <main className="mx-auto max-w-7xl px-4 py-10 md:px-8">
-        <div className="mb-8">
-          <p className="text-sm font-black uppercase tracking-[0.22em] text-volt">Owner Console</p>
-          <h1 className="font-display text-5xl font-black text-white">Bookings, Pricing, Finance</h1>
-          <p className="mt-3 text-slate-300">Daily operating controls for court reservations, rates, exports, imports, and profit tracking.</p>
-        </div>
-
-        <section className="grid gap-4 md:grid-cols-4">
-          {[
-            ["Bookings", overview.summary.bookings],
-            ["Court revenue", money(overview.summary.courtRevenue)],
-            ["Tax collected", money(overview.summary.taxCollected)],
-            ["Net profit", money(overview.summary.netProfit)],
-          ].map(([label, value]) => (
-            <div key={label} className="glass rounded-lg p-5">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">{label}</p>
-              <div className="mt-2 font-display text-3xl font-black text-volt">{value}</div>
-            </div>
-          ))}
+      <main>
+        <section className="brand-gradient brand-mesh relative overflow-hidden text-white">
+          <div className="court-lines absolute inset-0 opacity-25" />
+          <Container className="relative py-12 sm:py-14">
+            <Eyebrow light>Owner console</Eyebrow>
+            <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">Bookings, pricing & finance</h1>
+            <p className="mt-3 max-w-2xl text-white/85">
+              Daily operating controls for court reservations, rates, exports, imports, and profit tracking.
+            </p>
+          </Container>
         </section>
 
-        <section className="mt-6 grid gap-4 lg:grid-cols-3">
-          <form action="/api/admin/export/bookings" method="get" className="glass grid gap-3 rounded-lg p-5">
-            <h2 className="font-display text-2xl font-black text-white">Download Bookings</h2>
-            <input name="userId" placeholder="Admin user UUID" className="rounded-md border border-line bg-midnight px-3 py-2" />
-            <div className="grid grid-cols-2 gap-2">
-              <input name="from" type="date" defaultValue={today} className="rounded-md border border-line bg-midnight px-3 py-2" />
-              <input name="to" type="date" defaultValue={today} className="rounded-md border border-line bg-midnight px-3 py-2" />
-            </div>
-            <button className="rounded-md bg-volt px-4 py-3 font-black text-midnight">Download Excel CSV</button>
-          </form>
-
-          <form action="/api/admin/export/finances" method="get" className="glass grid gap-3 rounded-lg p-5">
-            <h2 className="font-display text-2xl font-black text-white">Download Finance</h2>
-            <input name="userId" placeholder="Admin user UUID" className="rounded-md border border-line bg-midnight px-3 py-2" />
-            <div className="grid grid-cols-2 gap-2">
-              <input name="from" type="date" defaultValue={today} className="rounded-md border border-line bg-midnight px-3 py-2" />
-              <input name="to" type="date" defaultValue={today} className="rounded-md border border-line bg-midnight px-3 py-2" />
-            </div>
-            <button className="rounded-md border border-court px-4 py-3 font-black text-white">Download P&L CSV</button>
-          </form>
-
-          <form action={importBookingsCsv} className="glass grid gap-3 rounded-lg p-5">
-            <h2 className="font-display text-2xl font-black text-white">Load Sheet Edits</h2>
-            <input name="userId" placeholder="Admin user UUID" className="rounded-md border border-line bg-midnight px-3 py-2" required />
-            <input name="file" type="file" accept=".csv,text/csv" className="rounded-md border border-line bg-midnight px-3 py-2" />
-            <textarea name="csv" rows={3} placeholder="Or paste CSV rows from Google Sheets / Excel" className="rounded-md border border-line bg-midnight px-3 py-2" />
-            <button className="rounded-md bg-court px-4 py-3 font-black text-white">Import Booking CSV</button>
-          </form>
-        </section>
-
-        <section className="glass mt-6 rounded-lg p-5">
-          <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-volt">Booking Ledger</p>
-              <h2 className="font-display text-3xl font-black text-white">Owner-managed reservations</h2>
-            </div>
-            <div className="text-sm text-slate-400">Gross profit: {money(overview.summary.grossProfit)}</div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] border-collapse text-sm">
-              <thead className="bg-midnight text-left text-xs uppercase tracking-[0.14em] text-slate-400">
-                <tr>
-                  <th className="p-3">ID</th>
-                  <th className="p-3">Player</th>
-                  <th className="p-3">Court</th>
-                  <th className="p-3">Window</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">Total</th>
-                  <th className="p-3">Profit</th>
-                  <th className="p-3">Update</th>
-                </tr>
-              </thead>
-              <tbody>
-                {overview.ledger.map((booking) => (
-                  <tr key={booking.id} className="border-t border-line/70">
-                    <td className="p-3 font-bold text-volt">{booking.id}</td>
-                    <td className="p-3">
-                      <div className="font-bold text-white">{booking.player_name || booking.user_id}</div>
-                      <div className="text-xs text-slate-500">{booking.player_email}</div>
-                    </td>
-                    <td className="p-3">Court {booking.court_id}</td>
-                    <td className="p-3 text-slate-300">{new Date(booking.start_time).toLocaleString("en-IN")}</td>
-                    <td className="p-3">{booking.status}</td>
-                    <td className="p-3">{money(booking.total_amount)}</td>
-                    <td className="p-3 text-volt">{money(booking.gross_profit)}</td>
-                    <td className="p-3">
-                      <form action={updateBookingAdmin} className="grid grid-cols-2 gap-2">
-                        <input type="hidden" name="id" value={booking.id} />
-                        <input name="userId" placeholder="Admin UUID" className="col-span-2 rounded border border-line bg-midnight px-2 py-1" required />
-                        <input name="courtId" type="number" defaultValue={booking.court_id} className="rounded border border-line bg-midnight px-2 py-1" />
-                        <select name="status" defaultValue={booking.status} className="rounded border border-line bg-midnight px-2 py-1">
-                          <option value="confirmed">confirmed</option>
-                          <option value="paid">paid</option>
-                          <option value="cancelled">cancelled</option>
-                          <option value="completed">completed</option>
-                        </select>
-                        <input name="startTime" type="datetime-local" defaultValue={dateTimeInput(booking.start_time)} className="rounded border border-line bg-midnight px-2 py-1" />
-                        <input name="endTime" type="datetime-local" defaultValue={dateTimeInput(booking.end_time)} className="rounded border border-line bg-midnight px-2 py-1" />
-                        <input name="totalAmount" type="number" step="0.01" defaultValue={booking.total_amount} className="rounded border border-line bg-midnight px-2 py-1" />
-                        <button className="rounded bg-volt px-2 py-1 font-black text-midnight">Save</button>
-                      </form>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="mt-6 grid gap-6 lg:grid-cols-2">
-          <div className="glass rounded-lg p-5">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-volt">Rate Controls</p>
-            <h2 className="mb-4 font-display text-3xl font-black text-white">Court pricing rules</h2>
-            <div className="space-y-3">
-              {overview.pricingRules.map((rule) => (
-                <form key={rule.id} action={upsertPricingRule} className="grid grid-cols-2 gap-2 rounded-md border border-line bg-midnight/70 p-3 md:grid-cols-6">
-                  <input type="hidden" name="id" value={rule.id} />
-                  <input name="userId" placeholder="Admin UUID" className="rounded border border-line bg-midnight px-2 py-1 md:col-span-2" required />
-                  <input name="label" defaultValue={rule.label} className="rounded border border-line bg-midnight px-2 py-1 md:col-span-2" />
-                  <input name="courtId" placeholder="Court or blank" defaultValue={rule.court_id ?? ""} className="rounded border border-line bg-midnight px-2 py-1" />
-                  <input name="price" type="number" defaultValue={rule.price} className="rounded border border-line bg-midnight px-2 py-1" />
-                  <input name="startTime" type="time" defaultValue={rule.start_time.slice(0, 5)} className="rounded border border-line bg-midnight px-2 py-1" />
-                  <input name="endTime" type="time" defaultValue={rule.end_time.slice(0, 5)} className="rounded border border-line bg-midnight px-2 py-1" />
-                  <label className="flex items-center gap-2 text-xs font-bold"><input name="active" type="checkbox" defaultChecked={rule.active} /> Active</label>
-                  <button className="rounded bg-court px-2 py-1 font-black text-white">Save rate</button>
-                </form>
-              ))}
-            </div>
-          </div>
-
-          <div className="glass rounded-lg p-5">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-volt">Finance Ledger</p>
-            <h2 className="mb-4 font-display text-3xl font-black text-white">Expenses and adjustments</h2>
-            <form action={addFinanceEntry} className="grid gap-2 rounded-md border border-line bg-midnight/70 p-3">
-              <input name="userId" placeholder="Admin user UUID" className="rounded-md border border-line bg-midnight px-3 py-2" required />
-              <div className="grid grid-cols-2 gap-2">
-                <input name="entryDate" type="date" defaultValue={today} className="rounded-md border border-line bg-midnight px-3 py-2" />
-                <select name="category" className="rounded-md border border-line bg-midnight px-3 py-2">
-                  <option value="expense">Expense</option>
-                  <option value="adjustment">Adjustment</option>
-                  <option value="revenue">Revenue</option>
-                </select>
+        <Container className="py-10">
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["Bookings", overview.summary.bookings],
+              ["Court revenue", money(overview.summary.courtRevenue)],
+              ["Tax collected", money(overview.summary.taxCollected)],
+              ["Net profit", money(overview.summary.netProfit)],
+            ].map(([label, value]) => (
+              <div key={label} className={card}>
+                <p className="text-xs font-bold uppercase tracking-wide text-slatey">{label}</p>
+                <div className="mt-2 font-display text-2xl font-extrabold text-brand">{value}</div>
               </div>
-              <input name="label" placeholder="Label" className="rounded-md border border-line bg-midnight px-3 py-2" />
-              <input name="amount" type="number" step="0.01" placeholder="Amount" className="rounded-md border border-line bg-midnight px-3 py-2" />
-              <textarea name="notes" rows={2} placeholder="Notes" className="rounded-md border border-line bg-midnight px-3 py-2" />
-              <button className="rounded-md bg-volt px-4 py-3 font-black text-midnight">Add finance entry</button>
-            </form>
-          </div>
-        </section>
+            ))}
+          </section>
 
-        <section className="mt-6 grid gap-6 lg:grid-cols-2">
-          <form action={createNotice} className="glass grid gap-4 rounded-lg p-5">
-            <h2 className="font-display text-3xl font-black text-white">Notice Board Editorial</h2>
-            <input name="userId" placeholder="Admin user UUID" className="rounded-md border border-line bg-midnight px-3 py-2" required />
-            <input name="title" placeholder="Notice title" className="rounded-md border border-line bg-midnight px-3 py-2" required />
-            <textarea name="content" placeholder="Announcement content" rows={5} className="rounded-md border border-line bg-midnight px-3 py-2" required />
-            <select name="type" className="rounded-md border border-line bg-midnight px-3 py-2">
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-            <button className="rounded-md bg-court px-4 py-3 font-black text-white">Publish Notice</button>
-          </form>
-          <form action={deleteNotice} className="glass flex flex-col gap-3 rounded-lg p-5">
-            <h2 className="font-display text-3xl font-black text-white">Purge Notice</h2>
-            <input name="userId" placeholder="Admin user UUID" className="rounded-md border border-line bg-midnight px-3 py-2" required />
-            <input name="id" placeholder="Notice ID to purge" type="number" className="rounded-md border border-line bg-midnight px-3 py-2" required />
-            <button className="rounded-md border border-red-300/40 px-4 py-3 font-black text-red-200">Purge</button>
-          </form>
-        </section>
+          <section className="mt-6 grid gap-4 lg:grid-cols-3">
+            <form action="/api/admin/export/bookings" method="get" className={`${card} grid gap-3`}>
+              <h2 className="font-display text-lg font-extrabold text-ink">Download bookings</h2>
+              <input name="userId" placeholder="Admin user UUID" className={field} />
+              <div className="grid grid-cols-2 gap-2">
+                <input name="from" type="date" defaultValue={today} className={field} />
+                <input name="to" type="date" defaultValue={today} className={field} />
+              </div>
+              <button className={btnPrimary}>Download Excel CSV</button>
+            </form>
+
+            <form action="/api/admin/export/finances" method="get" className={`${card} grid gap-3`}>
+              <h2 className="font-display text-lg font-extrabold text-ink">Download finance</h2>
+              <input name="userId" placeholder="Admin user UUID" className={field} />
+              <div className="grid grid-cols-2 gap-2">
+                <input name="from" type="date" defaultValue={today} className={field} />
+                <input name="to" type="date" defaultValue={today} className={field} />
+              </div>
+              <button className={btnGhost}>Download P&amp;L CSV</button>
+            </form>
+
+            <form action={importBookingsCsv} className={`${card} grid gap-3`}>
+              <h2 className="font-display text-lg font-extrabold text-ink">Load sheet edits</h2>
+              <input name="userId" placeholder="Admin user UUID" className={field} required />
+              <input name="file" type="file" accept=".csv,text/csv" className={field} />
+              <textarea name="csv" rows={3} placeholder="Or paste CSV rows from Google Sheets / Excel" className={field} />
+              <button className={btnPrimary}>Import booking CSV</button>
+            </form>
+          </section>
+
+          <section className={`mt-6 ${card}`}>
+            <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-brand">Booking ledger</p>
+                <h2 className="font-display text-xl font-extrabold text-ink">Owner-managed reservations</h2>
+              </div>
+              <div className="text-sm text-slatey">Gross profit: {money(overview.summary.grossProfit)}</div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[980px] border-collapse text-sm">
+                <thead className="bg-brand/5 text-left text-xs uppercase tracking-wide text-slatey">
+                  <tr>
+                    <th className="p-3">ID</th>
+                    <th className="p-3">Player</th>
+                    <th className="p-3">Court</th>
+                    <th className="p-3">Window</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">Total</th>
+                    <th className="p-3">Profit</th>
+                    <th className="p-3">Update</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overview.ledger.map((booking) => (
+                    <tr key={booking.id} className="border-t border-brand/10">
+                      <td className="p-3 font-bold text-brand">{booking.id}</td>
+                      <td className="p-3">
+                        <div className="font-bold text-ink">{booking.player_name || booking.user_id}</div>
+                        <div className="text-xs text-slatey">{booking.player_email}</div>
+                      </td>
+                      <td className="p-3 text-ink">Court {booking.court_id}</td>
+                      <td className="p-3 text-slatey">{new Date(booking.start_time).toLocaleString("en-IN")}</td>
+                      <td className="p-3 text-ink">{booking.status}</td>
+                      <td className="p-3 text-ink">{money(booking.total_amount)}</td>
+                      <td className="p-3 font-semibold text-brand">{money(booking.gross_profit)}</td>
+                      <td className="p-3">
+                        <form action={updateBookingAdmin} className="grid grid-cols-2 gap-2">
+                          <input type="hidden" name="id" value={booking.id} />
+                          <input name="userId" placeholder="Admin UUID" className={`col-span-2 ${fieldSm}`} required />
+                          <input name="courtId" type="number" defaultValue={booking.court_id} className={fieldSm} />
+                          <select name="status" defaultValue={booking.status} className={fieldSm}>
+                            <option value="confirmed">confirmed</option>
+                            <option value="paid">paid</option>
+                            <option value="cancelled">cancelled</option>
+                            <option value="completed">completed</option>
+                          </select>
+                          <input name="startTime" type="datetime-local" defaultValue={dateTimeInput(booking.start_time)} className={fieldSm} />
+                          <input name="endTime" type="datetime-local" defaultValue={dateTimeInput(booking.end_time)} className={fieldSm} />
+                          <input name="totalAmount" type="number" step="0.01" defaultValue={booking.total_amount} className={fieldSm} />
+                          <button className="rounded-lg bg-brand px-2 py-1.5 text-sm font-bold text-white">Save</button>
+                        </form>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="mt-6 grid gap-6 lg:grid-cols-2">
+            <div className={card}>
+              <p className="text-xs font-bold uppercase tracking-wide text-brand">Rate controls</p>
+              <h2 className="mb-4 font-display text-xl font-extrabold text-ink">Court pricing rules</h2>
+              <div className="space-y-3">
+                {overview.pricingRules.map((rule) => (
+                  <form key={rule.id} action={upsertPricingRule} className="grid grid-cols-2 gap-2 rounded-2xl border border-brand/10 bg-brand/[0.03] p-3 md:grid-cols-6">
+                    <input type="hidden" name="id" value={rule.id} />
+                    <input name="userId" placeholder="Admin UUID" className={`${fieldSm} md:col-span-2`} required />
+                    <input name="label" defaultValue={rule.label} className={`${fieldSm} md:col-span-2`} />
+                    <input name="courtId" placeholder="Court or blank" defaultValue={rule.court_id ?? ""} className={fieldSm} />
+                    <input name="price" type="number" defaultValue={rule.price} className={fieldSm} />
+                    <input name="startTime" type="time" defaultValue={rule.start_time.slice(0, 5)} className={fieldSm} />
+                    <input name="endTime" type="time" defaultValue={rule.end_time.slice(0, 5)} className={fieldSm} />
+                    <label className="flex items-center gap-2 text-xs font-bold text-ink"><input name="active" type="checkbox" defaultChecked={rule.active} className="accent-brand" /> Active</label>
+                    <button className="rounded-lg bg-brand px-2 py-1.5 text-sm font-bold text-white">Save rate</button>
+                  </form>
+                ))}
+              </div>
+            </div>
+
+            <div className={card}>
+              <p className="text-xs font-bold uppercase tracking-wide text-brand">Finance ledger</p>
+              <h2 className="mb-4 font-display text-xl font-extrabold text-ink">Expenses and adjustments</h2>
+              <form action={addFinanceEntry} className="grid gap-2 rounded-2xl border border-brand/10 bg-brand/[0.03] p-3">
+                <input name="userId" placeholder="Admin user UUID" className={field} required />
+                <div className="grid grid-cols-2 gap-2">
+                  <input name="entryDate" type="date" defaultValue={today} className={field} />
+                  <select name="category" className={field}>
+                    <option value="expense">Expense</option>
+                    <option value="adjustment">Adjustment</option>
+                    <option value="revenue">Revenue</option>
+                  </select>
+                </div>
+                <input name="label" placeholder="Label" className={field} />
+                <input name="amount" type="number" step="0.01" placeholder="Amount" className={field} />
+                <textarea name="notes" rows={2} placeholder="Notes" className={field} />
+                <button className={btnPrimary}>Add finance entry</button>
+              </form>
+            </div>
+          </section>
+
+          <section className="mt-6 grid gap-6 lg:grid-cols-2">
+            <form action={createNotice} className={`${card} grid gap-3`}>
+              <h2 className="font-display text-xl font-extrabold text-ink">Notice board editorial</h2>
+              <input name="userId" placeholder="Admin user UUID" className={field} required />
+              <input name="title" placeholder="Notice title" className={field} required />
+              <textarea name="content" placeholder="Announcement content" rows={5} className={field} required />
+              <select name="type" className={field}>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+              <button className={btnPrimary}>Publish notice</button>
+            </form>
+            <form action={deleteNotice} className={`${card} flex flex-col gap-3`}>
+              <h2 className="font-display text-xl font-extrabold text-ink">Purge notice</h2>
+              <input name="userId" placeholder="Admin user UUID" className={field} required />
+              <input name="id" placeholder="Notice ID to purge" type="number" className={field} required />
+              <button className="rounded-xl border border-red-300 px-4 py-3 text-sm font-bold text-red-500 transition hover:bg-red-50">Purge</button>
+            </form>
+          </section>
+        </Container>
       </main>
       <Footer />
     </>

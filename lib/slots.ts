@@ -3,8 +3,9 @@ import { fallbackPricingRules, priceForSlot } from "@/lib/pricing";
 import { getSupabaseService, hasSupabaseEnv } from "@/lib/supabase";
 
 const fallbackCourts: Court[] = [
-  { id: 1, name: "Court 1", type: "Indoor Premium" },
-  { id: 2, name: "Court 2", type: "Indoor Standard" },
+  { id: 1, name: "Court 1", type: "Pro Court" },
+  { id: 2, name: "Court 2", type: "Pro Court" },
+  { id: 3, name: "Court 3", type: "Pro Court" },
 ];
 
 const fallbackBookings: Booking[] = [
@@ -42,7 +43,7 @@ export async function getSlotsForDate(dateText: string): Promise<Slot[]> {
   if (hasSupabaseEnv()) {
     const supabase = getSupabaseService();
     const [courtsResult, bookingsResult, pricingResult] = await Promise.all([
-      supabase.from("courts").select("*").in("id", [1, 2]).order("id"),
+      supabase.from("courts").select("*").in("id", [1, 2, 3]).order("id"),
       supabase
         .from("bookings")
         .select("*")

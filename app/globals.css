@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
-  --font-display: "Arial Black", Impact, ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  color-scheme: light;
+  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 * {
@@ -14,25 +14,64 @@
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: #0a0f1d;
-  color: #d4e4fa;
+  background: #ffffff;
+  color: #0d1426;
   min-height: 100vh;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
+::selection {
+  background: rgba(47, 91, 255, 0.18);
+}
+
+/* Frosted card used across the brand site */
 .glass {
-  background: rgba(5, 20, 36, 0.72);
-  border: 1px solid rgba(42, 102, 255, 0.22);
-  backdrop-filter: blur(18px);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(47, 91, 255, 0.12);
+  backdrop-filter: blur(14px);
 }
 
-.court-perspective {
-  transform: rotateX(58deg) rotateZ(-38deg);
-  transform-style: preserve-3d;
+/* Brand gradient blocks */
+.brand-gradient {
+  background: linear-gradient(135deg, #2348e0 0%, #2f5bff 45%, #4d77ff 100%);
+}
+
+.brand-mesh {
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.16), transparent 30%),
+    radial-gradient(circle at 88% 12%, rgba(198, 242, 62, 0.16), transparent 26%),
+    radial-gradient(circle at 78% 88%, rgba(255, 255, 255, 0.12), transparent 32%);
+}
+
+.section-light {
+  background:
+    radial-gradient(circle at 85% -10%, rgba(47, 91, 255, 0.06), transparent 40%),
+    radial-gradient(circle at 0% 100%, rgba(47, 91, 255, 0.05), transparent 35%);
+}
+
+/* Court grid line texture used in hero */
+.court-lines {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+  background-size: 44px 44px;
 }
 
 .slot-cell {
-  min-height: 54px;
+  min-height: 56px;
+}
+
+/* Hide horizontal scrollbar on the nav ticker */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

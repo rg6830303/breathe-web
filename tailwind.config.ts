@@ -5,24 +5,48 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        midnight: "#0A0F1D",
-        court: "#2A66FF",
-        volt: "#D2FF2A",
-        surface: "#051424",
-        panel: "#122131",
-        line: "rgba(181,196,255,0.18)",
+        // Brand palette derived from the Breathe Pickleball logo (royal blue + white)
+        brand: {
+          DEFAULT: "#2F5BFF",
+          50: "#F2F6FF",
+          100: "#E4ECFF",
+          200: "#C6D6FF",
+          300: "#9DB6FF",
+          400: "#6B8DFF",
+          500: "#2F5BFF",
+          600: "#2348E0",
+          700: "#1B39C4",
+          800: "#162E9A",
+          900: "#152B7E",
+        },
+        ink: "#0D1426",
+        slatey: "#475569",
+        ball: "#C6F23E", // pickleball lime accent
+        // Legacy tokens kept so any older references keep compiling.
+        midnight: "#0B1530",
+        court: "#2F5BFF",
+        volt: "#2348E0",
+        surface: "#0B1B3A",
+        panel: "#F1F5FF",
+        line: "rgba(15,23,42,0.10)",
       },
       fontFamily: {
         display: ["var(--font-display)", "system-ui", "sans-serif"],
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        glow: "0 0 32px rgba(42, 102, 255, 0.36)",
-        volt: "0 0 26px rgba(210, 255, 42, 0.38)",
+        glow: "0 24px 60px -20px rgba(47, 91, 255, 0.45)",
+        card: "0 18px 40px -24px rgba(13, 20, 38, 0.25)",
+        soft: "0 8px 24px -12px rgba(13, 20, 38, 0.18)",
+      },
+      borderRadius: {
+        "2xl": "1.25rem",
+        "3xl": "1.75rem",
       },
       animation: {
-        ticker: "ticker 24s linear infinite",
+        ticker: "ticker 32s linear infinite",
         float: "float 6s ease-in-out infinite",
+        "fade-up": "fade-up 0.6s ease-out both",
       },
       keyframes: {
         ticker: {
@@ -32,6 +56,10 @@ const config: Config = {
         float: {
           "0%,100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-14px)" },
+        },
+        "fade-up": {
+          "0%": { opacity: "0", transform: "translateY(16px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
       },
     },
