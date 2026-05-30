@@ -6,6 +6,7 @@ import type { Slot } from "@/lib/types";
 import { calculateTotals } from "@/lib/pricing";
 import { BookingStickyBar } from "@/components/booking-sticky-bar";
 import { WaitlistModal, type WaitlistTarget } from "@/components/waitlist-modal";
+import { WeatherChip } from "@/components/weather-chip";
 import { generateMultiICS, whatsappBatchLink, type IcsBooking } from "@/lib/ics";
 
 function timeLabel(value: string) {
@@ -191,6 +192,10 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
             onChange={(e) => setDate(e.target.value)}
             className="rounded-xl border border-brand/15 bg-white px-3 py-2.5 text-sm font-semibold text-ink outline-none focus:border-brand"
           />
+        </div>
+
+        <div className="px-5 pt-3">
+          <WeatherChip date={date} />
         </div>
 
         <div className="flex flex-col gap-3 px-5 py-3 text-xs text-slatey sm:flex-row sm:items-center sm:justify-between">
