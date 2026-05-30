@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   ArrowRight,
@@ -103,17 +105,31 @@ export function AdminConsole() {
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={logout}
-          disabled={loggingOut}
-          className="inline-flex items-center gap-2 rounded-xl border border-brand/15 px-3 py-2 text-sm font-bold text-ink/70 transition hover:bg-brand/5 disabled:opacity-60"
-        >
-          {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />} Log out
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/gallery"
+            className="inline-flex items-center gap-2 rounded-xl border border-brand/15 px-3 py-2 text-sm font-bold text-brand transition hover:bg-brand/5"
+          >
+            Gallery Manager
+          </Link>
+          <Link
+            href="/admin/import"
+            className="inline-flex items-center gap-2 rounded-xl border border-brand/15 px-3 py-2 text-sm font-bold text-brand transition hover:bg-brand/5"
+          >
+            Import Wizard
+          </Link>
+          <button
+            type="button"
+            onClick={logout}
+            disabled={loggingOut}
+            className="inline-flex items-center gap-2 rounded-xl border border-brand/15 px-3 py-2 text-sm font-bold text-ink/70 transition hover:bg-brand/5 disabled:opacity-60"
+          >
+            {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />} Log out
+          </button>
+        </div>
       </div>
 
-      {tab === "overview" && <OverviewTab />}
+      {tab === "overview" && <AnalyticsDashboard />}
       {tab === "bookings" && <BookingsTab />}
       {tab === "courts" && <CourtTab />}
       {tab === "users" && <UsersTab />}
