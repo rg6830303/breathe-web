@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Bell, CalendarDays, CalendarPlus, Check, Info, Lock, MessageCircle, ReceiptText, Share2 } from "lucide-react";
+import { motion } from "framer-motion";
 import type { KeyboardEvent } from "react";
 import type { Slot } from "@/lib/types";
 import { calculateTotals } from "@/lib/pricing";
@@ -435,7 +436,7 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
                     const ariaLabel = `Court ${slot.courtId}, ${timeLabel(slot.startTime)}, ₹${slot.price}, ${state}`;
                     return (
                       <div key={`${slot.courtId}-${slot.startTime}`} role="gridcell" className="relative m-1">
-                        <button
+                        <motion.button
                           data-grid-cell="true"
                           data-row={rowIdx}
                           data-col={idx}
@@ -446,6 +447,8 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
                           onFocus={() => setFocus([rowIdx, idx])}
                           onClick={() => toggle(slot)}
                           disabled={slot.booked}
+                          animate={state === "open" ? { opacity: [0.75, 1, 0.75] } : { opacity: 1 }}
+                          transition={state === "open" ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : undefined}
                           className={`w-full min-h-[48px] rounded-xl border p-2 text-left transition outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 ${slotClass(state)}`}
                         >
                           <div className="flex items-center justify-between text-xs font-bold">
@@ -461,7 +464,7 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
                               ₹{slot.price}
                             </div>
                           )}
-                        </button>
+                        </motion.button>
                         {slot.booked && (
                           <button
                             type="button"
@@ -691,8 +694,12 @@ function SlotPill({ state }: { state: SlotState }) {
     );
   }
   return (
-    <span className="rounded-full border border-slot-openBorder bg-slot-openBg px-3 py-1 text-xs font-bold text-slot-open">
+    <motion.span
+      animate={{ opacity: [0.75, 1, 0.75] }}
+      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+      className="rounded-full border border-slot-openBorder bg-slot-openBg px-3 py-1 text-xs font-bold text-slot-open"
+    >
       Open
-    </span>
+    </motion.span>
   );
 }

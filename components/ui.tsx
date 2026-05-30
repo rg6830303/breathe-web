@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, Phone } from "lucide-react";
 import { site } from "@/lib/site";
+import { motion } from "framer-motion";
 
 export function Container({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <div className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${className}`}>{children}</div>;
@@ -59,12 +62,19 @@ export function PrimaryButton({
   className?: string;
 }) {
   return (
-    <Link
-      href={href}
-      className={`inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 active:scale-[0.98] ${className}`}
+    <motion.div
+      whileHover={{ scale: 1.04 }}
+      whileTap={{ scale: 0.96 }}
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+      className="inline-block"
     >
-      {children}
-    </Link>
+      <Link
+        href={href}
+        className={`inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 active:scale-[0.98] ${className}`}
+      >
+        {children}
+      </Link>
+    </motion.div>
   );
 }
 
@@ -109,18 +119,32 @@ export function CTABand() {
               Live availability across all courts, transparent pricing, and instant confirmation — straight from your phone.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link
-                href="/book"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-bold text-brand shadow-soft transition hover:bg-ball hover:text-ink active:scale-[0.98]"
+              <motion.div
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                className="inline-block w-full sm:w-auto"
               >
-                Book a Slot <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a
-                href={site.phoneHref}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/40 px-7 py-3.5 text-sm font-bold text-white transition hover:bg-white/10"
+                <Link
+                  href="/book"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-bold text-brand shadow-soft transition hover:bg-ball hover:text-ink"
+                >
+                  Book a Slot <ArrowRight className="h-4 w-4" />
+                </Link>
+              </motion.div>
+              <motion.div
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                className="inline-block w-full sm:w-auto"
               >
-                <Phone className="h-4 w-4" /> {site.phoneDisplay}
-              </a>
+                <a
+                  href={site.phoneHref}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/40 px-7 py-3.5 text-sm font-bold text-white transition hover:bg-white/10"
+                >
+                  <Phone className="h-4 w-4" /> {site.phoneDisplay}
+                </a>
+              </motion.div>
             </div>
           </div>
         </div>

@@ -88,11 +88,17 @@ export function Nav() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    active ? "bg-brand/10 text-brand" : "text-ink/70 hover:bg-brand/5 hover:text-brand"
+                  className={`relative rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    active ? "text-brand" : "text-ink/70 hover:bg-brand/5 hover:text-brand"
                   }`}
                 >
                   {link.label}
+                  {active && (
+                    <motion.div
+                      layoutId="nav-underline"
+                      className="absolute bottom-0 left-4 right-4 h-0.5 bg-brand-600"
+                    />
+                  )}
                 </Link>
               );
             })}
@@ -127,12 +133,24 @@ export function Nav() {
                 </Link>
               )
             )}
-            <Link
-              href="/book"
-              className="hidden items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 active:scale-[0.98] sm:inline-flex"
+            <motion.div
+              animate={{
+                boxShadow: [
+                  "0 0 0 0 rgba(47,91,255,0.4)",
+                  "0 0 0 10px rgba(47,91,255,0)",
+                  "0 0 0 0 rgba(47,91,255,0)"
+                ]
+              }}
+              transition={{ repeat: Infinity, duration: 2.5, ease: "easeOut" }}
+              className="hidden sm:inline-block rounded-full"
             >
-              Book a Slot <ArrowRight className="h-4 w-4" />
-            </Link>
+              <Link
+                href="/book"
+                className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 active:scale-[0.98]"
+              >
+                Book a Slot <ArrowRight className="h-4 w-4" />
+              </Link>
+            </motion.div>
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}

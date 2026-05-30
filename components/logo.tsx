@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 /** Pickleball paddle + ball mark, echoing the club logo's paddle that replaces the "t". */
 export function PaddleMark({ className = "h-7 w-7" }: { className?: string }) {
@@ -46,7 +47,8 @@ export function Logo({
 }) {
   const isLight = variant === "light";
   return (
-    <Link href="/" className={`group inline-flex items-center gap-2.5 ${className}`} aria-label="Breathe Pickleball home">
+    <motion.div whileHover={{ scale: 1.05 }} className="inline-block origin-left">
+      <Link href="/" className={`group inline-flex items-center gap-2.5 ${className}`} aria-label="Breathe Pickleball home">
       <span className={isLight ? "text-white" : "text-brand"}>
         <PaddleMark className="h-8 w-8 transition-transform duration-300 group-hover:-rotate-6" />
       </span>
@@ -67,5 +69,6 @@ export function Logo({
         </span>
       </span>
     </Link>
+    </motion.div>
   );
 }
