@@ -141,6 +141,17 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Global belt-and-braces: any animation or transition that slips past the
+     framer-motion / per-class overrides gets clamped to ~0ms so the user is
+     never forced to see motion they explicitly opted out of. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
   .paddle-3d,
   .animate-blob,
   .animate-spin-slow,
