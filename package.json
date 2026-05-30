@@ -11,6 +11,7 @@
   "dependencies": {
     "@libsql/client": "^0.17.3",
     "@react-email/components": "^0.0.36",
+    "@vercel/functions": "^3.6.1",
     "bcryptjs": "^3.0.3",
     "framer-motion": "^12.40.0",
     "jose": "^6.2.3",
