@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Check, Info, Lock, ReceiptText } from "lucide-react";
 import type { Slot } from "@/lib/types";
 import { calculateTotals } from "@/lib/pricing";
+import { BookingStickyBar } from "@/components/booking-sticky-bar";
 
 function timeLabel(value: string) {
   return new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" }).format(new Date(value));
@@ -296,7 +297,7 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
       </section>
 
       {/* Summary */}
-      <aside className="h-fit rounded-3xl border border-brand/10 bg-white p-5 shadow-card lg:sticky lg:top-28">
+      <aside id="reservation-summary" className="h-fit rounded-3xl border border-brand/10 bg-white p-5 shadow-card lg:sticky lg:top-28 scroll-mt-24">
         <h2 className="flex items-center gap-2 font-display text-lg font-extrabold text-ink">
           <ReceiptText className="h-5 w-5 text-brand" /> Reservation summary
         </h2>
@@ -362,6 +363,16 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
           Prices vary by time of day. Off-peak is most affordable; prime-time evenings are premium.
         </p>
       </aside>
+
+      <BookingStickyBar
+        selectedCount={selected.length}
+        total={totals.total}
+        onContinue={() => {
+          // Scroll the summary into view; on mobile the aside lives below the
+          // grid so this jumps the user straight to the confirm button.
+          document.getElementById("reservation-summary")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+      />
     </div>
   );
 }
