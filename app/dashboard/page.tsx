@@ -2,10 +2,50 @@ import { Award, Clock, Flame, Trophy, Zap } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { Container, Eyebrow } from "@/components/ui";
+import { UpcomingBookings, type UpcomingBooking } from "@/components/upcoming-bookings";
 import { requireUser } from "@/lib/guards";
+import { getSupabaseService, hasSupabaseEnv } from "@/lib/supabase";
 import { logout } from "@/app/actions/auth";
 
 export const dynamic = "force-dynamic";
+
+async function getUpcomingBookings(email: string): Promise<UpcomingBooking[]> {
+  if (!hasSupabaseEnv()) {
+    // Preview/dev fallback so the cancel UI is visible without Supabase.
+    const start = new Date();
+    start.setHours(start.getHours() + 8, 0, 0, 0);
+    const end = new Date(start.getTime() + 30 * 60 * 1000);
+    return [
+      {
+        id: 9001,
+        courtId: 2,
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+        totalAmount: 1062,
+        status: "confirmed",
+      },
+    ];
+  }
+  const supabase = getSupabaseService();
+  const { data: profile } = await supabase.from("profiles").select("id").eq("email", email).maybeSingle();
+  if (!profile) return [];
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id,court_id,start_time,end_time,total_amount,status")
+    .eq("user_id", profile.id)
+    .gte("start_time", new Date().toISOString())
+    .order("start_time", { ascending: true })
+    .limit(20);
+  if (error || !data) return [];
+  return data.map((row) => ({
+    id: row.id,
+    courtId: row.court_id,
+    startTime: row.start_time,
+    endTime: row.end_time,
+    totalAmount: Number(row.total_amount),
+    status: row.status,
+  }));
+}
 
 async function getDashboard() {
   const fallback = {
@@ -27,6 +67,7 @@ async function getDashboard() {
 export default async function DashboardPage() {
   const user = await requireUser();
   const data = await getDashboard();
+  const upcoming = await getUpcomingBookings(user.email);
   data.profile.full_name = user.name || data.profile.full_name;
   const xpPct = Math.min(100, Math.round((data.profile.current_xp / data.metrics.nextLevelXp) * 100));
   const stats = [
@@ -79,6 +120,14 @@ export default async function DashboardPage() {
               </div>
             ))}
           </div>
+
+          {/* Upcoming bookings */}
+          <section className="mt-6">
+            <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-extrabold text-ink">
+              <Clock className="h-5 w-5 text-brand" /> Upcoming bookings
+            </h2>
+            <UpcomingBookings initial={upcoming} />
+          </section>
 
           {/* XP progress */}
           <div className="mt-6 rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
