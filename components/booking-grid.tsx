@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Check, Info, Loader2, Lock, ReceiptText } from "lucide-react";
+import { CalendarDays, Check, Info, Lock, ReceiptText } from "lucide-react";
 import type { Slot } from "@/lib/types";
 import { calculateTotals } from "@/lib/pricing";
 
@@ -18,6 +18,23 @@ function dateLabel(value: string) {
 const PADDLE_PRICE = 300;
 const BALL_PRICE = 120;
 
+type Band = "morning" | "afternoon" | "evening";
+const BANDS: { key: Band; label: string }[] = [
+  { key: "morning", label: "Morning · 6–12" },
+  { key: "afternoon", label: "Afternoon · 12–5" },
+  { key: "evening", label: "Evening · 5–11" },
+];
+
+function bandFor(hour: number): Band {
+  if (hour < 12) return "morning";
+  if (hour < 17) return "afternoon";
+  return "evening";
+}
+
+function defaultBand(): Band {
+  return bandFor(new Date().getHours());
+}
+
 export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[]; initialDate: string }) {
   const [date, setDate] = useState(initialDate);
   const [slots, setSlots] = useState(initialSlots);
@@ -26,6 +43,8 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
   const [balls, setBalls] = useState(false);
   const [loading, setLoading] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [mobileCourt, setMobileCourt] = useState<number>(1);
+  const [band, setBand] = useState<Band>(defaultBand());
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +77,20 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
       cells: courts.map((c) => slots.find((s) => s.startTime === startTime && s.courtId === c.id)),
     }));
   }, [slots, courts]);
+
+  // Filter rows by selected time-of-day band on mobile + desktop.
+  const visibleRows = useMemo(
+    () => rows.filter((r) => bandFor(new Date(r.startTime).getHours()) === band),
+    [rows, band],
+  );
+
+  // When switching to a tab whose court no longer exists in the data (e.g.
+  // courts loaded from Supabase ordering), fall back to the first one.
+  useEffect(() => {
+    if (courts.length > 0 && !courts.some((c) => c.id === mobileCourt)) {
+      setMobileCourt(courts[0]!.id);
+    }
+  }, [courts, mobileCourt]);
 
   const equipmentTotal = (paddles ? PADDLE_PRICE : 0) + (balls ? BALL_PRICE : 0);
   const base = selected.reduce((sum, slot) => sum + slot.price, 0);
@@ -103,64 +136,162 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
           />
         </div>
 
-        <div className="flex items-center justify-between px-5 py-3 text-xs text-slatey">
+        <div className="flex flex-col gap-3 px-5 py-3 text-xs text-slatey sm:flex-row sm:items-center sm:justify-between">
           <span className="font-semibold text-ink">{dateLabel(date)}</span>
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded border border-brand/30 bg-brand/5" /> Open</span>
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-brand" /> Selected</span>
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-slate-200" /> Booked</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded bg-slot-openBg ring-1 ring-slot-openBorder" /> Open
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded bg-slot-selected" /> Selected
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded bg-slot-bookedBg ring-1 ring-slate-300" /> Booked
+            </span>
           </div>
         </div>
 
-        {/* Header */}
-        <div className="grid border-y border-brand/10 bg-brand/5 text-center text-xs font-bold uppercase tracking-wide text-ink" style={{ gridTemplateColumns: gridCols }}>
-          <div className="p-3 text-slatey">Time</div>
-          {courts.map((c) => (
-            <div key={c.id} className="border-l border-brand/10 p-3 text-brand">
-              {c.name}
-            </div>
-          ))}
+        {/* Time-of-day filter pills (mobile + desktop) */}
+        <div className="flex gap-2 overflow-x-auto border-y border-brand/10 bg-brand/[0.03] px-5 py-3">
+          {BANDS.map((b) => {
+            const isActive = band === b.key;
+            return (
+              <button
+                key={b.key}
+                type="button"
+                onClick={() => setBand(b.key)}
+                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                  isActive ? "bg-brand text-white shadow-soft" : "bg-white text-ink/70 border border-brand/15 hover:text-brand"
+                }`}
+                aria-pressed={isActive}
+              >
+                {b.label}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="relative max-h-[640px] overflow-y-auto">
-          {loading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
-              <Loader2 className="h-6 w-6 animate-spin text-brand" />
-            </div>
-          )}
-          {rows.map((row) => (
-            <div key={row.startTime} className="grid border-b border-brand/5" style={{ gridTemplateColumns: gridCols }}>
-              <div className="flex items-center justify-center bg-brand/[0.03] p-2 text-center text-xs font-bold text-slatey">
-                {timeLabel(row.startTime)}
+        {/* MOBILE: court tabs + stacked rows */}
+        <div className="lg:hidden">
+          <div className="flex gap-1 border-b border-brand/10 bg-white px-3 py-2">
+            {courts.map((c) => {
+              const isActive = mobileCourt === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setMobileCourt(c.id)}
+                  className={`flex-1 rounded-full px-3 py-2 text-xs font-bold transition ${
+                    isActive ? "bg-brand text-white shadow-soft" : "text-ink/70 hover:bg-brand/5"
+                  }`}
+                  aria-pressed={isActive}
+                >
+                  {c.name}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="relative">
+            {loading ? (
+              <div className="space-y-2 p-3" aria-busy="true" aria-label="Loading slots">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="animate-pulse h-12 bg-gray-100 rounded-lg" />
+                ))}
               </div>
-              {row.cells.map((slot, idx) => {
-                if (!slot) return <div key={idx} className="border-l border-brand/5" />;
-                const sel = isSelected(slot);
-                return (
-                  <button
-                    key={`${slot.courtId}-${slot.startTime}`}
-                    onClick={() => toggle(slot)}
-                    disabled={slot.booked}
-                    className={`slot-cell m-1 rounded-xl border p-2 text-left transition ${
-                      slot.booked
-                        ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                        : sel
-                          ? "border-brand bg-brand text-white shadow-glow"
-                          : "border-brand/20 bg-brand/[0.04] text-ink hover:border-brand hover:bg-brand/10"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-xs font-bold">
-                      <span>{slot.booked ? "Booked" : sel ? "Selected" : "Open"}</span>
-                      {slot.booked ? <Lock className="h-3.5 w-3.5" /> : sel ? <Check className="h-3.5 w-3.5" /> : null}
-                    </div>
-                    {!slot.booked && (
-                      <div className={`mt-1 text-xs font-semibold ${sel ? "text-white/90" : "text-slatey"}`}>₹{slot.price}</div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {visibleRows.length === 0 && (
+                  <li className="p-6 text-center text-sm text-slatey">No slots in this time band.</li>
+                )}
+                {visibleRows.map((row) => {
+                  const cell = row.cells.find((c) => c?.courtId === mobileCourt);
+                  if (!cell) return null;
+                  const sel = isSelected(cell);
+                  const disabled = cell.booked;
+                  return (
+                    <li
+                      key={`${cell.courtId}-${cell.startTime}`}
+                      className={`flex items-center justify-between min-h-[52px] px-4 py-3 border-b border-gray-100 ${
+                        disabled ? "cursor-not-allowed" : "cursor-pointer"
+                      }`}
+                      onClick={() => toggle(cell)}
+                    >
+                      <div>
+                        <div className="text-sm font-bold text-ink">{timeLabel(cell.startTime)}</div>
+                        <div className="text-xs text-slatey">{cell.courtName} · ₹{cell.price}</div>
+                      </div>
+                      <SlotPill state={disabled ? "booked" : sel ? "selected" : "open"} />
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        {/* DESKTOP: existing grid layout, retuned colors */}
+        <div className="hidden lg:block">
+          <div
+            className="grid border-y border-brand/10 bg-brand/5 text-center text-xs font-bold uppercase tracking-wide text-ink"
+            style={{ gridTemplateColumns: gridCols }}
+          >
+            <div className="p-3 text-slatey">Time</div>
+            {courts.map((c) => (
+              <div key={c.id} className="border-l border-brand/10 p-3 text-brand">
+                {c.name}
+              </div>
+            ))}
+          </div>
+
+          <div className="relative max-h-[640px] overflow-y-auto">
+            {loading ? (
+              <div className="space-y-2 p-3" aria-busy="true" aria-label="Loading slots">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="animate-pulse h-12 bg-gray-100 rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              visibleRows.map((row) => (
+                <div
+                  key={row.startTime}
+                  className="grid border-b border-brand/5"
+                  style={{ gridTemplateColumns: gridCols }}
+                >
+                  <div className="flex items-center justify-center bg-brand/[0.03] p-2 text-center text-xs font-bold text-slatey">
+                    {timeLabel(row.startTime)}
+                  </div>
+                  {row.cells.map((slot, idx) => {
+                    if (!slot) return <div key={idx} className="border-l border-brand/5" />;
+                    const sel = isSelected(slot);
+                    const state: SlotState = slot.booked ? "booked" : sel ? "selected" : "open";
+                    return (
+                      <button
+                        key={`${slot.courtId}-${slot.startTime}`}
+                        onClick={() => toggle(slot)}
+                        disabled={slot.booked}
+                        className={`m-1 min-h-[48px] rounded-xl border p-2 text-left transition ${slotClass(state)}`}
+                      >
+                        <div className="flex items-center justify-between text-xs font-bold">
+                          <span>{state === "booked" ? "Booked" : state === "selected" ? "Selected" : "Open"}</span>
+                          {state === "booked" ? (
+                            <Lock className="h-3.5 w-3.5" />
+                          ) : state === "selected" ? (
+                            <Check className="h-3.5 w-3.5" />
+                          ) : null}
+                        </div>
+                        {!slot.booked && (
+                          <div className={`mt-1 text-xs font-semibold ${state === "selected" ? "text-white/90" : "text-slatey"}`}>
+                            ₹{slot.price}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </section>
 
@@ -232,5 +363,42 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
         </p>
       </aside>
     </div>
+  );
+}
+
+type SlotState = "open" | "booked" | "selected";
+
+function slotClass(state: SlotState) {
+  switch (state) {
+    case "booked":
+      return "cursor-not-allowed border-slate-300 bg-slot-bookedBg text-slot-booked line-through";
+    case "selected":
+      return "border-brand bg-slot-selected text-white shadow-glow";
+    case "open":
+    default:
+      return "border-slot-openBorder bg-slot-openBg text-slot-open hover:border-brand";
+  }
+}
+
+/** Compact status pill used in the mobile rows. */
+function SlotPill({ state }: { state: SlotState }) {
+  if (state === "booked") {
+    return (
+      <span className="rounded-full bg-slot-bookedBg px-3 py-1 text-xs font-semibold text-slot-booked line-through">
+        Booked
+      </span>
+    );
+  }
+  if (state === "selected") {
+    return (
+      <span className="rounded-full bg-slot-selected px-3 py-1 text-xs font-bold text-white">
+        Selected
+      </span>
+    );
+  }
+  return (
+    <span className="rounded-full border border-slot-openBorder bg-slot-openBg px-3 py-1 text-xs font-bold text-slot-open">
+      Open
+    </span>
   );
 }
