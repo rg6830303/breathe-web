@@ -18,18 +18,19 @@ export default async function BookPage() {
   return (
     <>
       <Nav />
-      <main>
-        <section className="brand-gradient brand-mesh relative overflow-hidden text-white">
+      <main className="bg-brand-50/30">
+        {/* Adjusted padding on mobile to pull the scheduling interface upward cleanly */}
+        <section className="brand-gradient brand-mesh relative overflow-hidden text-white pb-16 pt-8 sm:py-16">
           <div className="court-lines absolute inset-0 opacity-25" />
-          <Container className="relative py-12 sm:py-14">
+          <Container className="relative">
             <Eyebrow light>Live booking</Eyebrow>
             <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">Reserve your court</h1>
-            <p className="mt-3 max-w-xl text-white/85">
+            <p className="mt-3 max-w-xl text-white/85 text-sm sm:text-base leading-relaxed">
               Pick a date, tap the open slots that suit you, and confirm. Availability updates in real time across all courts.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               {fallbackPricingRules.map((rule) => (
-                <span key={rule.id} className="rounded-full bg-white/12 px-3 py-1.5 text-xs font-semibold text-white">
+                <span key={rule.id} className="rounded-full bg-white/12 px-3 py-1.5 text-[10px] sm:text-xs font-semibold text-white">
                   {rule.label}: ₹{rule.price}
                 </span>
               ))}
@@ -37,7 +38,8 @@ export default async function BookPage() {
           </Container>
         </section>
 
-        <Container className="py-8 sm:py-10">
+        {/* Applied a negative top margin to make the booking card float cleanly over the gradient banner */}
+        <Container className="pb-8 pt-0 sm:pb-12 -mt-10 sm:-mt-14 relative z-10">
           <BookingGrid initialDate={date} initialSlots={slots} />
         </Container>
       </main>

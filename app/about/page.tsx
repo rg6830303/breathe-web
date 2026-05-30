@@ -3,7 +3,7 @@
 import { Users, Wind, TrendingUp, Star, MapPin } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
-import { CTABand, Container } from "@/components/ui";
+import { CTABand, Container, SectionDivider } from "@/components/ui";
 import { PageHero } from "@/components/ui/page-hero";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { StatCounter } from "@/components/motion/stat-counter";
@@ -42,7 +42,7 @@ export default function AboutPage() {
 
         {/* Mission & Stats */}
         <section
-          className="px-4 py-20 sm:px-6 lg:px-8 bg-brand-50"
+          className="px-4 py-20 sm:px-6 lg:px-8 bg-white"
           style={{
             backgroundImage: "radial-gradient(circle, #2F5BFF11 1px, transparent 1px)",
             backgroundSize: "24px 24px",
@@ -111,8 +111,10 @@ export default function AboutPage() {
           </Container>
         </section>
 
+        <SectionDivider />
+
         {/* Timeline */}
-        <section className="section-light px-4 py-20 sm:px-6 lg:px-8 bg-white">
+        <section className="section-light px-4 py-20 sm:px-6 lg:px-8 bg-brand-50/20">
           <Container className="!px-0 max-w-3xl">
             <div className="text-center mb-12">
               <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.2em] uppercase text-brand-600">
@@ -160,8 +162,10 @@ export default function AboutPage() {
           </Container>
         </section>
 
+        <SectionDivider />
+
         {/* Culture */}
-        <section className="px-4 py-20 sm:px-6 lg:px-8 bg-brand-50">
+        <section className="px-4 py-20 sm:px-6 lg:px-8 bg-white">
           <Container className="!px-0">
             <div className="brand-gradient brand-mesh relative overflow-hidden rounded-3xl p-8 text-white shadow-glow sm:p-12">
               <div className="court-lines absolute inset-0 opacity-20" />
@@ -198,6 +202,8 @@ export default function AboutPage() {
             </div>
           </Container>
         </section>
+
+        <SectionDivider />
 
         <CTABand />
       </main>

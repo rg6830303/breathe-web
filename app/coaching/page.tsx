@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Check, GraduationCap, Users, Target, Trophy } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
-import { CTABand, Container } from "@/components/ui";
+import { CTABand, Container, SectionDivider } from "@/components/ui";
 import { PageHero } from "@/components/ui/page-hero";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { GlowCard } from "@/components/ui/glow-card";
@@ -65,7 +65,7 @@ export default function CoachingPage() {
         />
 
         {/* Program Cards section */}
-        <section className="px-4 py-20 sm:px-6 lg:px-8 bg-white">
+        <section className="px-4 py-20 sm:px-6 lg:px-8 bg-brand-50/20">
           <Container className="!px-0">
             <div className="text-center mb-12">
               <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.2em] uppercase text-brand-600">
@@ -115,8 +115,10 @@ export default function CoachingPage() {
           </Container>
         </section>
 
+        <SectionDivider />
+
         {/* 4-step process */}
-        <section className="section-light px-4 py-20 sm:px-6 lg:px-8 bg-brand-50">
+        <section className="section-light px-4 py-20 sm:px-6 lg:px-8 bg-white">
           <Container className="!px-0">
             <div className="text-center mb-16">
               <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.2em] uppercase text-brand-600">
@@ -169,8 +171,10 @@ export default function CoachingPage() {
           </Container>
         </section>
 
+        <SectionDivider />
+
         {/* Private Sessions CTA block */}
-        <section className="px-4 py-16 sm:px-6 lg:px-8 bg-white">
+        <section className="px-4 py-16 sm:px-6 lg:px-8 bg-brand-50/20">
           <Container className="!px-0">
             <ScrollReveal direction="up">
               <div className="bg-brand-700 text-white rounded-3xl p-8 md:p-12 relative overflow-hidden shadow-glow">
@@ -198,6 +202,8 @@ export default function CoachingPage() {
             </ScrollReveal>
           </Container>
         </section>
+
+        <SectionDivider />
 
         <CTABand />
       </main>

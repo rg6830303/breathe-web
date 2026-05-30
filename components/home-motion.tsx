@@ -155,7 +155,7 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
             </motion.div>
             
             {/* Stat Counters */}
-            <motion.div variants={spanVariants} className="mt-10 grid max-w-md grid-cols-3 gap-4">
+            <motion.div variants={spanVariants} className="mt-10 flex flex-wrap gap-x-8 gap-y-4 max-w-md sm:grid sm:grid-cols-3 sm:gap-4">
               <div>
                 <div className="font-display text-2xl font-extrabold text-lime sm:text-3xl">
                   <StatCounter end={3} />

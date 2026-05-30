@@ -242,8 +242,8 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       {/* Court matrix */}
       <section className="overflow-hidden rounded-3xl border border-brand/10 bg-white shadow-soft">
-        <div className="flex flex-col gap-4 border-b border-brand/10 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-4 border-b border-brand/10 p-4 sm:p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="hidden sm:flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand/10 text-brand">
               <CalendarDays className="h-5 w-5" />
             </span>
@@ -252,13 +252,18 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
               <p className="text-sm text-slatey">30-minute slots · {courts.length} courts</p>
             </div>
           </div>
-          <input
-            type="date"
-            min={minDate}
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="rounded-xl border border-brand/15 bg-white px-3 py-2.5 text-sm font-semibold text-ink outline-none focus:border-brand"
-          />
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+            <span className="font-bold text-ink text-sm sm:hidden flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-brand" /> Select Date:
+            </span>
+            <input
+              type="date"
+              min={minDate}
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="rounded-xl border border-brand/15 bg-white px-3 py-2.5 text-sm font-semibold text-ink outline-none focus:border-brand w-auto"
+            />
+          </div>
         </div>
 
         <div className="px-5 pt-3">

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Clock, Facebook, Instagram, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
-import { Container } from "@/components/ui";
+import { Container, SectionDivider } from "@/components/ui";
 import { PageHero } from "@/components/ui/page-hero";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { GlowCard } from "@/components/ui/glow-card";
@@ -94,11 +94,17 @@ export default function ContactPage() {
                 />
               ))}
             </div>
+          </Container>
+        </section>
 
-            {/* Split Info Card + Google Map Section */}
-            <div className="mt-12 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <SectionDivider />
+
+        {/* Split Info Card + Google Map Section */}
+        <section className="px-4 py-16 sm:px-6 lg:px-8 bg-brand-50/20">
+          <Container className="!px-0">
+            <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
               <ScrollReveal direction="left" className="h-full">
-                <div className="rounded-3xl bg-brand-50 border border-brand/5 p-8 shadow-soft h-full flex flex-col justify-between">
+                <div className="rounded-3xl bg-white border border-brand/5 p-8 shadow-soft h-full flex flex-col justify-between">
                   <div>
                     <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.2em] uppercase text-brand-600 mb-6">
                       <span className="w-1.5 h-1.5 rounded-full bg-brand-600" /> FIND US
@@ -182,9 +188,15 @@ export default function ContactPage() {
                 </div>
               </ScrollReveal>
             </div>
+          </Container>
+        </section>
 
-            {/* Social Strip */}
-            <ScrollReveal direction="up" className="mt-12">
+        <SectionDivider />
+
+        {/* Social Strip */}
+        <section className="px-4 py-16 sm:px-6 lg:px-8 bg-white">
+          <Container className="!px-0">
+            <ScrollReveal direction="up">
               <div className="bg-brand-700 rounded-3xl p-8 text-white relative overflow-hidden shadow-glow">
                 <CourtPatternBg className="absolute inset-0 opacity-5 w-full h-full object-cover" />
                 <div className="relative flex flex-col md:flex-row items-center justify-between gap-6 max-w-4xl mx-auto">

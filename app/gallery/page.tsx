@@ -24,7 +24,7 @@ import {
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { PageHero } from "@/components/ui/page-hero";
-import { Container, CTABand } from "@/components/ui";
+import { Container, CTABand, SectionDivider } from "@/components/ui";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { CourtPatternBg } from "@/components/ui/court-pattern-bg";
 import { site } from "@/lib/site";
@@ -156,9 +156,15 @@ export default function GalleryPage() {
                 );
               })}
             </div>
+          </Container>
+        </section>
 
-            {/* Instagram CTA Section */}
-            <ScrollReveal direction="up" className="mt-16">
+        <SectionDivider />
+
+        {/* Instagram CTA Section */}
+        <section className="px-4 py-16 sm:px-6 lg:px-8 bg-brand-50/20">
+          <Container className="!px-0">
+            <ScrollReveal direction="up">
               <div className="bg-gradient-to-r from-purple-800 via-pink-700 to-amber-600 rounded-3xl p-8 text-center text-white shadow-glow">
                 <div className="relative max-w-xl mx-auto flex flex-col items-center gap-4">
                   <Instagram className="h-8 w-8 text-white" />
@@ -182,6 +188,8 @@ export default function GalleryPage() {
             </ScrollReveal>
           </Container>
         </section>
+
+        <SectionDivider />
 
         {/* Custom full screen Lightbox overlay */}
         <AnimatePresence>

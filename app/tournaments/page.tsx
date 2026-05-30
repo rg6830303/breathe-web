@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Award, CalendarDays, Crown, IndianRupee, MapPin, Medal, Trophy, Users, Check } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
-import { CTABand, Container } from "@/components/ui";
+import { CTABand, Container, SectionDivider } from "@/components/ui";
 import { PageHero } from "@/components/ui/page-hero";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { StatCounter } from "@/components/motion/stat-counter";
@@ -147,6 +147,8 @@ export default function TournamentsPage() {
           </Container>
         </section>
 
+        <SectionDivider />
+
         {/* Experience & Bracket draw section */}
         <section className="px-4 py-20 sm:px-6 lg:px-8 bg-white">
           <Container className="!px-0 grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
@@ -193,31 +195,33 @@ export default function TournamentsPage() {
           </Container>
         </section>
 
+        <SectionDivider />
+
         {/* Next event CTA */}
-        <section className="px-4 pb-4 sm:px-6 lg:px-8 bg-white">
+        <section className="px-4 py-16 sm:px-6 lg:px-8 bg-brand-50/20">
           <Container className="!px-0">
             <ScrollReveal direction="up">
-              <div className="brand-gradient brand-mesh relative overflow-hidden rounded-3xl p-8 text-center text-white shadow-glow sm:p-12">
-                <div className="court-lines absolute inset-0 opacity-20" />
+              <div className="bg-gray-950 border border-brand-500/20 relative overflow-hidden rounded-3xl p-8 text-center text-white shadow-card sm:p-12">
+                <div className="court-lines absolute inset-0 opacity-10" />
                 <div className="relative">
                   <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.2em] uppercase text-lime">
                     <span className="w-1.5 h-1.5 rounded-full bg-lime" /> NEXT EVENT
                   </span>
-                  <h2 className="mx-auto mt-4 max-w-2xl font-display text-2xl font-extrabold sm:text-3xl">
+                  <h2 className="mx-auto mt-4 max-w-2xl font-display text-2xl font-extrabold sm:text-3xl text-white">
                     Want in on the next Breathe Open?
                   </h2>
-                  <p className="mx-auto mt-3 max-w-xl text-white/85 text-sm leading-relaxed">
+                  <p className="mx-auto mt-3 max-w-xl text-gray-400 text-sm leading-relaxed">
                     Registrations open ahead of each event. Follow us on Instagram or reach out and we'll make sure you don't miss the next one.
                   </p>
                   
                   <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                     <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} className="w-full sm:w-auto">
-                      <a href={site.instagram} target="_blank" rel="noopener noreferrer" className="inline-flex w-full sm:w-auto items-center justify-center rounded-full bg-white px-7 py-3 text-sm font-bold text-brand shadow-soft hover:bg-gray-50 transition-colors">
+                      <a href={site.instagram} target="_blank" rel="noopener noreferrer" className="inline-flex w-full sm:w-auto items-center justify-center rounded-full bg-lime px-7 py-3 text-sm font-bold text-gray-900 shadow-soft hover:bg-lime-dark transition-colors">
                         Follow for updates
                       </a>
                     </motion.div>
                     <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} className="w-full sm:w-auto">
-                      <Link href="/contact" className="inline-flex w-full sm:w-auto items-center justify-center rounded-full border border-white/40 px-7 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10">
+                      <Link href="/contact" className="inline-flex w-full sm:w-auto items-center justify-center rounded-full border border-white/20 px-7 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10">
                         Register interest
                       </Link>
                     </motion.div>
@@ -227,6 +231,8 @@ export default function TournamentsPage() {
             </ScrollReveal>
           </Container>
         </section>
+
+        <SectionDivider />
 
         <CTABand />
       </main>

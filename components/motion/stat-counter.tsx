@@ -18,7 +18,7 @@ type Props = {
  *  natural than a linear ramp. Runs once. */
 export function StatCounter({ end, prefix = "", suffix = "", duration = 1800, className }: Props) {
   const ref = useRef<HTMLSpanElement | null>(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const inView = useInView(ref, { once: true, margin: "0px" });
   const [value, setValue] = useState(0);
 
   useEffect(() => {

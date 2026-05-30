@@ -32,7 +32,7 @@ export function WeatherChip({ date }: { date: string }) {
         {forecast.tempC}°C · {forecast.label} · {forecast.rainPct}% chance of rain
       </span>
       {wet && (
-        <span className="text-amber font-medium ml-2">
+        <span className="text-[#B45309] font-bold ml-2">
           ⚠ Outdoor courts — check before you head out
         </span>
       )}
