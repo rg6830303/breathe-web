@@ -8,18 +8,18 @@ import {
   ShieldCheck,
   ShowerHead,
   Sparkles,
-  Star,
   Sun,
   Trophy,
   Users,
   Zap,
 } from "lucide-react";
 import { Footer } from "@/components/footer";
+import { LiveAvailability } from "@/components/live-availability";
 import { Nav } from "@/components/nav";
 import { NoticeBoard } from "@/components/notice-board";
 import { Reveal } from "@/components/reveal";
 import { PaddleMark } from "@/components/logo";
-import { CTABand, Container, Eyebrow, SectionHeading } from "@/components/ui";
+import { CTABand, Container, SectionHeading } from "@/components/ui";
 import { getSupabaseService, hasSupabaseEnv } from "@/lib/supabase";
 import { site } from "@/lib/site";
 import type { Notice } from "@/lib/types";
@@ -52,14 +52,52 @@ const features = [
 const steps = [
   { icon: CalendarCheck, title: "Pick your slot", text: "Choose a date and tap an open 30-minute slot on any court." },
   { icon: Zap, title: "Review & confirm", text: "See transparent pricing with GST, add paddles or balls, and confirm." },
-  { icon: Star, title: "Show up & play", text: "Get a confirmation, walk in, and we'll have your court ready." },
+  { icon: Sparkles, title: "Show up & play", text: "Get a confirmation, walk in, and we'll have your court ready." },
 ];
 
 const testimonials = [
-  { name: "Ananya R.", role: "Weekend regular", quote: "Booking used to mean five phone calls. Now it's three taps on my phone and I'm on court the same evening." },
-  { name: "Sourav M.", role: "Intermediate player", quote: "The coaching transformed my third-shot drop. Genuinely the best pickleball community in North Kolkata." },
-  { name: "Priya & Karan", role: "Doubles pair", quote: "The monthly open is so well run — great vibe, real competition, and the courtside kitchen is a bonus." },
+  { name: "Ananya Roy", role: "Weekend regular", memberType: "Member since 2024", quote: "Booking used to mean five phone calls. Now it's three taps on my phone and I'm on court the same evening." },
+  { name: "Sourav Mukherjee", role: "Intermediate player", memberType: "Coaching student", quote: "The coaching transformed my third-shot drop. Genuinely the best pickleball community in North Kolkata." },
+  { name: "Priya & Karan", role: "Doubles pair", memberType: "Tournament regulars", quote: "The monthly open is so well run — great vibe, real competition, and the courtside kitchen is a bonus." },
 ];
+
+function initialsFor(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join("");
+}
+
+/** Inline SVG of two parallel sidelines + a centre net line. Sits over the
+ *  hero gradient at 6% opacity for a faint pickleball-court suggestion. */
+function CourtLinesSVG() {
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      viewBox="0 0 1200 800"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      style={{ opacity: 0.06 }}
+    >
+      {/* Outer sidelines */}
+      <line x1="120" y1="80" x2="120" y2="720" stroke="white" strokeWidth="2" />
+      <line x1="1080" y1="80" x2="1080" y2="720" stroke="white" strokeWidth="2" />
+      {/* Baselines */}
+      <line x1="120" y1="80" x2="1080" y2="80" stroke="white" strokeWidth="2" />
+      <line x1="120" y1="720" x2="1080" y2="720" stroke="white" strokeWidth="2" />
+      {/* Centre net line */}
+      <line x1="120" y1="400" x2="1080" y2="400" stroke="white" strokeWidth="3" />
+      {/* Non-volley zone (kitchen) lines */}
+      <line x1="120" y1="310" x2="1080" y2="310" stroke="white" strokeWidth="1.5" strokeDasharray="6 6" />
+      <line x1="120" y1="490" x2="1080" y2="490" stroke="white" strokeWidth="1.5" strokeDasharray="6 6" />
+      {/* Centre service line */}
+      <line x1="600" y1="80" x2="600" y2="310" stroke="white" strokeWidth="1.5" />
+      <line x1="600" y1="490" x2="600" y2="720" stroke="white" strokeWidth="1.5" />
+    </svg>
+  );
+}
 
 export default async function Home() {
   const notices = await getNotices();
@@ -68,10 +106,10 @@ export default async function Home() {
     <>
       <Nav />
       <main>
-        {/* Hero */}
-        <section className="brand-gradient brand-mesh relative overflow-hidden text-white">
-          <div className="court-lines absolute inset-0 opacity-30" />
-          <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-ball/15 blur-3xl animate-blob" />
+        {/* Hero — brand-700 → brand-800 gradient with SVG court overlay */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-brand-700 to-brand-800 text-white">
+          <CourtLinesSVG />
+          <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-lime/10 blur-3xl animate-blob" />
           <div className="pointer-events-none absolute -right-16 bottom-0 h-80 w-80 rounded-full bg-white/10 blur-3xl animate-blob [animation-delay:3s]" />
           <div className="scene pointer-events-none absolute right-6 top-24 hidden xl:block">
             <PaddleMark className="paddle-3d h-24 w-24 text-white/80 drop-shadow-[0_18px_30px_rgba(0,0,0,0.25)]" />
@@ -79,11 +117,11 @@ export default async function Home() {
           <Container className="relative grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
             <div className="animate-fade-up">
               <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-white">
-                <MapPin className="h-3.5 w-3.5 text-ball" /> Kaikhali · North Kolkata
+                <MapPin className="h-3.5 w-3.5 text-lime" /> Kaikhali · North Kolkata
               </span>
               <h1 className="mt-5 font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
                 Welcome to <br />
-                <span className="text-ball">Breathe Pickleball</span>
+                <span className="text-lime">Breathe Pickleball</span>
               </h1>
               <p className="mt-5 max-w-xl text-base leading-7 text-white/85 sm:text-lg">
                 Three professional courts, coaching for every age, and a thriving community — all bookable in seconds from your phone.
@@ -91,13 +129,13 @@ export default async function Home() {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href="/book"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-bold text-brand shadow-soft transition hover:bg-ball hover:text-ink active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-lime px-7 py-3.5 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark active:scale-[0.98]"
                 >
                   Book Slot Now <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href="/coaching"
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/40 px-7 py-3.5 text-sm font-bold text-white transition hover:bg-white/10"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white text-white px-7 py-3.5 text-sm font-bold transition hover:bg-white/10"
                 >
                   Explore Coaching
                 </Link>
@@ -109,58 +147,21 @@ export default async function Home() {
                   ["All", "Skill levels"],
                 ].map(([v, l]) => (
                   <div key={l}>
-                    <div className="font-display text-2xl font-extrabold text-ball sm:text-3xl">{v}</div>
+                    <div className="font-display text-2xl font-extrabold text-lime sm:text-3xl">{v}</div>
                     <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/70">{l}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Live availability card */}
+            {/* Live availability — next 6 half-hour slots, demo data fine */}
             <div className="animate-fade-up [animation-delay:120ms]">
-              <div className="relative mx-auto max-w-md rounded-3xl border border-white/20 bg-white/10 p-5 shadow-glow backdrop-blur-md">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-ball">
-                    <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ball opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-ball" />
-                    </span>
-                    Live availability
-                  </span>
-                  <span className="text-xs font-semibold text-white/70">Today</span>
-                </div>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[0.7rem] font-bold">
-                  {Array.from({ length: 18 }).map((_, i) => {
-                    const booked = [2, 5, 8, 11, 14].includes(i);
-                    const prime = [6, 7, 12].includes(i);
-                    return (
-                      <div
-                        key={i}
-                        className={`rounded-lg border py-3 ${
-                          booked
-                            ? "border-white/10 bg-white/5 text-white/40"
-                            : prime
-                              ? "border-ball/60 bg-ball/20 text-white"
-                              : "border-white/25 bg-white/10 text-white"
-                        }`}
-                      >
-                        {booked ? "—" : "Open"}
-                      </div>
-                    );
-                  })}
-                </div>
-                <Link
-                  href="/book"
-                  className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-brand transition hover:bg-ball hover:text-ink"
-                >
-                  See all open slots <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
+              <LiveAvailability />
             </div>
           </Container>
         </section>
 
-        {/* Trust strip */}
+        {/* Trust strip — white */}
         <section className="border-b border-brand/10 bg-white">
           <Container className="grid grid-cols-2 gap-6 py-8 text-center sm:grid-cols-4">
             {[
@@ -180,8 +181,8 @@ export default async function Home() {
           </Container>
         </section>
 
-        {/* Features */}
-        <section className="section-light px-4 py-20 sm:px-6 lg:px-8">
+        {/* Features — brand-50 */}
+        <section className="bg-brand-50 px-4 py-20 sm:px-6 lg:px-8">
           <Container className="!px-0">
             <SectionHeading
               center
@@ -205,8 +206,8 @@ export default async function Home() {
           </Container>
         </section>
 
-        {/* How it works */}
-        <section className="px-4 py-20 sm:px-6 lg:px-8">
+        {/* How it works — white */}
+        <section className="bg-white px-4 py-20 sm:px-6 lg:px-8">
           <Container className="!px-0">
             <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
               <SectionHeading
@@ -234,10 +235,10 @@ export default async function Home() {
           </Container>
         </section>
 
-        {/* Coaching + Tournaments split */}
-        <section className="px-4 pb-4 sm:px-6 lg:px-8">
+        {/* Coaching + Tournaments split — brand-50 */}
+        <section className="bg-brand-50 px-4 py-20 sm:px-6 lg:px-8">
           <Container className="!px-0 grid gap-5 lg:grid-cols-2">
-            <div className="relative overflow-hidden rounded-3xl border border-brand/10 bg-brand/5 p-8">
+            <div className="relative overflow-hidden rounded-3xl border border-brand/10 bg-white p-8 shadow-soft">
               <GraduationCap className="h-10 w-10 text-brand" />
               <h3 className="mt-4 font-display text-2xl font-extrabold text-ink">Coaching that levels you up</h3>
               <p className="mt-3 text-sm leading-6 text-slatey">
@@ -247,15 +248,15 @@ export default async function Home() {
                 View coaching programs <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-            <div className="brand-gradient brand-mesh relative overflow-hidden rounded-3xl p-8 text-white shadow-glow">
-              <div className="court-lines absolute inset-0 opacity-25" />
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 to-brand-800 p-8 text-white shadow-glow">
+              <CourtLinesSVG />
               <div className="relative">
-                <Trophy className="h-10 w-10 text-ball" />
+                <Trophy className="h-10 w-10 text-lime" />
                 <h3 className="mt-4 font-display text-2xl font-extrabold">Tournaments with real stakes</h3>
                 <p className="mt-3 text-sm leading-6 text-white/85">
                   Monthly opens and beginner brackets with cash prizes, ranking points, and the best courtside atmosphere in the city.
                 </p>
-                <Link href="/tournaments" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-ball hover:gap-3 transition-all">
+                <Link href="/tournaments" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-lime hover:gap-3 transition-all">
                   See the tournament calendar <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -263,27 +264,28 @@ export default async function Home() {
           </Container>
         </section>
 
-        {/* Notice board */}
+        {/* Notice board (component handles its own background) */}
         <NoticeBoard notices={notices} />
 
-        {/* Testimonials */}
-        <section className="section-light px-4 py-20 sm:px-6 lg:px-8">
+        {/* Testimonials — brand-50 */}
+        <section className="bg-brand-50 px-4 py-20 sm:px-6 lg:px-8">
           <Container className="!px-0">
             <SectionHeading center eyebrow="From our community" title="Loved by players across Kolkata" />
             <div className="mt-12 grid gap-5 md:grid-cols-3">
-              {testimonials.map((t, i) => (
-                <Reveal key={t.name} as="figure" delay={i * 90} className="card-3d rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-                  <div className="flex gap-1 text-ball">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-current" />
-                    ))}
+              {testimonials.map((t) => (
+                <div key={t.name} className="rounded-2xl bg-white shadow-md p-6 flex flex-col gap-4">
+                  <div className="flex gap-1 text-amber">{"★".repeat(5)}</div>
+                  <p className="text-gray-700 italic">&ldquo;{t.quote}&rdquo;</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-brand-600 flex items-center justify-center text-white font-semibold text-sm">
+                      {initialsFor(t.name)}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-900">{t.name}</div>
+                      <div className="text-sm text-gray-500">{t.memberType}</div>
+                    </div>
                   </div>
-                  <blockquote className="mt-4 text-sm leading-6 text-ink">“{t.quote}”</blockquote>
-                  <figcaption className="mt-5 text-sm">
-                    <span className="font-bold text-ink">{t.name}</span>
-                    <span className="block text-slatey">{t.role}</span>
-                  </figcaption>
-                </Reveal>
+                </div>
               ))}
             </div>
           </Container>
