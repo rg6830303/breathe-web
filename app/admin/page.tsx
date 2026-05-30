@@ -1,9 +1,12 @@
-import { addFinanceEntry, createNotice, deleteNotice, importBookingsCsv, updateBookingAdmin, upsertPricingRule } from "@/app/actions";
+import { addFinanceEntry, importBookingsCsv, updateBookingAdmin, upsertPricingRule } from "@/app/actions";
+import { AdminNotices, type AdminNotice } from "@/components/admin-notices";
+import { BookingHeatmap } from "@/components/booking-heatmap";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { Container, Eyebrow } from "@/components/ui";
-import { getAdminOverview } from "@/lib/admin-data";
+import { getAdminOverview, getBookingAnalytics } from "@/lib/admin-data";
 import { requireAdmin } from "@/lib/guards";
+import { getSupabaseService, hasSupabaseEnv } from "@/lib/supabase";
 import { logout } from "@/app/actions/auth";
 
 export const dynamic = "force-dynamic";
@@ -22,9 +25,22 @@ function dateTimeInput(value: string) {
   return new Date(value).toISOString().slice(0, 16);
 }
 
+async function getNoticesForAdmin(): Promise<AdminNotice[]> {
+  if (!hasSupabaseEnv()) {
+    return [
+      { id: "fb-1", title: "Tonight: prime-time courts filling fast", body: "7–9 PM slots on Courts 1 & 2 are nearly gone.", category: "daily", active: true, created_at: new Date().toISOString() },
+      { id: "fb-2", title: "Weekend Doubles Ladder", body: "Saturday social ladder.", category: "weekly", active: true, created_at: new Date().toISOString() },
+    ];
+  }
+  const { data } = await getSupabaseService().from("notices").select("*").order("created_at", { ascending: false });
+  return (data ?? []) as AdminNotice[];
+}
+
 export default async function AdminPage() {
   const admin = await requireAdmin();
   const overview = await getAdminOverview();
+  const analytics = await getBookingAnalytics();
+  const notices = await getNoticesForAdmin();
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -194,23 +210,49 @@ export default async function AdminPage() {
             </div>
           </section>
 
-          <section className="mt-6 grid gap-6 lg:grid-cols-2">
-            <form action={createNotice} className={`${card} grid gap-3`}>
-              <h2 className="font-display text-xl font-extrabold text-ink">Notice board editorial</h2>
-              <input name="title" placeholder="Notice title" className={field} required />
-              <textarea name="content" placeholder="Announcement content" rows={5} className={field} required />
-              <select name="type" className={field}>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
-              <button className={btnPrimary}>Publish notice</button>
-            </form>
-            <form action={deleteNotice} className={`${card} flex flex-col gap-3`}>
-              <h2 className="font-display text-xl font-extrabold text-ink">Purge notice</h2>
-              <input name="id" placeholder="Notice ID to purge" type="number" inputMode="numeric" className={field} required />
-              <button className="rounded-xl border border-red-300 px-4 py-3 text-sm font-bold text-red-500 transition hover:bg-red-50">Purge</button>
-            </form>
+          {/* Notice board (group12) — read/writes the new `notices` table
+              via /api/notices. Replaces the old form/purge pair that wrote
+              to `notice_board`. */}
+          <section className="mt-6">
+            <div className="mb-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand">Editorial</p>
+              <h2 className="font-display text-xl font-extrabold text-ink">Notice board</h2>
+            </div>
+            <AdminNotices initial={notices} />
+          </section>
+
+          {/* Analytics (group12) */}
+          <section className="mt-6">
+            <div className="mb-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand">Insights</p>
+              <h2 className="font-display text-xl font-extrabold text-ink">Analytics — this month</h2>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                ["Total bookings", String(analytics.totalBookings)],
+                ["Revenue", money(analytics.totalRevenue)],
+                ["Occupancy", `${analytics.occupancyPct}%`],
+                [
+                  "Top hour",
+                  analytics.mostPopularHour == null
+                    ? "—"
+                    : `${analytics.mostPopularHour % 12 === 0 ? 12 : analytics.mostPopularHour % 12}${analytics.mostPopularHour >= 12 ? " PM" : " AM"}`,
+                ],
+              ].map(([label, value]) => (
+                <div key={label} className={card}>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slatey">{label}</p>
+                  <div className="mt-2 font-display text-2xl font-extrabold text-brand">{value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className={`mt-4 ${card}`}>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slatey">
+                Bookings by hour (off-peak · standard · prime · late)
+              </p>
+              <BookingHeatmap data={analytics.hourly} />
+            </div>
           </section>
         </Container>
       </main>

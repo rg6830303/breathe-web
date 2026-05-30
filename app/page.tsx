@@ -32,9 +32,29 @@ async function getNotices(): Promise<Notice[]> {
   ];
   if (!hasSupabaseEnv()) return fallback;
   try {
-    const { data, error } = await getSupabaseService().from("notice_board").select("*").order("created_at", { ascending: false });
-    if (error) throw error;
-    return data?.length ? data : fallback;
+    // group12: prefer the new `notices` table (uuid pk, `body`, `active`).
+    // Fall back to the legacy `notice_board` table while existing rows still
+    // live there. Anything cast through `Notice` keeps the rest of the page
+    // unaware of the schema swap.
+    const supabase = getSupabaseService();
+    const fromNew = await supabase
+      .from("notices")
+      .select("id,title,body,category,created_at")
+      .eq("active", true)
+      .order("created_at", { ascending: false });
+    if (!fromNew.error && fromNew.data?.length) {
+      return fromNew.data.map((row, idx) => ({
+        id: idx + 1,
+        title: row.title,
+        content: row.body ?? "",
+        type: row.category as Notice["type"],
+        created_at: row.created_at,
+        updated_at: row.created_at,
+      }));
+    }
+    const fromLegacy = await supabase.from("notice_board").select("*").order("created_at", { ascending: false });
+    if (fromLegacy.error) throw fromLegacy.error;
+    return fromLegacy.data?.length ? fromLegacy.data : fallback;
   } catch {
     return fallback;
   }
