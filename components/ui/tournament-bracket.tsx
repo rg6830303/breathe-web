@@ -12,7 +12,7 @@ export function TournamentBracket() {
     hidden: { pathLength: 0 },
     visible: {
       pathLength: 1,
-      transition: { duration: 1.2, ease: "easeInOut", delay: 0.6 },
+      transition: { duration: 1.2, ease: "easeInOut" as const, delay: 0.6 },
     },
   };
 
@@ -21,7 +21,7 @@ export function TournamentBracket() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: "easeOut", delay },
+      transition: { duration: 0.5, ease: "easeOut" as const, delay },
     },
   });
 
@@ -31,7 +31,7 @@ export function TournamentBracket() {
       scale: 1,
       opacity: 1,
       borderColor: "#FFC93C",
-      transition: { type: "spring", stiffness: 200, damping: 15, delay: 1.8 },
+      transition: { type: "spring" as const, stiffness: 200, damping: 15, delay: 1.8 },
     },
   };
 

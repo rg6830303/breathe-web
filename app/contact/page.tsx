@@ -9,6 +9,7 @@ import { PageHero } from "@/components/ui/page-hero";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { GlowCard } from "@/components/ui/glow-card";
 import { TiltCard } from "@/components/motion/tilt-card";
+import { CourtPatternBg } from "@/components/ui/court-pattern-bg";
 import { motion } from "framer-motion";
 import { site } from "@/lib/site";
 

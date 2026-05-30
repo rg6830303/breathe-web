@@ -12,7 +12,7 @@ type Props = {
   direction?: Direction;
   className?: string;
   /** Optional override of the rootMargin offset — bigger = triggers later. */
-  margin?: `-${number}px`;
+  margin?: string;
 };
 
 /** Scroll-triggered reveal used on every inner page. Fires `once`, so once
@@ -21,7 +21,7 @@ type Props = {
  *  (the duration is clamped, not the variants themselves). */
 export function ScrollReveal({ children, delay = 0, direction = "up", className = "", margin = "-80px" }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const inView = useInView(ref, { once: true, margin });
+  const inView = useInView(ref, { once: true, margin: margin as any });
   const variants = {
     hidden: {
       opacity: 0,

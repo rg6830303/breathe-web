@@ -24,7 +24,7 @@ import {
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { PageHero } from "@/components/ui/page-hero";
-import { Container } from "@/components/ui";
+import { Container, CTABand } from "@/components/ui";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { CourtPatternBg } from "@/components/ui/court-pattern-bg";
 import { site } from "@/lib/site";
