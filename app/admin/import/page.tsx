@@ -192,7 +192,7 @@ export default function ImportWizardPage() {
           notes: rawNotes ? String(rawNotes).trim() : null,
           originalRowIndex: idx + 1,
           isValid: false,
-          validationError: null,
+          validationError: null as string | null,
           isExcluded: false
         };
 
