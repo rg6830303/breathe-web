@@ -28,7 +28,7 @@ import { TestimonialsCarousel } from "@/components/testimonials-carousel";
 import type { Notice } from "@/lib/types";
 
 const features = [
-  { icon: Sun, title: "3 pro outdoor courts", text: "Tournament-grade surfaces with proper net systems and floodlights for evening play." },
+  { icon: Sun, title: "3 premium asphalt courts", text: "Professional asphalt surface with tournament-grade net systems, floodlit for evening play." },
   { icon: GraduationCap, title: "Coaching for all ages", text: "Structured programs from first-timers to competitive players, led by certified coaches." },
   { icon: Trophy, title: "Tournaments & cash prizes", text: "Regular open and beginner brackets that bring the city's pickleball community together." },
   { icon: Coffee, title: "In-house kitchen", text: "Refuel courtside with snacks and beverages between games." },

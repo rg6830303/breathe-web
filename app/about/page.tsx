@@ -17,7 +17,7 @@ const values = [
   { icon: Users, title: "Community first", text: "We're a place where regulars know each other's names and first-timers feel at home from rally one." },
   { icon: Wind, title: "Breathe & play", text: "Sport as a way to switch off, move, and reset. Good rallies, good people, fresh air." },
   { icon: TrendingUp, title: "Always growing", text: "From casual evenings to competitive ladders, we help players find their next level." },
-  { icon: Star, title: "Quality courts", text: "Tournament-grade surfaces and proper equipment so every game feels the part." },
+  { icon: Star, title: "Premium asphalt courts", text: "Professional asphalt surface with tournament-grade net systems, floodlit for evening play." },
 ];
 
 const timeline = [

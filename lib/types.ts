@@ -1,57 +1,9 @@
-export type Role = "player" | "admin";
 export type NoticeType = "daily" | "weekly" | "monthly";
 
-export type Court = {
-  id: number;
-  name: string;
-  type: string;
-};
-
-export type Booking = {
-  id: number;
-  user_id: string;
-  court_id: number;
-  start_time: string;
-  end_time: string;
-  total_amount: number;
-  status: string;
-};
-
-export type BookingLedgerRow = Booking & {
-  player_name?: string;
-  player_email?: string;
-  base_amount: number;
-  tax_amount: number;
-  operating_cost: number;
-  gross_profit: number;
-};
-
-export type PricingRule = {
-  id: number;
-  label: string;
-  court_id: number | null;
-  start_time: string;
-  end_time: string;
-  price: number;
-  active: boolean;
-};
-
-export type FinanceEntry = {
-  id: number;
-  entry_date: string;
-  category: "revenue" | "expense" | "adjustment";
-  label: string;
-  amount: number;
-  notes: string | null;
-};
-
 export type Slot = {
-  courtId: number;
-  courtName: string;
-  type: string;
-  startTime: string;
-  endTime: string;
-  booked: boolean;
+  court: number;
+  time: string;
+  status: "open" | "booked" | "blocked";
   price: number;
 };
 
@@ -60,6 +12,38 @@ export type Notice = {
   title: string;
   content: string;
   type: NoticeType;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DbUser = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DbBooking = {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  user_phone: string | null;
+  court_number: number;
+  slot_date: string;
+  slot_time: string;
+  duration_minutes: number;
+  price: number;
+  addons: string;
+  subtotal: number;
+  gst: number;
+  total_amount: number;
+  status: "pending" | "confirmed" | "cancelled";
+  razorpay_order_id: string | null;
+  razorpay_payment_id: string | null;
+  razorpay_signature: string | null;
   created_at: string;
   updated_at: string;
 };

@@ -1,23 +1,46 @@
-import { getSession } from "@/lib/session";
-import { getSupabaseService, hasSupabaseEnv } from "@/lib/supabase";
+import { SignJWT, jwtVerify } from "jose";
+import { cookies } from "next/headers";
 
-/**
- * Authorize an admin action. Prefers the signed admin session cookie; falls back
- * to the legacy Supabase `profiles.role` lookup when a user id is supplied.
- */
-export async function assertAdmin(userId?: string | null) {
-  const session = await getSession();
-  if (session?.role === "admin") return;
+const secret = new TextEncoder().encode(process.env.JWT_SECRET ?? "breathe-pickleball-dev-secret-change-me");
+const COOKIE_NAME = "bp_session";
+const ADMIN_COOKIE = "bp_admin_session";
 
-  if (userId && hasSupabaseEnv()) {
-    const { data, error } = await getSupabaseService()
-      .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .single();
-    if (error) throw error;
-    if (data?.role === "admin") return;
-  }
+export type UserPayload = { id: string; email: string; name: string; role: "user" };
+export type AdminPayload = { id: string; email: string; role: "admin" };
 
-  throw new Error("Admin role required.");
+export async function signToken(payload: UserPayload | AdminPayload) {
+  return new SignJWT(payload as unknown as Record<string, unknown>)
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("7d")
+    .sign(secret);
 }
+
+export async function verifyToken(token: string): Promise<UserPayload | AdminPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, secret);
+    return payload as unknown as UserPayload | AdminPayload;
+  } catch {
+    return null;
+  }
+}
+
+export async function getSession(): Promise<UserPayload | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+  if (!token) return null;
+  const payload = await verifyToken(token);
+  if (!payload || payload.role !== "user") return null;
+  return payload as UserPayload;
+}
+
+export async function getAdminSession(): Promise<AdminPayload | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(ADMIN_COOKIE)?.value;
+  if (!token) return null;
+  const payload = await verifyToken(token);
+  if (!payload || payload.role !== "admin") return null;
+  return payload as AdminPayload;
+}
+
+export { COOKIE_NAME, ADMIN_COOKIE };

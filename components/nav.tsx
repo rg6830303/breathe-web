@@ -4,19 +4,28 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowRight, LayoutDashboard, LogOut, MapPin, Menu, Phone, Shield, User, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Logo } from "@/components/logo";
-import { logout } from "@/app/actions/auth";
 import { navLinks, site } from "@/lib/site";
 import { motion, AnimatePresence } from "framer-motion";
 
-type Account = { email: string; name: string; role: "player" | "admin" } | null;
+type Account = { email: string; name: string; role: "user" | "admin" } | null;
 
 export function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [account, setAccount] = useState<Account>(null);
   const [loaded, setLoaded] = useState(false);
+
+  async function handleLogout() {
+    const endpoint = account?.role === "admin" ? "/api/admin/auth/logout" : "/api/auth/logout";
+    await fetch(endpoint, { method: "POST" });
+    setAccount(null);
+    router.push("/");
+    router.refresh();
+  }
 
   useEffect(() => {
     let active = true;
@@ -114,14 +123,14 @@ export function Nav() {
                   {account.role === "admin" ? <Shield className="h-4 w-4 text-brand" /> : <User className="h-4 w-4 text-brand" />}
                   <span className="max-w-[120px] truncate">{account.name}</span>
                 </Link>
-                <form action={logout}>
-                  <button
-                    aria-label="Log out"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand/15 text-ink transition hover:bg-brand/5"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  aria-label="Log out"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand/15 text-ink transition hover:bg-brand/5"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
               </div>
             ) : (
               loaded && (
@@ -244,11 +253,13 @@ export function Nav() {
                         </span>
                         <ArrowRight className="h-4 w-4 opacity-50" />
                       </Link>
-                      <form action={logout}>
-                        <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand">
-                          <LogOut className="h-4 w-4" /> Log out ({account.name})
-                        </button>
-                      </form>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand"
+                      >
+                        <LogOut className="h-4 w-4" /> Log out ({account.name})
+                      </button>
                     </>
                   ) : (
                     <div className="grid grid-cols-2 gap-2 mb-2">

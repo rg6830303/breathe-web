@@ -1,79 +1,77 @@
-import { Award, Clock, Flame, Trophy, Zap } from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ArrowRight, CalendarDays, Clock, IndianRupee, ListChecks } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { Container, Eyebrow } from "@/components/ui";
-import { UpcomingBookings, type UpcomingBooking } from "@/components/upcoming-bookings";
-import { requireUser } from "@/lib/guards";
-import { getSupabaseService, hasSupabaseEnv } from "@/lib/supabase";
-import { logout } from "@/app/actions/auth";
+import { getSession } from "@/lib/auth";
+import { turso } from "@/lib/turso";
 
 export const dynamic = "force-dynamic";
 
-async function getUpcomingBookings(email: string): Promise<UpcomingBooking[]> {
-  if (!hasSupabaseEnv()) {
-    // Preview/dev fallback so the cancel UI is visible without Supabase.
-    const start = new Date();
-    start.setHours(start.getHours() + 8, 0, 0, 0);
-    const end = new Date(start.getTime() + 30 * 60 * 1000);
-    return [
-      {
-        id: 9001,
-        courtId: 2,
-        startTime: start.toISOString(),
-        endTime: end.toISOString(),
-        totalAmount: 1062,
-        status: "confirmed",
-      },
-    ];
+type Row = {
+  id: string;
+  court_number: number;
+  slot_date: string;
+  slot_time: string;
+  total_amount: number;
+  status: string;
+  created_at: string;
+};
+
+async function getBookings(userId: string): Promise<Row[]> {
+  try {
+    const result = await turso.execute({
+      sql: `SELECT id, court_number, slot_date, slot_time, total_amount, status, created_at
+            FROM bookings WHERE user_id = ?
+            ORDER BY slot_date DESC, slot_time DESC LIMIT 60`,
+      args: [userId],
+    });
+    return result.rows.map((r) => ({
+      id: String(r.id),
+      court_number: Number(r.court_number),
+      slot_date: String(r.slot_date),
+      slot_time: String(r.slot_time).slice(0, 5),
+      total_amount: Number(r.total_amount),
+      status: String(r.status),
+      created_at: String(r.created_at),
+    }));
+  } catch {
+    return [];
   }
-  const supabase = getSupabaseService();
-  const { data: profile } = await supabase.from("profiles").select("id").eq("email", email).maybeSingle();
-  if (!profile) return [];
-  const { data, error } = await supabase
-    .from("bookings")
-    .select("id,court_id,start_time,end_time,total_amount,status")
-    .eq("user_id", profile.id)
-    .gte("start_time", new Date().toISOString())
-    .order("start_time", { ascending: true })
-    .limit(20);
-  if (error || !data) return [];
-  return data.map((row: any) => ({
-    id: row.id,
-    courtId: row.court_id,
-    startTime: row.start_time,
-    endTime: row.end_time,
-    totalAmount: Number(row.total_amount),
-    status: row.status,
-  }));
 }
 
-async function getDashboard() {
-  const fallback = {
-    profile: { full_name: "Dinker Pro", current_streak: 12, current_xp: 8450 },
-    metrics: { level: 24, nextLevelXp: 10000, winRate: 68, matches: 142, courtHours: 32 },
-    badges: [
-      { name: "Dinker", progress: 100, unlocked: true },
-      { name: "Rallier", progress: 60, unlocked: false },
-      { name: "Pro-Smasher", progress: 0, unlocked: false },
-    ],
-  };
-  if (!process.env.VERCEL_URL && process.env.NODE_ENV === "production") return fallback;
-  const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
-  const response = await fetch(`${baseUrl}/api/player/dashboard`, { cache: "no-store" }).catch(() => null);
-  if (!response?.ok) return fallback;
-  return response.json();
+function formatDate(d: string) {
+  return new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(
+    new Date(`${d}T00:00:00`),
+  );
+}
+
+function courtColor(c: number) {
+  return ["bg-brand text-white", "bg-lime text-gray-900", "bg-purple-600 text-white"][c - 1] ?? "bg-brand text-white";
+}
+
+function statusBadge(s: string) {
+  if (s === "confirmed") return "bg-lime/20 text-lime-dark border border-lime/40";
+  if (s === "cancelled") return "bg-red-100 text-red-700 border border-red-200";
+  return "bg-gray-100 text-gray-700 border border-gray-200";
 }
 
 export default async function DashboardPage() {
-  const user = await requireUser();
-  const data = await getDashboard();
-  const upcoming = await getUpcomingBookings(user.email);
-  data.profile.full_name = user.name || data.profile.full_name;
-  const xpPct = Math.min(100, Math.round((data.profile.current_xp / data.metrics.nextLevelXp) * 100));
+  const session = await getSession();
+  if (!session) redirect("/login?next=/dashboard");
+
+  const bookings = await getBookings(session.id);
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = bookings.filter((b) => b.slot_date >= today && b.status === "confirmed");
+  const totalSpent = bookings
+    .filter((b) => b.status === "confirmed")
+    .reduce((sum, b) => sum + b.total_amount, 0);
+
   const stats = [
-    { icon: Trophy, value: `${data.metrics.winRate}%`, label: "Win rate" },
-    { icon: Zap, value: data.metrics.matches, label: "Matches" },
-    { icon: Clock, value: `${data.metrics.courtHours}h`, label: "Court time" },
+    { icon: ListChecks, label: "Total bookings", value: bookings.length.toString() },
+    { icon: Clock, label: "Upcoming sessions", value: upcoming.length.toString() },
+    { icon: IndianRupee, label: "Total spent", value: `₹${totalSpent.toLocaleString("en-IN")}` },
   ];
 
   return (
@@ -81,36 +79,31 @@ export default async function DashboardPage() {
       <Nav />
       <main>
         <section className="brand-gradient brand-mesh relative overflow-hidden text-white">
-          <div className="court-lines absolute inset-0 opacity-25" />
           <Container className="relative flex flex-col gap-4 py-12 sm:py-14 md:flex-row md:items-center md:justify-between">
             <div>
               <Eyebrow light>Player dashboard</Eyebrow>
               <div className="mt-4 flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 font-display text-2xl font-extrabold uppercase">
-                  {String(data.profile.full_name).charAt(0)}
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 font-display text-xl font-extrabold uppercase">
+                  {session.name.charAt(0)}
                 </div>
                 <div>
-                  <h1 className="font-display text-2xl font-extrabold sm:text-3xl">{data.profile.full_name}</h1>
-                  <p className="text-sm font-semibold text-ball">Level {data.metrics.level} Athlete</p>
+                  <h1 className="font-display text-2xl font-extrabold sm:text-3xl">Hi, {session.name.split(" ")[0]}</h1>
+                  <p className="text-sm text-white/80">{session.email}</p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <a href="/book" className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand transition hover:bg-ball hover:text-ink">
-                Book a court
-              </a>
-              <form action={logout}>
-                <button className="rounded-full border border-white/40 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/10">
-                  Log out
-                </button>
-              </form>
-            </div>
+            <Link
+              href="/book"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-lime px-5 py-3 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark"
+            >
+              Book another slot <ArrowRight className="h-4 w-4" />
+            </Link>
           </Container>
         </section>
 
         <Container className="py-10">
-          <div className="grid gap-6 lg:grid-cols-3">
-            {stats.map(({ icon: Icon, value, label }) => (
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {stats.map(({ icon: Icon, label, value }) => (
               <div key={label} className="rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wide text-slatey">{label}</span>
@@ -119,64 +112,49 @@ export default async function DashboardPage() {
                 <div className="mt-3 font-display text-3xl font-extrabold text-ink">{value}</div>
               </div>
             ))}
-          </div>
-
-          {/* Upcoming bookings */}
-          <section className="mt-6">
-            <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-extrabold text-ink">
-              <Clock className="h-5 w-5 text-brand" /> Upcoming bookings
-            </h2>
-            <UpcomingBookings initial={upcoming} />
           </section>
 
-          {/* XP progress */}
-          <div className="mt-6 rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-            <div className="mb-3 flex items-center justify-between text-sm font-semibold">
-              <span className="text-ink">Progress to next level</span>
-              <span className="text-brand">{data.profile.current_xp} / {data.metrics.nextLevelXp} XP</span>
-            </div>
-            <div className="h-3 overflow-hidden rounded-full bg-brand/10">
-              <div className="h-full rounded-full brand-gradient" style={{ width: `${xpPct}%` }} />
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-6 lg:grid-cols-2">
-            {/* Badges */}
-            <div className="rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-              <h3 className="flex items-center gap-2 font-display text-lg font-extrabold text-ink">
-                <Award className="h-5 w-5 text-brand" /> Badge unlocks
-              </h3>
-              <div className="mt-4 space-y-3">
-                {data.badges.map((badge: { name: string; progress: number; unlocked: boolean }) => (
-                  <div key={badge.name} className="rounded-2xl border border-brand/10 bg-brand/[0.03] p-4">
-                    <div className="mb-2 flex justify-between text-sm font-bold">
-                      <span className="text-ink">{badge.name}</span>
-                      <span className={badge.unlocked ? "text-brand" : "text-slatey"}>
-                        {badge.unlocked ? "Unlocked" : `${badge.progress}%`}
+          <section className="mt-8">
+            <h2 className="mb-4 flex items-center gap-2 font-display text-xl font-extrabold text-ink">
+              <CalendarDays className="h-5 w-5 text-brand" /> Your bookings
+            </h2>
+            {bookings.length === 0 ? (
+              <div className="rounded-3xl border border-dashed border-brand/20 bg-brand/[0.03] p-10 text-center">
+                <p className="text-sm text-slatey">No bookings yet — book your first court below.</p>
+                <Link
+                  href="/book"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600"
+                >
+                  Book a court <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {bookings.map((b) => (
+                  <div key={b.id} className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className={`flex h-12 w-12 items-center justify-center rounded-2xl font-display text-base font-extrabold ${courtColor(b.court_number)}`}>
+                          C{b.court_number}
+                        </span>
+                        <div>
+                          <div className="font-display text-base font-extrabold text-ink">{formatDate(b.slot_date)}</div>
+                          <div className="text-sm text-slatey">{b.slot_time} · 30 min</div>
+                        </div>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${statusBadge(b.status)}`}>
+                        {b.status}
                       </span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-brand/10">
-                      <div className="h-full rounded-full bg-brand" style={{ width: `${Math.min(100, badge.progress)}%` }} />
+                    <div className="mt-4 flex items-center justify-between border-t border-brand/10 pt-3 text-sm">
+                      <span className="text-slatey">Amount</span>
+                      <span className="font-display text-base font-extrabold text-brand">₹{b.total_amount.toLocaleString("en-IN")}</span>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Streak */}
-            <div className="flex flex-col justify-between rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-              <div>
-                <h3 className="flex items-center gap-2 font-display text-xs font-bold uppercase tracking-wide text-slatey">
-                  <Flame className="h-4 w-4 text-brand" /> Current streak
-                </h3>
-                <div className="mt-3 font-display text-5xl font-extrabold text-brand">{data.profile.current_streak} days</div>
-              </div>
-              <p className="mt-4 text-sm leading-6 text-slatey">
-                Keep the streak alive — book your next session and stay on the ladder. Metrics sync from your booking
-                history once your account is connected.
-              </p>
-            </div>
-          </div>
+            )}
+          </section>
         </Container>
       </main>
       <Footer />
