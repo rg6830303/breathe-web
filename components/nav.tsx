@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowRight, LayoutDashboard, LogOut, MapPin, Menu, Phone, Shield, User, X } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { Logo } from "@/components/logo";
 import { navLinks, site } from "@/lib/site";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,7 +12,6 @@ type Account = { email: string; name: string; role: "user" | "admin" } | null;
 
 export function Nav() {
   const pathname = usePathname();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [account, setAccount] = useState<Account>(null);
@@ -22,9 +20,8 @@ export function Nav() {
   async function handleLogout() {
     const endpoint = account?.role === "admin" ? "/api/admin/auth/logout" : "/api/auth/logout";
     await fetch(endpoint, { method: "POST" });
-    setAccount(null);
-    router.push("/");
-    router.refresh();
+    // Hard redirect so cleared cookie is picked up server-side immediately
+    window.location.href = "/";
   }
 
   useEffect(() => {

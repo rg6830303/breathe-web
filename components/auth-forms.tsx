@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight, Loader2, LogIn, ShieldCheck } from "lucide-react";
 
@@ -32,7 +32,6 @@ function Field(props: {
 }
 
 export function SignupForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") ?? "/dashboard";
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
@@ -51,11 +50,10 @@ export function SignupForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Signup failed");
-      router.push(next);
-      router.refresh();
+      // Hard redirect so the new session cookie is read server-side on the next request
+      window.location.href = next;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");
-    } finally {
       setLoading(false);
     }
   }
@@ -89,7 +87,10 @@ export function SignupForm() {
           className="group mt-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 disabled:opacity-60"
         >
           {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Creating account…
+            </>
           ) : (
             <>
               Create account <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -109,7 +110,6 @@ export function SignupForm() {
 }
 
 export function LoginForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") ?? "/dashboard";
   const [form, setForm] = useState({ email: "", password: "" });
@@ -128,11 +128,11 @@ export function LoginForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Login failed");
-      router.push(next);
-      router.refresh();
+      // Hard redirect ensures the session cookie is sent to the server-side
+      // dashboard page, bypassing the Next.js App Router client cache entirely.
+      window.location.href = next;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
       setLoading(false);
     }
   }
@@ -164,7 +164,10 @@ export function LoginForm() {
           className="group mt-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 disabled:opacity-60"
         >
           {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Signing in…
+            </>
           ) : (
             <>
               Log in <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
