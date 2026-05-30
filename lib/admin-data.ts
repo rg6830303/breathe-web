@@ -150,7 +150,7 @@ export async function getBookingAnalytics(): Promise<AnalyticsSummary> {
       .select("start_time,total_amount")
       .eq("status", "confirmed")
       .gte("start_time", monthStartIso);
-    if (!error && data) rows = data.map((r) => ({ start_time: r.start_time, total_amount: Number(r.total_amount) }));
+    if (!error && data) rows = data.map((r: any) => ({ start_time: r.start_time, total_amount: Number(r.total_amount) }));
   }
   if (rows.length === 0) {
     // Demo data — distinct hourly distribution + a plausible peak in the

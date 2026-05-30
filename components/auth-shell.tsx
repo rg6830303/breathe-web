@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { AlertCircle, ArrowLeft, Check } from "lucide-react";
 import { Logo, PaddleMark } from "@/components/logo";

@@ -37,7 +37,7 @@ async function getUpcomingBookings(email: string): Promise<UpcomingBooking[]> {
     .order("start_time", { ascending: true })
     .limit(20);
   if (error || !data) return [];
-  return data.map((row) => ({
+  return data.map((row: any) => ({
     id: row.id,
     courtId: row.court_id,
     startTime: row.start_time,

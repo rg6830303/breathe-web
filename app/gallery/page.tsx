@@ -15,7 +15,6 @@ import {
   Heart,
   Lightbulb,
   Crosshair,
-  Camera,
   Instagram,
   X,
   ChevronLeft,
@@ -30,18 +29,105 @@ import { CourtPatternBg } from "@/components/ui/court-pattern-bg";
 import { site } from "@/lib/site";
 
 const galleryItems = [
-  { label: 'Floodlit Evening Rallies', gradient: 'from-brand-900 to-brand-700', icon: 'Zap', aspect: 'tall' },
-  { label: 'Junior Academy in Action', gradient: 'from-emerald-800 to-brand-700', icon: 'GraduationCap', aspect: 'wide' },
-  { label: 'Open Tournament Finals', gradient: 'from-amber-800 to-brand-800', icon: 'Trophy', aspect: 'square' },
-  { label: 'Courtside Community', gradient: 'from-brand-700 to-purple-800', icon: 'Users', aspect: 'wide' },
-  { label: 'Coaching Drills', gradient: 'from-brand-800 to-cyan-800', icon: 'Target', aspect: 'square' },
-  { label: 'Weekend Doubles Ladder', gradient: 'from-rose-800 to-brand-800', icon: 'BarChart2', aspect: 'tall' },
-  { label: 'Prize Night Celebrations', gradient: 'from-amber-700 to-rose-800', icon: 'Star', aspect: 'wide' },
-  { label: 'Morning Practice', gradient: 'from-brand-600 to-cyan-700', icon: 'Sun', aspect: 'square' },
-  { label: 'Net Play Mastery', gradient: 'from-brand-800 to-indigo-800', icon: 'Activity', aspect: 'square' },
-  { label: 'Beginner Batches', gradient: 'from-green-800 to-brand-700', icon: 'Heart', aspect: 'wide' },
-  { label: 'Court 3 Spotlight', gradient: 'from-brand-700 to-blue-900', icon: 'Lightbulb', aspect: 'tall' },
-  { label: 'Match Point', gradient: 'from-red-800 to-brand-800', icon: 'Crosshair', aspect: 'square' },
+  {
+    id: 1,
+    label: "Floodlit Evening Rallies",
+    caption: "Under the lights at Kaikhali! There's nothing like a fast-paced evening rally under our professional tournament floodlights. 🏓⚡ Book your court tonight!",
+    gradient: "from-brand-900 to-brand-700",
+    icon: "Zap",
+    likes: 124,
+    comments: 12,
+    date: "2 hours ago",
+    type: "image"
+  },
+  {
+    id: 2,
+    label: "Junior Academy in Action",
+    caption: "Tomorrow's champions are training hard today! 🌟 Our Junior Academy is back on court focusing on baseline footwork and dink accuracy. 🎓👶",
+    gradient: "from-emerald-800 to-brand-700",
+    icon: "GraduationCap",
+    likes: 248,
+    comments: 31,
+    date: "5 hours ago",
+    type: "carousel"
+  },
+  {
+    id: 3,
+    label: "Open Tournament Finals",
+    caption: "The atmosphere was absolute electric during the Breathe Open Doubles final! 🏆 Congratulations to the winners who took home the cash prize! 💥",
+    gradient: "from-amber-800 to-brand-800",
+    icon: "Trophy",
+    likes: 312,
+    comments: 42,
+    date: "1 day ago",
+    type: "video"
+  },
+  {
+    id: 4,
+    label: "Courtside Community",
+    caption: "Rallies over egos. Breathe is where Kolkata's community meets to connect, reset, and celebrate together off the court! ☕🍔 #PickleballIndia",
+    gradient: "from-brand-700 to-purple-800",
+    icon: "Users",
+    likes: 156,
+    comments: 8,
+    date: "2 days ago",
+    type: "image"
+  },
+  {
+    id: 5,
+    label: "Coaching Drills",
+    caption: "Focusing on that third-shot drop strategy. Our certified coaches provide structured training to elevate your game at every skill tier! 🎯📈",
+    gradient: "from-brand-800 to-cyan-800",
+    icon: "Target",
+    likes: 98,
+    comments: 6,
+    date: "3 days ago",
+    type: "image"
+  },
+  {
+    id: 6,
+    label: "Weekend Doubles Ladder",
+    caption: "Saturday Ladder is locked and loaded! Full venue occupancy and intense competitive matches across all 3 courts. Check the scoreboard! 📊🔥",
+    gradient: "from-rose-800 to-brand-800",
+    icon: "BarChart2",
+    likes: 184,
+    comments: 15,
+    date: "4 days ago",
+    type: "carousel"
+  },
+  {
+    id: 7,
+    label: "Prize Night Celebrations",
+    caption: "Celebrating the community under the stars! A perfect ending to our Monthly Open with prize-giving ceremonies, food, and endless smiles! ⭐🏆",
+    gradient: "from-amber-700 to-rose-800",
+    icon: "Star",
+    likes: 275,
+    comments: 24,
+    date: "5 days ago",
+    type: "image"
+  },
+  {
+    id: 8,
+    label: "Morning Practice",
+    caption: "Rise and dink! Start your morning with positive energy and good rallies under the fresh breeze. 🌅🏓 We open daily at 6:00 AM!",
+    gradient: "from-brand-600 to-cyan-700",
+    icon: "Sun",
+    likes: 110,
+    comments: 4,
+    date: "1 week ago",
+    type: "image"
+  },
+  {
+    id: 9,
+    label: "Net Play Mastery",
+    caption: "Mastering the kitchen dinks. Quick reflexes and sharp kitchen control are what wins pickleball double matches! ⚡💪 #KitchenControl",
+    gradient: "from-brand-800 to-indigo-800",
+    icon: "Activity",
+    likes: 135,
+    comments: 11,
+    date: "1 week ago",
+    type: "video"
+  }
 ];
 
 const iconMap: Record<string, React.ComponentType<any>> = {
@@ -108,48 +194,57 @@ export default function GalleryPage() {
           subtitle="From first serves to championship points, here's a glimpse of the energy on our courts. For the latest photos and reels, follow us on Instagram."
         />
 
-        {/* Masonry gallery section */}
+        {/* Responsive Instagram Grid */}
         <section className="px-4 py-16 sm:px-6 lg:px-8 bg-white">
           <Container className="!px-0">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 auto-rows-[160px] md:auto-rows-[180px] lg:auto-rows-[200px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               {galleryItems.map((item, idx) => {
                 const Icon = iconMap[item.icon];
-                const spanClass = `
-                  ${item.aspect === "tall" ? "md:row-span-2" : ""}
-                  ${item.aspect === "wide" ? "md:col-span-2" : ""}
-                `;
                 return (
                   <ScrollReveal
-                    key={item.label}
+                    key={item.id}
                     delay={idx * 0.05}
                     direction="up"
-                    className={`relative overflow-hidden rounded-2xl cursor-pointer shadow-soft border border-brand/5 ${spanClass}`}
+                    className="relative overflow-hidden rounded-2xl cursor-pointer shadow-soft border border-brand/5 aspect-square"
                   >
                     <motion.div
                       onClick={() => openLightbox(idx)}
-                      className={`relative w-full h-full bg-gradient-to-br ${item.gradient} p-5 flex flex-col justify-between group`}
+                      className={`relative w-full h-full bg-gradient-to-br ${item.gradient} flex flex-col justify-between group`}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
                       {/* Court line SVG watermark */}
                       <CourtPatternBg className="absolute inset-0 opacity-10 pointer-events-none w-full h-full object-cover" />
 
-                      {/* Icon & Label Center Layout */}
+                      {/* Icon & Title Layout */}
                       <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4">
-                        {Icon && <Icon className="w-10 h-10 text-white/40 group-hover:scale-110 transition-transform duration-300" />}
-                        <span className="text-white text-xs md:text-sm font-bold text-center px-2">{item.label}</span>
+                        {Icon && <Icon className="w-12 h-12 text-white/40 group-hover:scale-110 transition-transform duration-300" />}
+                        <span className="text-white text-sm font-bold text-center px-4 leading-tight">{item.label}</span>
                       </div>
 
-                      {/* Hover overlay */}
-                      <motion.div
-                        className="absolute inset-0 bg-white/5 pointer-events-none"
-                        initial={{ opacity: 0 }}
-                        whileHover={{ opacity: 1 }}
-                      />
+                      {/* Dark blurred Instagram hover overlay */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-[4px] opacity-0 group-hover:opacity-100 transition-all duration-300 p-6 text-center select-none z-10">
+                        <div className="text-white font-display font-extrabold flex items-center justify-center gap-6 text-base">
+                          <span className="flex items-center gap-1.5 hover:scale-105 transition">
+                            ❤️ {item.likes}
+                          </span>
+                          <span className="flex items-center gap-1.5 hover:scale-105 transition">
+                            💬 {item.comments}
+                          </span>
+                        </div>
+                        <div className="mt-4 text-[10px] text-lime font-bold uppercase tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-lime/30 bg-lime/5">
+                          View on Instagram ↗
+                        </div>
+                      </div>
+
+                      {/* Top right type tag (carousel, video etc) */}
+                      <div className="absolute top-3 right-3 text-[10px] text-white/40 font-semibold bg-black/20 px-2.5 py-1 rounded-full backdrop-blur-sm">
+                        {item.type === "video" ? "📹 Reel" : item.type === "carousel" ? "📁 Carousel" : "📸 Post"}
+                      </div>
 
                       {/* Bottom left label */}
-                      <div className="absolute bottom-3 left-3 text-[9px] text-white/35 font-mono">
-                        Photo coming soon
+                      <div className="absolute bottom-3 left-3 text-[9px] text-white/30 font-mono">
+                        {item.date}
                       </div>
                     </motion.div>
                   </ScrollReveal>
@@ -228,29 +323,79 @@ export default function GalleryPage() {
                 <ChevronRight className="w-6 h-6" />
               </button>
 
-              {/* Slide content wrapper */}
+              {/* Detail Card Overlay split panel */}
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                className={`relative w-full max-w-2xl aspect-[4/3] rounded-3xl bg-gradient-to-br ${galleryItems[activeIdx].gradient} p-8 flex flex-col justify-between shadow-glow overflow-hidden`}
+                className="relative w-full max-w-3xl rounded-3xl bg-gray-900 border border-white/10 shadow-glow overflow-hidden grid md:grid-cols-2 aspect-auto"
                 onClick={(e) => e.stopPropagation()} // Prevent closing lightbox when clicking inside card
               >
-                <CourtPatternBg className="absolute inset-0 opacity-15 pointer-events-none w-full h-full object-cover" />
-
-                <div className="relative h-full flex flex-col items-center justify-center gap-6">
-                  {(() => {
-                    const ActiveIcon = iconMap[galleryItems[activeIdx].icon];
-                    return ActiveIcon ? <ActiveIcon className="w-20 h-20 text-white/50 animate-pulse" /> : null;
-                  })()}
-                  <h3 className="text-white text-2xl md:text-3xl font-extrabold text-center max-w-lg leading-tight">
-                    {galleryItems[activeIdx].label}
-                  </h3>
+                {/* Left Side: Dynamic visual tile */}
+                <div className={`relative w-full aspect-square md:aspect-auto md:h-full bg-gradient-to-br ${galleryItems[activeIdx].gradient} p-8 flex flex-col justify-between min-h-[250px]`}>
+                  <CourtPatternBg className="absolute inset-0 opacity-20 pointer-events-none w-full h-full object-cover" />
+                  <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
+                    {(() => {
+                      const ActiveIcon = iconMap[galleryItems[activeIdx].icon];
+                      return ActiveIcon ? <ActiveIcon className="w-5 h-5 text-white" /> : null;
+                    })()}
+                  </div>
+                  <div className="relative mt-20 flex flex-col gap-2">
+                    <span className="text-[10px] text-lime font-bold uppercase tracking-widest">
+                      {galleryItems[activeIdx].type === "video" ? "📹 Reel" : galleryItems[activeIdx].type === "carousel" ? "📁 Carousel" : "📸 Post"}
+                    </span>
+                    <h3 className="text-white text-xl md:text-2xl font-extrabold leading-tight">
+                      {galleryItems[activeIdx].label}
+                    </h3>
+                  </div>
                 </div>
 
-                <div className="relative text-center text-white/40 text-xs font-mono">
-                  Breathe Pickleball · Kolkata
+                {/* Right Side: Instagram Details */}
+                <div className="p-6 sm:p-8 flex flex-col justify-between bg-[#0D1426] border-t md:border-t-0 md:border-l border-white/10">
+                  <div className="flex flex-col gap-4">
+                    {/* Channel / Logo Header */}
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-brand flex items-center justify-center text-xs font-bold text-white tracking-wider">
+                        BP
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-white">breathepickleball</div>
+                        <div className="text-[10px] text-gray-500">Kaikhali, Kolkata</div>
+                      </div>
+                    </div>
+                    
+                    <hr className="border-white/5 my-1" />
+
+                    {/* Caption */}
+                    <p className="text-gray-300 text-xs sm:text-sm leading-relaxed font-sans mt-2">
+                      {galleryItems[activeIdx].caption}
+                    </p>
+                  </div>
+
+                  <div className="mt-6">
+                    <hr className="border-white/5 my-2" />
+                    
+                    {/* Likes, Comments & Date */}
+                    <div className="flex items-center justify-between text-xs text-gray-400">
+                      <div className="flex items-center gap-4 text-xs font-bold">
+                        <span>❤️ {galleryItems[activeIdx].likes} likes</span>
+                        <span>💬 {galleryItems[activeIdx].comments} comments</span>
+                      </div>
+                      <span className="text-[9px] text-gray-500 font-mono">{galleryItems[activeIdx].date}</span>
+                    </div>
+
+                    <div className="mt-4 flex gap-2">
+                      <a
+                        href={site.instagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-[#D4FC34] px-4 py-2.5 text-xs font-bold text-gray-950 shadow-soft hover:bg-lime-dark transition"
+                      >
+                        <Instagram className="h-3.5 w-3.5" /> View Post on Instagram
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             </motion.div>

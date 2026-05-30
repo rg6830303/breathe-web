@@ -42,7 +42,7 @@ async function getNotices(): Promise<Notice[]> {
       .eq("active", true)
       .order("created_at", { ascending: false });
     if (!fromNew.error && fromNew.data?.length) {
-      return fromNew.data.map((row, idx) => ({
+      return fromNew.data.map((row: any, idx: number) => ({
         id: idx + 1,
         title: row.title,
         content: row.body ?? "",
