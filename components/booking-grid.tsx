@@ -55,6 +55,7 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
   // Roving tab index for the desktop grid. Stores [rowIdx, courtIdx] of the
   // currently-focusable cell; arrow keys move it without scrolling the page.
   const [focus, setFocus] = useState<[number, number]>([0, 0]);
+  const [recurringWeeks, setRecurringWeeks] = useState<0 | 1 | 2 | 4 | 8>(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -532,12 +533,60 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
           </div>
         </div>
 
+        {/* Recurrence (group13) — optional weekly repeat. Adds N-1 clones of
+            each selected slot at +1, +2, … +(N-1) weeks. Server's gist
+            exclusion guarantees no double-booking; conflicts return as
+            `skipped` in the response and we surface them after confirm. */}
+        {selected.length > 0 && (
+          <div className="mt-4 rounded-2xl border border-brand/15 bg-brand/[0.03] p-4">
+            <label className="flex cursor-pointer items-center gap-3 text-sm font-bold text-ink">
+              <input
+                type="checkbox"
+                checked={recurringWeeks > 0}
+                onChange={(e) => setRecurringWeeks(e.target.checked ? 4 : 0)}
+                className="h-4 w-4 accent-brand"
+              />
+              Make this a weekly recurring booking
+            </label>
+            {recurringWeeks > 0 && (
+              <>
+                <div className="mt-3 text-xs font-bold uppercase tracking-wide text-slatey">Repeat for</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {([1, 2, 4, 8] as const).map((w) => (
+                    <button
+                      key={w}
+                      type="button"
+                      onClick={() => setRecurringWeeks(w)}
+                      aria-pressed={recurringWeeks === w}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                        recurringWeeks === w
+                          ? "bg-brand text-white shadow-soft"
+                          : "border border-brand/20 bg-white text-ink/70 hover:text-brand"
+                      }`}
+                    >
+                      {w} {w === 1 ? "week" : "weeks"}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs leading-5 text-slatey">
+                  This will create up to <strong>{recurringWeeks * selected.length}</strong> bookings totalling{" "}
+                  <strong>₹{totals.total * recurringWeeks}</strong>. Dates already booked will be skipped automatically.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
         <button
           onClick={() => selected.length > 0 && setConfirmed(true)}
           disabled={selected.length === 0}
           className="mt-4 w-full rounded-2xl bg-brand px-4 py-3.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
         >
-          {selected.length === 0 ? "Select a slot to continue" : `Confirm ${selected.length} slot${selected.length > 1 ? "s" : ""}`}
+          {selected.length === 0
+            ? "Select a slot to continue"
+            : recurringWeeks > 0
+              ? `Confirm ${selected.length}× ${recurringWeeks} weeks`
+              : `Confirm ${selected.length} slot${selected.length > 1 ? "s" : ""}`}
         </button>
 
         {confirmed && (
