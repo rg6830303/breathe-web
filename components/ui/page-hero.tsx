@@ -8,9 +8,10 @@ type Props = {
   title: string;
   subtitle?: string;
   dark?: boolean;
+  bgClassName?: string;
 };
 
-export function PageHero({ label, title, subtitle, dark = false }: Props) {
+export function PageHero({ label, title, subtitle, dark = false, bgClassName }: Props) {
   const words = title.split(" ");
 
   const containerVariants = {
@@ -31,13 +32,13 @@ export function PageHero({ label, title, subtitle, dark = false }: Props) {
     },
   };
 
+  const defaultBg = dark
+    ? "bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 text-white"
+    : "bg-gradient-to-br from-brand-50 via-white to-brand-100 text-gray-900";
+
   return (
     <section
-      className={`relative overflow-hidden ${
-        dark
-          ? "bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 text-white"
-          : "bg-gradient-to-br from-brand-50 via-white to-brand-100 text-gray-900"
-      }`}
+      className={`relative overflow-hidden ${bgClassName ?? defaultBg}`}
     >
       {/* Court line SVG overlay */}
       <CourtPatternBg
