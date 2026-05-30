@@ -1,21 +1,23 @@
-import type { Metadata } from "next";
-import { Heart, Leaf, MapPin, Target, TrendingUp, Users } from "lucide-react";
+"use client";
+
+import { Users, Wind, TrendingUp, Star, MapPin } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
-import { CTABand, Container, Eyebrow, SectionHeading } from "@/components/ui";
+import { CTABand, Container } from "@/components/ui";
+import { PageHero } from "@/components/ui/page-hero";
+import { ScrollReveal } from "@/components/motion/scroll-reveal";
+import { StatCounter } from "@/components/motion/stat-counter";
+import { GlowCard } from "@/components/ui/glow-card";
+import { TiltCard } from "@/components/motion/tilt-card";
+import { CourtPatternBg } from "@/components/ui/court-pattern-bg";
+import { motion } from "framer-motion";
 import { site } from "@/lib/site";
 
-export const metadata: Metadata = {
-  title: "About Us",
-  description:
-    "The story of Breathe Pickleball — North Kolkata's community-first pickleball club in Kaikhali, built around culture, coaching, and growth.",
-};
-
 const values = [
-  { icon: Heart, title: "Community first", text: "We're a place where regulars know each other's names and first-timers feel at home from rally one." },
-  { icon: Leaf, title: "Breathe & play", text: "Sport as a way to switch off, move, and reset. Good rallies, good people, fresh air." },
+  { icon: Users, title: "Community first", text: "We're a place where regulars know each other's names and first-timers feel at home from rally one." },
+  { icon: Wind, title: "Breathe & play", text: "Sport as a way to switch off, move, and reset. Good rallies, good people, fresh air." },
   { icon: TrendingUp, title: "Always growing", text: "From casual evenings to competitive ladders, we help players find their next level." },
-  { icon: Target, title: "Quality courts", text: "Tournament-grade surfaces and proper equipment so every game feels the part." },
+  { icon: Star, title: "Quality courts", text: "Tournament-grade surfaces and proper equipment so every game feels the part." },
 ];
 
 const timeline = [
@@ -29,106 +31,167 @@ export default function AboutPage() {
   return (
     <>
       <Nav />
-      <main>
-        <section className="brand-gradient brand-mesh relative overflow-hidden text-white">
-          <div className="court-lines absolute inset-0 opacity-25" />
-          <Container className="relative py-16 sm:py-20">
-            <Eyebrow light>About Breathe</Eyebrow>
-            <h1 className="mt-3 max-w-3xl font-display text-3xl font-extrabold leading-tight sm:text-5xl">
-              More than a court — a place to <span className="text-ball">breathe and play</span>
-            </h1>
-            <p className="mt-5 max-w-2xl text-white/85 sm:text-lg">
-              Breathe Pickleball is North Kolkata's community-first pickleball club in Kaikhali. We bring together
-              great courts, real coaching, and a welcoming crowd so that everyone — from total beginners to seasoned
-              competitors — has somewhere to play their best game.
-            </p>
-            <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-sm font-semibold">
-              <MapPin className="h-4 w-4 text-ball" /> {site.address}
-            </div>
-          </Container>
-        </section>
+      <main className="overflow-x-hidden">
+        {/* Page Hero */}
+        <PageHero
+          dark={true}
+          label="About Breathe"
+          title="More than a court — a place to breathe and play"
+          subtitle="North Kolkata's community-first pickleball club. Great courts, real coaching, and a welcoming crowd."
+        />
 
-        {/* Mission */}
-        <section className="px-4 py-20 sm:px-6 lg:px-8">
+        {/* Mission & Stats */}
+        <section
+          className="px-4 py-20 sm:px-6 lg:px-8 bg-brand-50"
+          style={{
+            backgroundImage: "radial-gradient(circle, #2F5BFF11 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        >
           <Container className="!px-0 grid gap-12 lg:grid-cols-[1fr_1fr] lg:items-center">
-            <div>
-              <SectionHeading
-                eyebrow="Our mission"
-                title="Make pickleball easy to love in Kolkata"
-                description="Pickleball is the fastest-growing sport in the country, and we want everyone in the city to experience why. That means courts that are easy to reach, slots that are easy to book, coaching that's easy to start, and a community that's easy to belong to."
-              />
-              <div className="mt-6 grid grid-cols-2 gap-4">
-                {[
-                  ["3", "Professional courts"],
-                  ["All ages", "Welcomed & coached"],
-                  ["Daily", "Open 6 AM – 11 PM"],
-                  ["Monthly", "Tournaments hosted"],
-                ].map(([v, l]) => (
-                  <div key={l} className="rounded-2xl border border-brand/10 bg-white p-4 shadow-soft">
-                    <div className="font-display text-xl font-extrabold text-brand">{v}</div>
-                    <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-slatey">{l}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {values.map(({ icon: Icon, title, text }) => (
-                <div key={title} className="rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <h3 className="mt-4 font-display text-base font-bold text-ink">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slatey">{text}</p>
+            <ScrollReveal direction="up">
+              <div>
+                <span className="flex items-center gap-2 text-xs font-bold tracking-[0.2em] uppercase text-brand-600">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-600" /> OUR MISSION
+                </span>
+                <h2 className="mt-3 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl text-ink">
+                  Make pickleball easy to love in Kolkata
+                </h2>
+                <p className="mt-4 text-base leading-7 text-slatey">
+                  Pickleball is the fastest-growing sport in the country, and we want everyone in the city to experience why. That means courts that are easy to reach, slots that are easy to book, coaching that's easy to start, and a community that's easy to belong to.
+                </p>
+
+                {/* Stats grid */}
+                <div className="mt-8 grid grid-cols-2 gap-4">
+                  {[
+                    { value: 3, label: "Professional courts", suffix: "" },
+                    { value: 100, label: "Welcomed & coached", prefix: "All ages", isText: true },
+                    { value: 6, label: "Open 6 AM – 11 PM", suffix: " AM", prefix: "", isTime: true },
+                    { value: 12, label: "Tournaments hosted", suffix: "+", prefix: "Monthly", isText: true },
+                  ].map((stat, i) => (
+                    <TiltCard key={stat.label} maxTilt={6}>
+                      <GlowCard className="p-5 shadow-soft border border-brand/5">
+                        <div className="font-display text-3xl font-extrabold text-brand-600">
+                          {stat.isTime ? (
+                            <span className="whitespace-nowrap">
+                              <StatCounter end={6} />AM–<StatCounter end={11} />PM
+                            </span>
+                          ) : stat.isText ? (
+                            stat.prefix
+                          ) : (
+                            <StatCounter end={stat.value} suffix={stat.suffix} />
+                          )}
+                        </div>
+                        <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slatey">
+                          {stat.label}
+                        </div>
+                      </GlowCard>
+                    </TiltCard>
+                  ))}
                 </div>
+              </div>
+            </ScrollReveal>
+
+            {/* Values Grid */}
+            <div className="grid gap-6 sm:grid-cols-2">
+              {values.map(({ icon: Icon, title, text }, idx) => (
+                <ScrollReveal key={title} delay={idx * 0.1} direction="right">
+                  <TiltCard maxTilt={5} className="h-full">
+                    <GlowCard className="h-full border border-brand/5 shadow-soft hover:shadow-card transition-all">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <h3 className="mt-4 font-display text-base font-bold text-ink">{title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-slatey">{text}</p>
+                    </GlowCard>
+                  </TiltCard>
+                </ScrollReveal>
               ))}
             </div>
           </Container>
         </section>
 
         {/* Timeline */}
-        <section className="section-light px-4 py-20 sm:px-6 lg:px-8">
-          <Container className="!px-0">
-            <SectionHeading center eyebrow="Our journey" title="How Breathe grew" />
-            <div className="mt-12 grid gap-5 md:grid-cols-4">
-              {timeline.map((t, i) => (
-                <div key={t.year} className="relative rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full brand-gradient font-display text-sm font-extrabold text-white">
-                    {i + 1}
-                  </span>
-                  <h3 className="mt-4 font-display text-base font-bold text-ink">{t.year}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slatey">{t.text}</p>
-                </div>
-              ))}
+        <section className="section-light px-4 py-20 sm:px-6 lg:px-8 bg-white">
+          <Container className="!px-0 max-w-3xl">
+            <div className="text-center mb-12">
+              <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.2em] uppercase text-brand-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-600" /> OUR JOURNEY
+              </span>
+              <h2 className="mt-3 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl text-ink">
+                How Breathe grew
+              </h2>
+            </div>
+
+            <div className="relative pl-8 md:pl-12">
+              {/* Vertical drawing line */}
+              <motion.div
+                initial={{ scaleY: 0 }}
+                whileInView={{ scaleY: 1 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 1.2, ease: "easeInOut" }}
+                className="absolute left-[15px] md:left-[23px] top-2 bottom-2 w-0.5 bg-brand-200 origin-top"
+              />
+
+              <div className="space-y-10">
+                {timeline.map((item, idx) => (
+                  <div key={item.year} className="relative">
+                    {/* Node circle */}
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      whileInView={{ scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ type: "spring", stiffness: 300, damping: 15, delay: idx * 0.15 }}
+                      className="absolute -left-[24px] md:-left-[32px] top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white z-10 shadow-soft"
+                    >
+                      {idx + 1}
+                    </motion.div>
+
+                    <ScrollReveal direction="left" delay={idx * 0.12}>
+                      <div className="bg-white rounded-2xl border border-brand/5 p-6 shadow-soft hover:shadow-card transition-all">
+                        <span className="text-xs font-bold text-brand-500 uppercase tracking-widest">{item.year}</span>
+                        <p className="mt-2 text-sm leading-relaxed text-slatey">{item.text}</p>
+                      </div>
+                    </ScrollReveal>
+                  </div>
+                ))}
+              </div>
             </div>
           </Container>
         </section>
 
         {/* Culture */}
-        <section className="px-4 py-20 sm:px-6 lg:px-8">
+        <section className="px-4 py-20 sm:px-6 lg:px-8 bg-brand-50">
           <Container className="!px-0">
             <div className="brand-gradient brand-mesh relative overflow-hidden rounded-3xl p-8 text-white shadow-glow sm:p-12">
               <div className="court-lines absolute inset-0 opacity-20" />
+              
               <div className="relative grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-center">
-                <div>
-                  <Users className="h-10 w-10 text-ball" />
-                  <h2 className="mt-4 font-display text-2xl font-extrabold sm:text-3xl">A culture built on rallies, not egos</h2>
-                  <p className="mt-4 text-white/85">
-                    Whether you came to compete or just to unwind after work, you'll find a court and a partner here.
-                    We mix up doubles, run friendly ladders, celebrate beginners' first wins, and keep the energy warm
-                    and welcoming — on and off the court.
-                  </p>
-                </div>
+                <ScrollReveal direction="left">
+                  <div>
+                    <Users className="h-10 w-10 text-lime" />
+                    <h2 className="mt-4 font-display text-2xl font-extrabold sm:text-3xl">
+                      A culture built on rallies, not egos
+                    </h2>
+                    <p className="mt-4 text-white/80 leading-relaxed">
+                      Whether you came to compete or just to unwind after work, you'll find a court and a partner here. We mix up doubles, run friendly ladders, celebrate beginners' first wins, and keep the energy warm and welcoming — on and off the court.
+                    </p>
+                  </div>
+                </ScrollReveal>
+
                 <ul className="grid gap-3">
                   {[
                     "Open play sessions where you can rotate in and meet new partners",
                     "Beginner-friendly coaching with zero judgement",
                     "Social ladders and leagues for friendly competition",
                     "Courtside kitchen and changing rooms for the full experience",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-3 rounded-2xl bg-white/10 p-4 text-sm">
-                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-ball" />
-                      {item}
-                    </li>
+                  ].map((item, idx) => (
+                    <ScrollReveal key={item} direction="right" delay={idx * 0.1}>
+                      <li className="flex items-start gap-3 rounded-2xl bg-white/10 p-4 text-sm hover:bg-white/15 transition-all">
+                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-lime" />
+                        <span>{item}</span>
+                      </li>
+                    </ScrollReveal>
                   ))}
                 </ul>
               </div>
