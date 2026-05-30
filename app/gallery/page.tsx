@@ -3,8 +3,33 @@ import { Nav } from "@/components/nav";
 import { PageHero } from "@/components/ui/page-hero";
 import { CTABand } from "@/components/ui";
 import { GalleryGrid, type InstaPost } from "@/components/gallery-grid";
+import { turso } from "@/lib/turso";
 
-export const revalidate = 3600;
+export const revalidate = 60; // short cache so new uploads show up fast
+
+async function getGalleryImages(): Promise<InstaPost[] | null> {
+  try {
+    const result = await turso.execute({
+      sql: "SELECT id, blob_url, caption, created_at FROM gallery_images WHERE active = 1 ORDER BY display_order ASC, created_at DESC",
+      args: [],
+    });
+    
+    if (result.rows.length === 0) return null;
+    
+    return result.rows.map((row) => ({
+      id: String(row.id),
+      caption: row.caption ? String(row.caption) : undefined,
+      media_type: "IMAGE" as const,
+      media_url: String(row.blob_url),
+      thumbnail_url: String(row.blob_url),
+      permalink: String(row.blob_url),
+      timestamp: new Date(Number(row.created_at)).toISOString(),
+    }));
+  } catch (err) {
+    console.error("[getGalleryImages error]", err);
+    return null;
+  }
+}
 
 async function getInstagramPosts(): Promise<InstaPost[] | null> {
   const token = process.env.INSTAGRAM_ACCESS_TOKEN;
@@ -24,11 +49,18 @@ async function getInstagramPosts(): Promise<InstaPost[] | null> {
 }
 
 export default async function GalleryPage() {
-  const posts = await getInstagramPosts();
+  // First, check for hosted images in our Vercel Blob/Turso database
+  let posts = await getGalleryImages();
+  
+  // If none are uploaded, fall back to Instagram API
+  if (!posts || posts.length === 0) {
+    posts = await getInstagramPosts();
+  }
+
   return (
     <>
       <Nav />
-      <main className="overflow-x-hidden">
+      <main className="overflow-x-hidden min-h-screen bg-brand-50/10">
         <PageHero
           dark
           label="Gallery"

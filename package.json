@@ -11,6 +11,7 @@
   "dependencies": {
     "@libsql/client": "^0.17.3",
     "@react-email/components": "^0.0.36",
+    "@vercel/blob": "^2.4.0",
     "@vercel/functions": "^3.6.1",
     "bcryptjs": "^3.0.3",
     "framer-motion": "^12.40.0",
@@ -20,6 +21,7 @@
     "razorpay": "^2.9.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-dropzone": "^15.0.0",
     "recharts": "^3.8.1",
     "resend": "^4.0.1",
     "uuid": "^14.0.0"
@@ -29,6 +31,7 @@
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "@types/react-dropzone": "^4.2.2",
     "@types/uuid": "^10.0.0",
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.1.3",
