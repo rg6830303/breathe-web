@@ -114,7 +114,7 @@ export default function ImportWizardPage() {
     if (row.customer_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.customer_email)) return { isValid: false, error: "Invalid Email format." };
     if (isNaN(Number(row.amount)) || Number(row.amount) < 0) return { isValid: false, error: "Amount must be a positive number." };
     
-    return { isValid: true, error: null };
+    return { isValid: true, error: null as string | null };
   };
 
   // Parse spreadsheet contents
@@ -198,7 +198,7 @@ export default function ImportWizardPage() {
 
         const validation = validateRowClient(mappedRow);
         mappedRow.isValid = validation.isValid && !dateErr;
-        mappedRow.validationError = dateErr ? "Invalid date format." : validation.error;
+        mappedRow.validationError = dateErr ? "Invalid date format." : (validation.error as string | null);
         
         // Auto-exclude invalid rows
         mappedRow.isExcluded = !mappedRow.isValid;

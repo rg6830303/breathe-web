@@ -1,3 +1,5 @@
+"use client";
+
 export default function OfflinePage() {
   return (
     <html lang="en">
@@ -95,10 +97,7 @@ export default function OfflinePage() {
             ← Go back
           </button>
         </div>
-        <script dangerouslySetInnerHTML={{ __html: `
-          // Auto-retry when connection returns
-          window.addEventListener('online', () => window.location.reload());
-        `}} />
+        <script dangerouslySetInnerHTML={{ __html: `window.addEventListener('online', () => window.location.reload());` }} />
       </body>
     </html>
   );
