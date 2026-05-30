@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendTelegramAlert } from "@/lib/notifications";
+import { notifyWaitlistNext, sendTelegramAlert } from "@/lib/notifications";
 import { getSession } from "@/lib/session";
 import { getSupabaseService, hasSupabaseEnv } from "@/lib/supabase";
 
@@ -91,6 +91,13 @@ export async function POST(request: NextRequest) {
     `❌ Cancellation: Court ${booking.court_id} on ${dateLabel} at ${timeLabel} — ${session.name}` +
       (reason ? `\nReason: ${reason}` : ""),
   ).catch(() => undefined);
+
+  // Walk the waitlist FIFO for this freed slot and email the oldest entrant.
+  // Fire-and-forget so the cancellation isn't blocked on email delivery.
+  void notifyWaitlistNext({
+    courtId: booking.court_id,
+    startTime: booking.start_time,
+  }).catch(() => undefined);
 
   return NextResponse.json({ booking: updated });
 }

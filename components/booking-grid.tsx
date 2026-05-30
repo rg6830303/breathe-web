@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, CalendarPlus, Check, Info, Lock, MessageCircle, ReceiptText, Share2 } from "lucide-react";
+import { Bell, CalendarDays, CalendarPlus, Check, Info, Lock, MessageCircle, ReceiptText, Share2 } from "lucide-react";
 import type { Slot } from "@/lib/types";
 import { calculateTotals } from "@/lib/pricing";
 import { BookingStickyBar } from "@/components/booking-sticky-bar";
+import { WaitlistModal, type WaitlistTarget } from "@/components/waitlist-modal";
 import { generateMultiICS, whatsappBatchLink, type IcsBooking } from "@/lib/ics";
 
 function timeLabel(value: string) {
@@ -48,6 +49,7 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
   const [mobileCourt, setMobileCourt] = useState<number>(1);
   const [band, setBand] = useState<Band>(defaultBand());
   const [toast, setToast] = useState<string | null>(null);
+  const [waitlistTarget, setWaitlistTarget] = useState<WaitlistTarget | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -268,15 +270,34 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
                     <li
                       key={`${cell.courtId}-${cell.startTime}`}
                       className={`flex items-center justify-between min-h-[52px] px-4 py-3 border-b border-gray-100 ${
-                        disabled ? "cursor-not-allowed" : "cursor-pointer"
+                        disabled ? "cursor-default" : "cursor-pointer"
                       }`}
-                      onClick={() => toggle(cell)}
+                      onClick={() => !disabled && toggle(cell)}
                     >
                       <div>
                         <div className="text-sm font-bold text-ink">{timeLabel(cell.startTime)}</div>
                         <div className="text-xs text-slatey">{cell.courtName} · ₹{cell.price}</div>
                       </div>
-                      <SlotPill state={disabled ? "booked" : sel ? "selected" : "open"} />
+                      <div className="flex items-center gap-2">
+                        {disabled && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setWaitlistTarget({
+                                courtId: cell.courtId,
+                                courtName: cell.courtName,
+                                startTime: cell.startTime,
+                                endTime: cell.endTime,
+                              });
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full border border-brand/20 px-2.5 py-1 text-[0.65rem] font-bold text-brand hover:bg-brand/5"
+                          >
+                            <Bell className="h-3 w-3" /> Notify me
+                          </button>
+                        )}
+                        <SlotPill state={disabled ? "booked" : sel ? "selected" : "open"} />
+                      </div>
                     </li>
                   );
                 })}
@@ -321,26 +342,44 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
                     const sel = isSelected(slot);
                     const state: SlotState = slot.booked ? "booked" : sel ? "selected" : "open";
                     return (
-                      <button
-                        key={`${slot.courtId}-${slot.startTime}`}
-                        onClick={() => toggle(slot)}
-                        disabled={slot.booked}
-                        className={`m-1 min-h-[48px] rounded-xl border p-2 text-left transition ${slotClass(state)}`}
-                      >
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <span>{state === "booked" ? "Booked" : state === "selected" ? "Selected" : "Open"}</span>
-                          {state === "booked" ? (
-                            <Lock className="h-3.5 w-3.5" />
-                          ) : state === "selected" ? (
-                            <Check className="h-3.5 w-3.5" />
-                          ) : null}
-                        </div>
-                        {!slot.booked && (
-                          <div className={`mt-1 text-xs font-semibold ${state === "selected" ? "text-white/90" : "text-slatey"}`}>
-                            ₹{slot.price}
+                      <div key={`${slot.courtId}-${slot.startTime}`} className="relative m-1">
+                        <button
+                          onClick={() => toggle(slot)}
+                          disabled={slot.booked}
+                          className={`w-full min-h-[48px] rounded-xl border p-2 text-left transition ${slotClass(state)}`}
+                        >
+                          <div className="flex items-center justify-between text-xs font-bold">
+                            <span>{state === "booked" ? "Booked" : state === "selected" ? "Selected" : "Open"}</span>
+                            {state === "booked" ? (
+                              <Lock className="h-3.5 w-3.5" />
+                            ) : state === "selected" ? (
+                              <Check className="h-3.5 w-3.5" />
+                            ) : null}
                           </div>
+                          {!slot.booked && (
+                            <div className={`mt-1 text-xs font-semibold ${state === "selected" ? "text-white/90" : "text-slatey"}`}>
+                              ₹{slot.price}
+                            </div>
+                          )}
+                        </button>
+                        {slot.booked && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setWaitlistTarget({
+                                courtId: slot.courtId,
+                                courtName: slot.courtName,
+                                startTime: slot.startTime,
+                                endTime: slot.endTime,
+                              })
+                            }
+                            aria-label={`Notify me when ${slot.courtName} at ${timeLabel(slot.startTime)} opens up`}
+                            className="absolute right-1.5 bottom-1.5 inline-flex items-center gap-1 rounded-full border border-brand/30 bg-white px-2 py-0.5 text-[0.6rem] font-bold text-brand shadow-sm hover:bg-brand/5"
+                          >
+                            <Bell className="h-2.5 w-2.5" /> Notify
+                          </button>
                         )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -465,6 +504,10 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
           document.getElementById("reservation-summary")?.scrollIntoView({ behavior: "smooth", block: "start" });
         }}
       />
+
+      {waitlistTarget && (
+        <WaitlistModal target={waitlistTarget} onClose={() => setWaitlistTarget(null)} />
+      )}
     </div>
   );
 }
