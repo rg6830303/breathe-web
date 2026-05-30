@@ -113,6 +113,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           // JSON.stringify produces clean, escaped output — safe to inject.
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{})})}`,
+          }}
+        />
       </head>
       <body className="font-sans antialiased">
         <Providers>{children}</Providers>

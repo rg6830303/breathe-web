@@ -1,13 +1,58 @@
 {
   "name": "Breathe Pickleball",
   "short_name": "Breathe PB",
+  "description": "Book your pickleball court at Breathe Pickleball, Kaikhali Kolkata — instant online reservations, coaching & tournaments.",
   "start_url": "/book",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#1E3FBF",
   "theme_color": "#2F5BFF",
-  "description": "Book your pickleball court at Breathe, Kaikhali — instant online reservations.",
+  "categories": ["sports", "lifestyle", "health"],
+  "lang": "en-IN",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Book a Court",
+      "short_name": "Book",
+      "description": "Reserve a pickleball slot instantly",
+      "url": "/book",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your bookings and sessions",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Court Calendar",
+      "short_name": "Calendar",
+      "description": "See slot availability for the week",
+      "url": "/calendar",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/breathe-logo.jpg",
+      "sizes": "800x600",
+      "type": "image/jpeg",
+      "label": "Breathe Pickleball home page"
+    }
   ]
 }

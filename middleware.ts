@@ -6,7 +6,7 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (pathname.startsWith("/dashboard")) {
-    const token = req.cookies.get("bp_session")?.value;
+    const token = req.cookies.get("breathe_player_session")?.value;
     const payload = token ? await verifyToken(token) : null;
     if (!payload || payload.role !== "user") {
       return NextResponse.redirect(new URL(`/login?next=${pathname}`, req.url));
@@ -14,7 +14,7 @@ export async function middleware(req: NextRequest) {
   }
 
   if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
-    const token = req.cookies.get("bp_admin_session")?.value;
+    const token = req.cookies.get("breathe_admin_session")?.value;
     const payload = token ? await verifyToken(token) : null;
     if (!payload || payload.role !== "admin") {
       return NextResponse.redirect(new URL("/admin/login", req.url));

@@ -35,6 +35,12 @@ export default function BookPage() {
                   {rule.label}: ₹{rule.price}
                 </span>
               ))}
+              <a
+                href="/calendar"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/30 px-3 py-1.5 text-[10px] font-semibold text-white/80 hover:bg-white/10 transition sm:text-xs"
+              >
+                📅 See 7-day calendar →
+              </a>
             </div>
           </Container>
         </section>

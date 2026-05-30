@@ -29,7 +29,37 @@ function todayIST(): string {
 
 export async function GET(request: NextRequest) {
   try {
-    const date = request.nextUrl.searchParams.get("date") ?? todayIST();
+    const params = request.nextUrl.searchParams;
+    const from = params.get("from");
+    const to = params.get("to");
+
+    // ── Calendar range mode ──────────────────────────────────────
+    if (from && to) {
+      let result;
+      try {
+        result = await turso.execute({
+          sql: `SELECT slot_date, slot_time, COUNT(*) as booked
+                FROM bookings
+                WHERE slot_date BETWEEN ? AND ? AND status = 'confirmed'
+                GROUP BY slot_date, slot_time`,
+          args: [from, to],
+        });
+      } catch (dbErr) {
+        console.error("[slots range db error]", dbErr);
+        result = { rows: [] };
+      }
+
+      const slots = result.rows.map((r) => ({
+        date: String(r.slot_date),
+        time: String(r.slot_time).slice(0, 5),
+        booked: Number(r.booked),
+      }));
+
+      return NextResponse.json({ from, to, slots });
+    }
+
+    // ── Single-date mode (existing behavior) ─────────────────────
+    const date = params.get("date") ?? todayIST();
 
     // Query active bookings for this date
     let bookingsResult;
@@ -91,3 +121,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
 }
+
+

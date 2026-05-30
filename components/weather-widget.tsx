@@ -12,7 +12,7 @@ type WeatherData = {
   isDay: boolean;
 };
 
-export function WeatherWidget() {
+export function WeatherWidget({ compact = false }: { compact?: boolean }) {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -106,6 +106,24 @@ export function WeatherWidget() {
 
   const { label, icon: Icon, color } = getWeatherDetails(weather.code, weather.isDay);
   const rec = getRecommendation(weather.temp, weather.code);
+
+  // Compact single-line bar for tight layouts (e.g., calendar page)
+  if (compact) {
+    return (
+      <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#0B0F19] px-4 py-2.5 text-white">
+        <div className="flex items-center gap-2 text-xs">
+          <Icon className={`h-4 w-4 ${color}`} />
+          <span className="font-semibold">{weather.temp}°C · {label}</span>
+          <span className="text-white/40">Kaikhali</span>
+        </div>
+        <div className="flex items-center gap-3 text-xs text-white/60">
+          <span>💧 {weather.humidity}%</span>
+          <span>💨 {weather.windSpeed} km/h</span>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${rec.color}`}>{rec.badge}</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0B0F19] p-5 text-white shadow-soft transition hover:border-[#D4FC34]/30 sm:p-6">
