@@ -44,7 +44,13 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/breathe-logo.jpg",
-    apple: "/breathe-logo.jpg",
+    apple: "/icons/icon-192.png",
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Breathe PB",
   },
 };
 

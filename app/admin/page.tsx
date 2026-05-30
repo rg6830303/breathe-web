@@ -134,7 +134,7 @@ export default async function AdminPage() {
                       <td className="p-3">
                         <form action={updateBookingAdmin} className="grid grid-cols-2 gap-2">
                           <input type="hidden" name="id" value={booking.id} />
-                          <input name="courtId" type="number" defaultValue={booking.court_id} className={fieldSm} />
+                          <input name="courtId" type="number" inputMode="numeric" defaultValue={booking.court_id} className={fieldSm} />
                           <select name="status" defaultValue={booking.status} className={fieldSm}>
                             <option value="confirmed">confirmed</option>
                             <option value="paid">paid</option>
@@ -143,7 +143,7 @@ export default async function AdminPage() {
                           </select>
                           <input name="startTime" type="datetime-local" defaultValue={dateTimeInput(booking.start_time)} className={fieldSm} />
                           <input name="endTime" type="datetime-local" defaultValue={dateTimeInput(booking.end_time)} className={fieldSm} />
-                          <input name="totalAmount" type="number" step="0.01" defaultValue={booking.total_amount} className={fieldSm} />
+                          <input name="totalAmount" type="number" inputMode="decimal" step="0.01" defaultValue={booking.total_amount} className={fieldSm} />
                           <button className="rounded-lg bg-brand px-2 py-1.5 text-sm font-bold text-white">Save</button>
                         </form>
                       </td>
@@ -163,8 +163,8 @@ export default async function AdminPage() {
                   <form key={rule.id} action={upsertPricingRule} className="grid grid-cols-2 gap-2 rounded-2xl border border-brand/10 bg-brand/[0.03] p-3 md:grid-cols-6">
                     <input type="hidden" name="id" value={rule.id} />
                     <input name="label" defaultValue={rule.label} className={`${fieldSm} md:col-span-2`} />
-                    <input name="courtId" placeholder="Court or blank" defaultValue={rule.court_id ?? ""} className={fieldSm} />
-                    <input name="price" type="number" defaultValue={rule.price} className={fieldSm} />
+                    <input name="courtId" inputMode="numeric" placeholder="Court or blank" defaultValue={rule.court_id ?? ""} className={fieldSm} />
+                    <input name="price" type="number" inputMode="numeric" defaultValue={rule.price} className={fieldSm} />
                     <input name="startTime" type="time" defaultValue={rule.start_time.slice(0, 5)} className={fieldSm} />
                     <input name="endTime" type="time" defaultValue={rule.end_time.slice(0, 5)} className={fieldSm} />
                     <label className="flex items-center gap-2 text-xs font-bold text-ink"><input name="active" type="checkbox" defaultChecked={rule.active} className="accent-brand" /> Active</label>
@@ -187,7 +187,7 @@ export default async function AdminPage() {
                   </select>
                 </div>
                 <input name="label" placeholder="Label" className={field} />
-                <input name="amount" type="number" step="0.01" placeholder="Amount" className={field} />
+                <input name="amount" type="number" inputMode="decimal" step="0.01" placeholder="Amount" className={field} />
                 <textarea name="notes" rows={2} placeholder="Notes" className={field} />
                 <button className={btnPrimary}>Add finance entry</button>
               </form>
@@ -208,7 +208,7 @@ export default async function AdminPage() {
             </form>
             <form action={deleteNotice} className={`${card} flex flex-col gap-3`}>
               <h2 className="font-display text-xl font-extrabold text-ink">Purge notice</h2>
-              <input name="id" placeholder="Notice ID to purge" type="number" className={field} required />
+              <input name="id" placeholder="Notice ID to purge" type="number" inputMode="numeric" className={field} required />
               <button className="rounded-xl border border-red-300 px-4 py-3 text-sm font-bold text-red-500 transition hover:bg-red-50">Purge</button>
             </form>
           </section>

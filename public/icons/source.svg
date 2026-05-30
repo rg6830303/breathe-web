@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Source SVG for the PWA app icon. Filled brand-blue background with a white
+  paddle silhouette (head + handle) echoing the Breathe Pickleball logo.
+
+  Re-render PNGs with `node scripts/generate-icons.mjs` after editing.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" ry="96" fill="#2F5BFF"/>
+  <!-- Paddle head -->
+  <ellipse cx="256" cy="200" rx="120" ry="140" fill="#FFFFFF"/>
+  <!-- Paddle handle -->
+  <rect x="232" y="320" width="48" height="120" rx="22" fill="#FFFFFF"/>
+  <!-- A small lime dot for the pickleball -->
+  <circle cx="336" cy="312" r="28" fill="#C6F432"/>
+</svg>

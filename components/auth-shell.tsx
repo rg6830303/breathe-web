@@ -94,6 +94,7 @@ export function AuthField({
   type = "text",
   placeholder,
   autoComplete,
+  inputMode,
   required = true,
 }: {
   label: string;
@@ -101,8 +102,16 @@ export function AuthField({
   type?: string;
   placeholder?: string;
   autoComplete?: string;
+  /** Lets the caller force the correct mobile keyboard. If omitted, we infer a
+   *  sensible default from `type` (email → email, tel → tel, number → numeric). */
+  inputMode?: "text" | "email" | "tel" | "numeric" | "decimal" | "search" | "url" | "none";
   required?: boolean;
 }) {
+  // Auto-derive inputMode when not explicit. Keeps callers terse for the
+  // common cases but lets specific fields (OTP, postcode) override.
+  const derivedInputMode =
+    inputMode ??
+    (type === "email" ? "email" : type === "tel" ? "tel" : type === "number" ? "numeric" : undefined);
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm font-semibold text-ink">{label}</span>
@@ -111,6 +120,7 @@ export function AuthField({
         type={type}
         placeholder={placeholder}
         autoComplete={autoComplete}
+        inputMode={derivedInputMode}
         required={required}
         className="w-full rounded-2xl border border-brand/15 bg-white px-4 py-3 text-sm text-ink shadow-soft outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10"
       />
