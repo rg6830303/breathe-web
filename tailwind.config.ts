@@ -21,7 +21,7 @@ const config: Config = {
         },
         ink: "#0D1426",
         slatey: "#475569",
-        ball: "#C6F23E", // pickleball lime accent
+        ball: "#0EA5E9", // accent (was lime #C6F23E — retoned to electric blue for stronger contrast on light & dark)
         // Legacy tokens kept so any older references keep compiling.
         midnight: "#0B1530",
         court: "#2F5BFF",
