@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Bell, CalendarDays, CalendarPlus, Check, Info, Lock, MessageCircle, ReceiptText, Share2 } from "lucide-react";
+import type { KeyboardEvent } from "react";
 import type { Slot } from "@/lib/types";
 import { calculateTotals } from "@/lib/pricing";
 import { BookingStickyBar } from "@/components/booking-sticky-bar";
@@ -51,6 +52,9 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
   const [band, setBand] = useState<Band>(defaultBand());
   const [toast, setToast] = useState<string | null>(null);
   const [waitlistTarget, setWaitlistTarget] = useState<WaitlistTarget | null>(null);
+  // Roving tab index for the desktop grid. Stores [rowIdx, courtIdx] of the
+  // currently-focusable cell; arrow keys move it without scrolling the page.
+  const [focus, setFocus] = useState<[number, number]>([0, 0]);
 
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +149,67 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  /** Move keyboard focus to a specific (row, col) in the desktop grid. We use
+   *  data attributes rather than refs so the lookup survives re-renders. */
+  function focusCell(rowIdx: number, colIdx: number) {
+    const node = document.querySelector<HTMLElement>(
+      `[data-grid-cell="true"][data-row="${rowIdx}"][data-col="${colIdx}"]`,
+    );
+    node?.focus();
+  }
+
+  function onGridKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    const rows = visibleRows.length;
+    const cols = courts.length;
+    if (rows === 0 || cols === 0) return;
+    let [r, c] = focus;
+    // Clamp the current position to the visible window — `visibleRows` shrinks
+    // when the band filter changes, so a stale focus can land off-grid.
+    r = Math.min(r, rows - 1);
+    c = Math.min(c, cols - 1);
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        r = Math.min(r + 1, rows - 1);
+        setFocus([r, c]);
+        focusCell(r, c);
+        return;
+      case "ArrowUp":
+        e.preventDefault();
+        r = Math.max(r - 1, 0);
+        setFocus([r, c]);
+        focusCell(r, c);
+        return;
+      case "ArrowRight":
+        e.preventDefault();
+        c = Math.min(c + 1, cols - 1);
+        setFocus([r, c]);
+        focusCell(r, c);
+        return;
+      case "ArrowLeft":
+        e.preventDefault();
+        c = Math.max(c - 1, 0);
+        setFocus([r, c]);
+        focusCell(r, c);
+        return;
+      case " ":
+      case "Enter": {
+        e.preventDefault();
+        const cell = visibleRows[r]?.cells[c];
+        if (cell && !cell.booked) toggle(cell);
+        return;
+      }
+      case "Escape":
+        if (selected.length > 0) {
+          e.preventDefault();
+          setSelected([]);
+          setConfirmed(false);
+        }
+        return;
+    }
   }
 
   async function shareBooking() {
@@ -311,15 +376,30 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
           </div>
         </div>
 
-        {/* DESKTOP: existing grid layout, retuned colors */}
-        <div className="hidden lg:block">
+        {/* DESKTOP: ARIA grid with roving tabindex + arrow-key navigation */}
+        <div
+          className="hidden lg:block"
+          role="grid"
+          aria-label="Court availability — select your slots"
+          aria-rowcount={visibleRows.length + 1}
+          aria-colcount={courts.length + 1}
+          onKeyDown={onGridKeyDown}
+        >
           <div
+            role="row"
             className="grid border-y border-brand/10 bg-brand/5 text-center text-xs font-bold uppercase tracking-wide text-ink"
             style={{ gridTemplateColumns: gridCols }}
           >
-            <div className="p-3 text-slatey">Time</div>
+            <div role="columnheader" aria-label="Time" className="p-3 text-slatey">
+              Time
+            </div>
             {courts.map((c) => (
-              <div key={c.id} className="border-l border-brand/10 p-3 text-brand">
+              <div
+                key={c.id}
+                role="columnheader"
+                aria-label={`Court ${c.id}`}
+                className="border-l border-brand/10 p-3 text-brand"
+              >
                 {c.name}
               </div>
             ))}
@@ -333,25 +413,39 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
                 ))}
               </div>
             ) : (
-              visibleRows.map((row) => (
+              visibleRows.map((row, rowIdx) => (
                 <div
                   key={row.startTime}
+                  role="row"
                   className="grid border-b border-brand/5"
                   style={{ gridTemplateColumns: gridCols }}
                 >
-                  <div className="flex items-center justify-center bg-brand/[0.03] p-2 text-center text-xs font-bold text-slatey">
+                  <div
+                    role="rowheader"
+                    className="flex items-center justify-center bg-brand/[0.03] p-2 text-center text-xs font-bold text-slatey"
+                  >
                     {timeLabel(row.startTime)}
                   </div>
                   {row.cells.map((slot, idx) => {
-                    if (!slot) return <div key={idx} className="border-l border-brand/5" />;
+                    if (!slot) return <div key={idx} role="gridcell" aria-hidden="true" className="border-l border-brand/5" />;
                     const sel = isSelected(slot);
                     const state: SlotState = slot.booked ? "booked" : sel ? "selected" : "open";
+                    const isFocused = focus[0] === rowIdx && focus[1] === idx;
+                    const ariaLabel = `Court ${slot.courtId}, ${timeLabel(slot.startTime)}, ₹${slot.price}, ${state}`;
                     return (
-                      <div key={`${slot.courtId}-${slot.startTime}`} className="relative m-1">
+                      <div key={`${slot.courtId}-${slot.startTime}`} role="gridcell" className="relative m-1">
                         <button
+                          data-grid-cell="true"
+                          data-row={rowIdx}
+                          data-col={idx}
+                          tabIndex={isFocused ? 0 : -1}
+                          aria-label={ariaLabel}
+                          aria-selected={sel}
+                          aria-disabled={slot.booked}
+                          onFocus={() => setFocus([rowIdx, idx])}
                           onClick={() => toggle(slot)}
                           disabled={slot.booked}
-                          className={`w-full min-h-[48px] rounded-xl border p-2 text-left transition ${slotClass(state)}`}
+                          className={`w-full min-h-[48px] rounded-xl border p-2 text-left transition outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 ${slotClass(state)}`}
                         >
                           <div className="flex items-center justify-between text-xs font-bold">
                             <span>{state === "booked" ? "Booked" : state === "selected" ? "Selected" : "Open"}</span>
@@ -379,7 +473,7 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
                               })
                             }
                             aria-label={`Notify me when ${slot.courtName} at ${timeLabel(slot.startTime)} opens up`}
-                            className="absolute right-1.5 bottom-1.5 inline-flex items-center gap-1 rounded-full border border-brand/30 bg-white px-2 py-0.5 text-[0.6rem] font-bold text-brand shadow-sm hover:bg-brand/5"
+                            className="absolute right-1.5 bottom-1.5 inline-flex items-center gap-1 rounded-full border border-brand/30 bg-white px-2 py-0.5 text-[0.6rem] font-bold text-brand shadow-sm hover:bg-brand/5 focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 outline-none"
                           >
                             <Bell className="h-2.5 w-2.5" /> Notify
                           </button>
