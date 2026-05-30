@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { calculateTotals } from "@/lib/pricing";
+import { generateICS } from "@/lib/ics";
 import { mirrorBookingToSheets, sendBookingEmails, sendTelegramAlert } from "@/lib/notifications";
 import { getSupabaseService } from "@/lib/supabase";
 
@@ -27,6 +28,16 @@ export async function POST(request: NextRequest) {
   const total = Number(booking?.total_amount ?? calculateTotals(0, equipmentTotal).total);
   const window = `${new Date(startTime).toLocaleString()} - ${new Date(endTime).toLocaleTimeString()}`;
 
+  // Build an ICS string the client can also use for the in-app "Add to
+  // Calendar" button — we return it alongside the booking record so the
+  // BookingGrid confirmation panel doesn't need a second round-trip.
+  const icsString = generateICS({
+    courtId,
+    startTime: new Date(startTime),
+    endTime: new Date(endTime),
+    bookingId: String(booking?.id ?? `${courtId}-${startTime}`),
+  });
+
   await Promise.allSettled([
     sendTelegramAlert(`New booking: ${playerName ?? userId}, Court ${courtId}, ${window}, INR ${total}`),
     sendBookingEmails({
@@ -36,9 +47,10 @@ export async function POST(request: NextRequest) {
       courtId,
       window,
       total,
+      ics: icsString,
     }),
     mirrorBookingToSheets({ event: "INSERT", record: booking }),
   ]);
 
-  return NextResponse.json({ booking });
+  return NextResponse.json({ booking, ics: icsString });
 }

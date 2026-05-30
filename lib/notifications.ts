@@ -29,14 +29,29 @@ export async function sendBookingEmails(input: {
   courtId: number;
   window: string;
   total: number;
+  /** Optional ICS calendar payload. When present we attach it so both the
+   *  player and the admin land it in their calendar with one click. */
+  ics?: string;
 }) {
   const client = getResend();
   if (!client) return { skipped: true };
+  const attachments = input.ics
+    ? [
+        {
+          filename: "breathe-booking.ics",
+          // Resend's SDK accepts base64-encoded `content` strings for binary
+          // attachments. ICS is text but base64 sidesteps any character-set
+          // mangling along the way.
+          content: Buffer.from(input.ics, "utf8").toString("base64"),
+        },
+      ]
+    : undefined;
   return client.emails.send({
     from: "Breathe Pickleball <bookings@breathepickleball.com>",
     to: [input.playerEmail, input.adminEmail],
     subject: `Breathe Pickleball booking - Court ${input.courtId}`,
     react: BookingConfirmationEmail(input),
+    attachments,
   });
 }
 

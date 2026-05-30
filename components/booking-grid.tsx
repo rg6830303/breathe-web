@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Check, Info, Lock, ReceiptText } from "lucide-react";
+import { CalendarDays, CalendarPlus, Check, Info, Lock, MessageCircle, ReceiptText, Share2 } from "lucide-react";
 import type { Slot } from "@/lib/types";
 import { calculateTotals } from "@/lib/pricing";
 import { BookingStickyBar } from "@/components/booking-sticky-bar";
+import { generateMultiICS, whatsappBatchLink, type IcsBooking } from "@/lib/ics";
 
 function timeLabel(value: string) {
   return new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" }).format(new Date(value));
@@ -46,6 +47,7 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
   const [confirmed, setConfirmed] = useState(false);
   const [mobileCourt, setMobileCourt] = useState<number>(1);
   const [band, setBand] = useState<Band>(defaultBand());
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,6 +115,58 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
 
   const minDate = new Date().toISOString().slice(0, 10);
   const gridCols = `64px repeat(${Math.max(courts.length, 1)}, minmax(0, 1fr))`;
+
+  // Build the IcsBooking list for the confirmation block. Bookings are local
+  // (no server round-trip yet); we synthesise a stable id from court+start so
+  // the ICS UID is deterministic and replaceable on update if needed.
+  const confirmedBookings: IcsBooking[] = selected.map((s) => ({
+    courtId: s.courtId,
+    startTime: new Date(s.startTime),
+    endTime: new Date(s.endTime),
+    bookingId: `${date}-${s.courtId}-${new Date(s.startTime).getTime()}`,
+  }));
+
+  function showToast(message: string) {
+    setToast(message);
+    window.setTimeout(() => setToast(null), 2400);
+  }
+
+  function downloadIcs() {
+    const ics = generateMultiICS(confirmedBookings);
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "breathe-booking.ics";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function shareBooking() {
+    const first = confirmedBookings[0];
+    if (!first) return;
+    const dateStr = first.startTime.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+    const timeStr = first.startTime.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+    const shareData = {
+      title: "Court at Breathe Pickleball",
+      text: `Court ${first.courtId} · ${dateStr} · ${timeStr}`,
+      url: typeof window !== "undefined" ? window.location.href : "https://breathe-web-six.vercel.app",
+    };
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // User cancelled the share sheet — silent no-op is fine.
+      }
+      return;
+    }
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      await navigator.clipboard.writeText(shareData.url);
+      showToast("Link copied");
+    }
+  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -349,12 +403,50 @@ export function BookingGrid({ initialSlots, initialDate }: { initialSlots: Slot[
         </button>
 
         {confirmed && (
-          <div className="mt-3 flex items-start gap-2 rounded-2xl border border-brand/20 bg-brand/5 p-3 text-xs text-ink">
-            <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
-            <span>
-              Slots held! Online payment is being connected — our team will message you on {" "}
-              <strong>WhatsApp</strong> to confirm and collect payment.
-            </span>
+          <div className="mt-3 space-y-3">
+            <div className="flex items-start gap-2 rounded-2xl border border-brand/20 bg-brand/5 p-3 text-xs text-ink">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+              <span>
+                Slots held! Online payment is being connected — our team will message you on {" "}
+                <strong>WhatsApp</strong> to confirm and collect payment.
+              </span>
+            </div>
+
+            {/* Calendar / share / WhatsApp actions */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={downloadIcs}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-brand/20 bg-white px-3 py-2.5 text-xs font-bold text-brand hover:bg-brand/5"
+              >
+                <CalendarPlus className="h-4 w-4" /> Add to Calendar
+              </button>
+              <button
+                type="button"
+                onClick={shareBooking}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-brand/20 bg-white px-3 py-2.5 text-xs font-bold text-brand hover:bg-brand/5"
+              >
+                <Share2 className="h-4 w-4" /> Share Booking
+              </button>
+            </div>
+            <a
+              href={whatsappBatchLink(confirmedBookings)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-3 py-2.5 text-xs font-bold text-white hover:opacity-90"
+            >
+              <MessageCircle className="h-4 w-4" /> Message us on WhatsApp ↗
+            </a>
+
+            {toast && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="rounded-xl border border-brand/20 bg-ink px-3 py-2 text-center text-xs font-bold text-white"
+              >
+                {toast}
+              </div>
+            )}
           </div>
         )}
 
