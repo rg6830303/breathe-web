@@ -1,9 +1,11 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET ?? "breathe-pickleball-dev-secret-change-me");
-const COOKIE_NAME = "bp_session";
-const ADMIN_COOKIE = "bp_admin_session";
+const secret = new TextEncoder().encode(
+  process.env.SESSION_SECRET ?? process.env.JWT_SECRET ?? "breathe-pickleball-dev-secret-change-me-64-chars-long-or-more"
+);
+const COOKIE_NAME = "breathe_player_session";
+const ADMIN_COOKIE = "breathe_admin_session";
 
 export type UserPayload = { id: string; email: string; name: string; role: "user" };
 export type AdminPayload = { id: string; email: string; role: "admin" };

@@ -8,26 +8,38 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
 
     if (!email || !password) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
 
-    const result = await turso.execute({
-      sql: "SELECT id, email, password_hash FROM admins WHERE email = ? LIMIT 1",
-      args: [email],
-    });
+    let result;
+    try {
+      result = await turso.execute({
+        sql: "SELECT id, email, password_hash FROM admins WHERE email = ? LIMIT 1",
+        args: [email],
+      });
+    } catch (dbErr) {
+      console.error("[admin login db error]", dbErr);
+      return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+    }
+
     const row = result.rows[0];
-    if (!row) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    if (!row) {
+      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+    }
 
     const ok = await bcrypt.compare(password, String(row.password_hash));
-    if (!ok) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    if (!ok) {
+      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+    }
 
     const id = String(row.id);
     const token = await signToken({ id, email, role: "admin" });
+    
     const cookieStore = await cookies();
     cookieStore.set(ADMIN_COOKIE, token, {
       httpOnly: true,
@@ -39,7 +51,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Login failed";
-    return NextResponse.json({ error: message }, { status: 401 });
+    console.error("[admin login error]", err);
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
 }

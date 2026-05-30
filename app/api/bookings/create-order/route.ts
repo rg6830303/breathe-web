@@ -11,76 +11,96 @@ type SlotInput = { date: string; time: string; court: number };
 type AddonInput = { id: string; label: string; price: number; qty?: number };
 
 export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}));
-  const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
-  const addons: AddonInput[] = Array.isArray(body.addons) ? body.addons : [];
+    const body = await req.json().catch(() => ({}));
+    const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
+    const addons: AddonInput[] = Array.isArray(body.addons) ? body.addons : [];
 
-  if (slots.length === 0) {
-    return NextResponse.json({ error: "Select at least one slot." }, { status: 400 });
-  }
-
-  for (const s of slots) {
-    if (!s.date || !s.time || ![1, 2, 3].includes(s.court)) {
-      return NextResponse.json({ error: "Invalid slot." }, { status: 400 });
+    if (slots.length === 0) {
+      return NextResponse.json({ error: "Select at least one slot." }, { status: 400 });
     }
-  }
 
-  const dates = Array.from(new Set(slots.map((s) => s.date)));
-  for (const d of dates) {
-    const [booked, blocked] = await Promise.all([
-      turso.execute({
-        sql: "SELECT court_number, slot_time FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
-        args: [d],
-      }),
-      turso.execute({
-        sql: "SELECT court_number, slot_time FROM blocked_slots WHERE slot_date = ?",
-        args: [d],
-      }),
-    ]);
-    const taken = new Set<string>();
-    booked.rows.forEach((r) =>
-      taken.add(`${Number(r.court_number)}@${String(r.slot_time).slice(0, 5)}`),
-    );
-    blocked.rows.forEach((r) =>
-      taken.add(`${Number(r.court_number)}@${String(r.slot_time).slice(0, 5)}`),
-    );
     for (const s of slots) {
-      if (s.date !== d) continue;
-      if (taken.has(`${s.court}@${s.time.slice(0, 5)}`)) {
-        return NextResponse.json(
-          { error: `Slot Court ${s.court} at ${s.time} on ${s.date} is no longer available.` },
-          { status: 409 },
-        );
+      if (!s.date || !s.time || ![1, 2, 3].includes(s.court)) {
+        return NextResponse.json({ error: "Invalid slot." }, { status: 400 });
       }
     }
+
+    const dates = Array.from(new Set(slots.map((s) => s.date)));
+    
+    // Check database to ensure slots are not overbooked
+    for (const d of dates) {
+      let booked;
+      try {
+        booked = await turso.execute({
+          sql: "SELECT slot_time FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
+          args: [d],
+        });
+      } catch (dbErr) {
+        console.error("[create-order check db error]", dbErr);
+        return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+      }
+
+      // Count booked slots for each time
+      const bookingsCount: Record<string, number> = {};
+      for (const row of booked.rows) {
+        const time = String(row.slot_time).slice(0, 5);
+        bookingsCount[time] = (bookingsCount[time] ?? 0) + 1;
+      }
+
+      // Check capacity for the requested slots on this day
+      for (const s of slots) {
+        if (s.date !== d) continue;
+        const timeKey = s.time.slice(0, 5);
+        const bookedNum = bookingsCount[timeKey] ?? 0;
+        
+        // Max capacity is 3 courts (total_courts in venue_config)
+        const totalCourts = 3; 
+        if (bookedNum >= totalCourts) {
+          return NextResponse.json(
+            { error: `Slot at ${s.time} on ${s.date} is no longer available.` },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
+    const base = slots.reduce((sum, s) => sum + getSlotPrice(s.time), 0);
+    const addonTotal = addons.reduce((sum, a) => sum + (Number(a.price) || 0) * (Number(a.qty) || 1), 0);
+    const totals = calculateTotals(base, addonTotal);
+
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keyId || !keySecret) {
+      return NextResponse.json({ error: "Razorpay is not configured." }, { status: 500 });
+    }
+
+    let order;
+    try {
+      const rzp = new Razorpay({ key_id: keyId, key_secret: keySecret });
+      order = await rzp.orders.create({
+        amount: Math.round(totals.total * 100),
+        currency: "INR",
+        receipt: uuid(),
+        notes: { user_id: session.id, slots: String(slots.length) },
+      });
+    } catch (rzpErr) {
+      console.error("[create-order razorpay error]", rzpErr);
+      return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      orderId: order.id,
+      amount: order.amount,
+      currency: "INR",
+      keyId,
+      totals,
+    });
+  } catch (err: unknown) {
+    console.error("[create-order error]", err);
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
-
-  const base = slots.reduce((sum, s) => sum + getSlotPrice(s.time), 0);
-  const addonTotal = addons.reduce((sum, a) => sum + (Number(a.price) || 0) * (Number(a.qty) || 1), 0);
-  const totals = calculateTotals(base, addonTotal);
-
-  const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
-  if (!keyId || !keySecret) {
-    return NextResponse.json({ error: "Razorpay is not configured." }, { status: 500 });
-  }
-
-  const rzp = new Razorpay({ key_id: keyId, key_secret: keySecret });
-  const order = await rzp.orders.create({
-    amount: Math.round(totals.total * 100),
-    currency: "INR",
-    receipt: uuid(),
-    notes: { user_id: session.id, slots: String(slots.length) },
-  });
-
-  return NextResponse.json({
-    orderId: order.id,
-    amount: order.amount,
-    currency: "INR",
-    keyId,
-    totals,
-  });
 }

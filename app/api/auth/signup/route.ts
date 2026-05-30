@@ -13,7 +13,7 @@ function isEmail(v: string) {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const name = String(body.name ?? "").trim();
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
@@ -23,20 +23,34 @@ export async function POST(req: Request) {
     if (!isEmail(email)) return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
     if (password.length < 8) return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
 
-    const existing = await turso.execute({
-      sql: "SELECT id FROM users WHERE email = ? LIMIT 1",
-      args: [email],
-    });
+    let existing;
+    try {
+      existing = await turso.execute({
+        sql: "SELECT id FROM users WHERE email = ? LIMIT 1",
+        args: [email],
+      });
+    } catch (dbErr) {
+      console.error("[signup db-check error]", dbErr);
+      return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+    }
+
     if (existing.rows.length > 0) {
       return NextResponse.json({ error: "An account with this email already exists." }, { status: 400 });
     }
 
     const id = uuid();
     const hash = await bcrypt.hash(password, 12);
-    await turso.execute({
-      sql: "INSERT INTO users (id, name, email, password_hash, phone) VALUES (?, ?, ?, ?, ?)",
-      args: [id, name, email, hash, phone],
-    });
+    const now = Date.now();
+
+    try {
+      await turso.execute({
+        sql: "INSERT INTO users (id, email, password_hash, full_name, phone, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        args: [id, email, hash, name, phone, now],
+      });
+    } catch (insertErr) {
+      console.error("[signup db-insert error]", insertErr);
+      return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+    }
 
     const token = await signToken({ id, email, name, role: "user" });
     const cookieStore = await cookies();
@@ -50,7 +64,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, user: { id, name, email } });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Signup failed";
-    return NextResponse.json({ error: message }, { status: 400 });
+    console.error("[signup error]", err);
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
 }

@@ -28,50 +28,66 @@ function todayIST(): string {
 }
 
 export async function GET(request: NextRequest) {
-  const date = request.nextUrl.searchParams.get("date") ?? todayIST();
-
-  let bookedRows: Array<{ court_number: number; slot_time: string }> = [];
-  let blockedRows: Array<{ court_number: number; slot_time: string }> = [];
   try {
-    const [booked, blocked] = await Promise.all([
-      turso.execute({
-        sql: "SELECT court_number, slot_time FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
-        args: [date],
-      }),
-      turso.execute({
-        sql: "SELECT court_number, slot_time FROM blocked_slots WHERE slot_date = ?",
-        args: [date],
-      }),
-    ]);
-    bookedRows = booked.rows.map((r) => ({
-      court_number: Number(r.court_number),
-      slot_time: String(r.slot_time).slice(0, 5),
-    }));
-    blockedRows = blocked.rows.map((r) => ({
-      court_number: Number(r.court_number),
-      slot_time: String(r.slot_time).slice(0, 5),
-    }));
-  } catch {
-    // DB not initialized yet — return all-open grid so the UI still works.
-    bookedRows = [];
-    blockedRows = [];
-  }
+    const date = request.nextUrl.searchParams.get("date") ?? todayIST();
 
-  const bookedKey = new Set(bookedRows.map((r) => `${r.court_number}@${r.slot_time}`));
-  const blockedKey = new Set(blockedRows.map((r) => `${r.court_number}@${r.slot_time}`));
-
-  const slots: Slot[] = [];
-  for (const time of generateTimes()) {
-    for (const court of COURTS) {
-      const key = `${court}@${time}`;
-      const status: Slot["status"] = bookedKey.has(key)
-        ? "booked"
-        : blockedKey.has(key)
-          ? "blocked"
-          : "open";
-      slots.push({ court, time, status, price: getSlotPrice(time) });
+    // Query active bookings for this date
+    let bookingsResult;
+    try {
+      bookingsResult = await turso.execute({
+        sql: "SELECT id, slot_time, notes FROM bookings WHERE slot_date = ? AND status = 'confirmed' ORDER BY created_at ASC",
+        args: [date],
+      });
+    } catch (dbErr) {
+      console.error("[slots route db error]", dbErr);
+      bookingsResult = { rows: [] };
     }
-  }
 
-  return NextResponse.json({ date, courts: [...COURTS], slots });
+    // Group bookings by slot_time
+    const bookingsByTime: Record<string, Array<{ id: string; notes: string | null }>> = {};
+    for (const row of bookingsResult.rows) {
+      const time = String(row.slot_time).slice(0, 5);
+      if (!bookingsByTime[time]) {
+        bookingsByTime[time] = [];
+      }
+      bookingsByTime[time].push({
+        id: String(row.id),
+        notes: row.notes ? String(row.notes) : null,
+      });
+    }
+
+    const slots: Slot[] = [];
+    const allTimes = generateTimes();
+
+    for (const time of allTimes) {
+      const activeBookings = bookingsByTime[time] ?? [];
+      for (const court of COURTS) {
+        // Assign bookings to courts based on index (court 1 for index 0, court 2 for index 1, etc.)
+        const bookingIndex = court - 1;
+        const b = activeBookings[bookingIndex];
+
+        let status: Slot["status"] = "open";
+        if (b) {
+          // If notes matches "Admin block", mark it as blocked
+          if (b.notes === "Admin block" || String(b.notes).toLowerCase().includes("admin block")) {
+            status = "blocked";
+          } else {
+            status = "booked";
+          }
+        }
+
+        slots.push({
+          court,
+          time,
+          status,
+          price: getSlotPrice(time),
+        });
+      }
+    }
+
+    return NextResponse.json({ date, courts: [...COURTS], slots });
+  } catch (err: unknown) {
+    console.error("[slots route error]", err);
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+  }
 }

@@ -4,6 +4,7 @@ import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { Container, Eyebrow } from "@/components/ui";
 import { fallbackPricingRules } from "@/lib/pricing";
+import { WeatherWidget } from "@/components/weather-widget";
 
 export const metadata: Metadata = {
   title: "Book a Court",
@@ -39,6 +40,10 @@ export default function BookPage() {
         </section>
 
         <Container className="relative z-10 -mt-10 pb-8 pt-0 sm:-mt-14 sm:pb-12">
+          {/* Live Weather Widget for Kaikhali, Kolkata */}
+          <div className="mb-6">
+            <WeatherWidget />
+          </div>
           <BookingGrid />
         </Container>
       </main>

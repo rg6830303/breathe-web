@@ -6,6 +6,7 @@ import { Nav } from "@/components/nav";
 import { Container, Eyebrow } from "@/components/ui";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
+import { WeatherWidget } from "@/components/weather-widget";
 
 export const dynamic = "force-dynamic";
 
@@ -22,29 +23,41 @@ type Row = {
 async function getBookings(userId: string): Promise<Row[]> {
   try {
     const result = await turso.execute({
-      sql: `SELECT id, court_number, slot_date, slot_time, total_amount, status, created_at
-            FROM bookings WHERE user_id = ?
+      sql: `SELECT id, slot_date, slot_time, amount_paid as total_amount, status, created_at,
+                   COALESCE((
+                     SELECT COUNT(*) FROM bookings b2 
+                     WHERE b2.slot_date = b.slot_date 
+                       AND b2.slot_time = b.slot_time 
+                       AND b2.status = 'confirmed' 
+                       AND b2.created_at <= b.created_at
+                   ), 1) as court_number
+            FROM bookings b WHERE user_id = ?
             ORDER BY slot_date DESC, slot_time DESC LIMIT 60`,
       args: [userId],
     });
     return result.rows.map((r) => ({
       id: String(r.id),
-      court_number: Number(r.court_number),
+      court_number: Number(r.court_number) || 1,
       slot_date: String(r.slot_date),
       slot_time: String(r.slot_time).slice(0, 5),
       total_amount: Number(r.total_amount),
       status: String(r.status),
       created_at: String(r.created_at),
     }));
-  } catch {
+  } catch (err) {
+    console.error("[dashboard getBookings error]", err);
     return [];
   }
 }
 
 function formatDate(d: string) {
-  return new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(
-    new Date(`${d}T00:00:00`),
-  );
+  try {
+    return new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(
+      new Date(`${d}T00:00:00`),
+    );
+  } catch {
+    return d;
+  }
 }
 
 function courtColor(c: number) {
@@ -77,7 +90,7 @@ export default async function DashboardPage() {
   return (
     <>
       <Nav />
-      <main>
+      <main className="min-h-screen bg-brand-50/20">
         <section className="brand-gradient brand-mesh relative overflow-hidden text-white">
           <Container className="relative flex flex-col gap-4 py-12 sm:py-14 md:flex-row md:items-center md:justify-between">
             <div>
@@ -101,8 +114,13 @@ export default async function DashboardPage() {
           </Container>
         </section>
 
-        <Container className="py-10">
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Container className="py-8">
+          {/* Live Weather Widget for Kaikhali, Kolkata */}
+          <div className="mb-8">
+            <WeatherWidget />
+          </div>
+
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             {stats.map(({ icon: Icon, label, value }) => (
               <div key={label} className="rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
                 <div className="flex items-center justify-between">
@@ -129,7 +147,7 @@ export default async function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2">
                 {bookings.map((b) => (
                   <div key={b.id} className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
                     <div className="flex items-start justify-between gap-3">
@@ -139,7 +157,7 @@ export default async function DashboardPage() {
                         </span>
                         <div>
                           <div className="font-display text-base font-extrabold text-ink">{formatDate(b.slot_date)}</div>
-                          <div className="text-sm text-slatey">{b.slot_time} · 30 min</div>
+                          <div className="text-sm text-slatey">{b.slot_time} · 60 min</div>
                         </div>
                       </div>
                       <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${statusBadge(b.status)}`}>
