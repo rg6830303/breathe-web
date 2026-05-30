@@ -4,12 +4,25 @@
 
 :root {
   color-scheme: light;
-  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  /* Display + body font stacks. next/font/google injects the CSS vars on <html>
+     (Bricolage Grotesque + Inter). Fallback strings keep things readable if a
+     font fails to load. --font-sans aliases --font-body for back-compat with
+     existing utility classes that reference it. */
+  --font-display: var(--font-display), "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-body), "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-body);
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* Avoid 300ms tap delay + double-tap zoom on interactive elements. */
+button,
+a,
+[role="button"],
+[role="gridcell"] {
+  touch-action: manipulation;
 }
 
 html {
@@ -20,8 +33,11 @@ html {
 body {
   background: #ffffff;
   color: #0d1426;
-  min-height: 100vh;
-  font-family: var(--font-sans);
+  /* Safer viewport units: svh on iOS Safari avoids the URL-bar collapse jump,
+     dvh keeps height correct on browsers that animate it. */
+  min-height: 100svh;
+  min-height: 100dvh;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -149,4 +165,14 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Safe-area-aware full-viewport height. Use anywhere we previously reached for
+   min-h-screen / h-screen (which both compile to 100vh and break on iOS). */
+@layer utilities {
+  .min-h-screen-safe {
+    min-height: 100vh; /* fallback for very old browsers */
+    min-height: 100svh;
+    min-height: 100dvh;
+  }
 }

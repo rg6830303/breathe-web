@@ -21,7 +21,7 @@ export function AuthShell({
   accent?: "brand" | "owner";
 }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white lg:grid lg:grid-cols-2">
+    <div className="relative min-h-screen-safe overflow-hidden bg-white lg:grid lg:grid-cols-2">
       {/* Brand / 3D panel */}
       <aside className="brand-gradient brand-mesh relative hidden overflow-hidden p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="court-lines absolute inset-0 opacity-25" />
@@ -58,7 +58,7 @@ export function AuthShell({
       </aside>
 
       {/* Form panel */}
-      <main className="relative flex min-h-screen flex-col justify-center px-5 py-12 sm:px-10">
+      <main className="relative flex min-h-screen-safe flex-col justify-center px-5 py-12 sm:px-10">
         <div className="pointer-events-none absolute inset-0 section-light lg:hidden" />
         <div className="relative mx-auto w-full max-w-md animate-fade-up">
           <div className="mb-8 flex items-center justify-between lg:hidden">

@@ -37,7 +37,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-white/70">Explore</h3>
+            <h3 className="font-display text-xs font-bold uppercase tracking-[0.24em] text-white/70">Explore</h3>
             <ul className="mt-4 space-y-2.5 text-sm text-white/85">
               {navLinks.map((link) => (
                 <li key={link.href}>
@@ -60,7 +60,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-white/70">Get in touch</h3>
+            <h3 className="font-display text-xs font-bold uppercase tracking-[0.24em] text-white/70">Get in touch</h3>
             <ul className="mt-4 space-y-3 text-sm text-white/85">
               <li className="flex items-start gap-3">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ball" />
@@ -83,7 +83,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-white/70">Find us</h3>
+            <h3 className="font-display text-xs font-bold uppercase tracking-[0.24em] text-white/70">Find us</h3>
             <a
               href={site.mapsLink}
               target="_blank"

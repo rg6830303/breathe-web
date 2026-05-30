@@ -117,7 +117,7 @@ export default async function DashboardPage() {
             {/* Streak */}
             <div className="flex flex-col justify-between rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
               <div>
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slatey">
+                <h3 className="flex items-center gap-2 font-display text-xs font-bold uppercase tracking-wide text-slatey">
                   <Flame className="h-4 w-4 text-brand" /> Current streak
                 </h3>
                 <div className="mt-3 font-display text-5xl font-extrabold text-brand">{data.profile.current_streak} days</div>

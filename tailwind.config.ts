@@ -22,6 +22,23 @@ const config: Config = {
         ink: "#0D1426",
         slatey: "#475569",
         ball: "#0EA5E9", // accent (was lime #C6F23E — retoned to electric blue for stronger contrast on light & dark)
+        // Spec palette additions (group1)
+        lime: {
+          DEFAULT: "#C6F432",
+          dark: "#A3BF1A",
+        },
+        amber: {
+          DEFAULT: "#FFC93C",
+        },
+        slot: {
+          open: "#166534",
+          openBg: "#DCFCE7",
+          openBorder: "#86EFAC",
+          booked: "#6B7280",
+          bookedBg: "#F3F4F6",
+          selected: "#2F5BFF",
+          selectedBg: "#EEF2FF",
+        },
         // Legacy tokens kept so any older references keep compiling.
         midnight: "#0B1530",
         court: "#2F5BFF",
