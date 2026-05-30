@@ -52,6 +52,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
     }
 
+    // Dual-write user signup to Supabase
+    try {
+      const { supabase, hasSupabase } = require("@/lib/supabase");
+      if (hasSupabase) {
+        await supabase.from("users").insert({
+          id,
+          email,
+          password_hash: hash,
+          full_name: name,
+          phone,
+          created_at: now
+        });
+      }
+    } catch (sbErr) {
+      console.error("[signup supabase sync error]", sbErr);
+    }
+
     const token = await signToken({ id, email, name, role: "user" });
     const cookieStore = await cookies();
     cookieStore.set(COOKIE_NAME, token, {

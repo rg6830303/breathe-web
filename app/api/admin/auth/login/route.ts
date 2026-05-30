@@ -27,7 +27,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
     }
 
-    const row = result.rows[0];
+    let row = result.rows[0];
+    if (!row) {
+      // Supabase admin lookup fallback
+      try {
+        const { supabase, hasSupabase } = require("@/lib/supabase");
+        if (hasSupabase) {
+          const { data, error } = await supabase
+            .from("admins")
+            .select("id, email, password_hash")
+            .eq("email", email)
+            .maybeSingle();
+          if (data && !error) {
+            row = {
+              id: data.id,
+              email: data.email,
+              password_hash: data.password_hash,
+            } as any;
+          }
+        }
+      } catch (sbErr) {
+        console.error("[admin login supabase fallback error]", sbErr);
+      }
+    }
+
     if (!row) {
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }

@@ -98,6 +98,30 @@ export async function POST(req: Request) {
         console.error("[verify-payment db-insert error]", insertErr);
         return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
       }
+
+      // Sync booking to Supabase
+      try {
+        const { supabase, hasSupabase } = require("@/lib/supabase");
+        if (hasSupabase) {
+          await supabase.from("bookings").insert({
+            id,
+            user_id: session.id,
+            slot_date: s.date,
+            slot_time: s.time,
+            duration_min: 60,
+            guest_name: userName,
+            guest_phone: userPhone,
+            guest_email: userEmail,
+            amount_paid: Math.round(totals.total),
+            status: "confirmed",
+            source: "online",
+            notes: JSON.stringify(notesObj),
+            created_at: now
+          });
+        }
+      } catch (sbErr) {
+        console.error("[verify-payment supabase sync error]", sbErr);
+      }
     }
 
     // Try to perform notification triggers asynchronously if notifyBookingConfirmed is set up

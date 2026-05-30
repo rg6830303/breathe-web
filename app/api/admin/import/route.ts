@@ -114,6 +114,7 @@ export async function POST(req: Request) {
         continue;
       }
 
+      const bookingId = uuid();
       try {
         await turso.execute({
           sql: `INSERT INTO bookings (
@@ -122,7 +123,7 @@ export async function POST(req: Request) {
             status, source, notes, created_at
           ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, 'import', ?, ?)`,
           args: [
-            uuid(),
+            bookingId,
             r.date,
             r.time,
             r.duration_min,
@@ -135,6 +136,31 @@ export async function POST(req: Request) {
             now
           ]
         });
+        
+        // Sync imported booking to Supabase
+        try {
+          const { supabase, hasSupabase } = require("@/lib/supabase");
+          if (hasSupabase) {
+            await supabase.from("bookings").insert({
+              id: bookingId,
+              user_id: null,
+              slot_date: r.date,
+              slot_time: r.time,
+              duration_min: r.duration_min,
+              guest_name: r.customer_name,
+              guest_phone: r.customer_phone,
+              guest_email: r.customer_email,
+              amount_paid: r.amount,
+              status: r.status,
+              source: "import",
+              notes: r.notes,
+              created_at: now
+            });
+          }
+        } catch (sbErr) {
+          console.error("[import supabase sync error]", sbErr);
+        }
+
         imported++;
       } catch (dbErr) {
         console.error("[import db-insert error]", dbErr);

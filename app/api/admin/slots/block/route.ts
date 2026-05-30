@@ -19,17 +19,41 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid block payload." }, { status: 400 });
     }
 
+    const id = uuid();
+    const now = Date.now();
     try {
       await turso.execute({
         sql: `INSERT INTO bookings (
           id, user_id, slot_date, slot_time, duration_min, 
           guest_name, amount_paid, status, source, notes, created_at
         ) VALUES (?, NULL, ?, ?, 60, 'Admin Block', 0, 'confirmed', 'walk_in', ?, ?)`,
-        args: [uuid(), date, time, reason, Date.now()],
+        args: [id, date, time, reason, now],
       });
     } catch (dbErr) {
       console.error("[admin block db error]", dbErr);
       return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+    }
+
+    // Sync manual block to Supabase
+    try {
+      const { supabase, hasSupabase } = require("@/lib/supabase");
+      if (hasSupabase) {
+        await supabase.from("bookings").insert({
+          id,
+          user_id: null,
+          slot_date: date,
+          slot_time: time,
+          duration_min: 60,
+          guest_name: "Admin Block",
+          amount_paid: 0,
+          status: "confirmed",
+          source: "walk_in",
+          notes: reason,
+          created_at: now
+        });
+      }
+    } catch (sbErr) {
+      console.error("[admin block supabase sync error]", sbErr);
     }
 
     return NextResponse.json({ ok: true });
