@@ -5,7 +5,7 @@ import { navLinks, site } from "@/lib/site";
 
 export function Footer() {
   return (
-    <footer className="brand-gradient relative overflow-hidden text-white">
+    <footer className="brand-gradient relative overflow-hidden text-white pb-[env(safe-area-inset-bottom,0px)]">
       <div className="court-lines absolute inset-0 opacity-20" />
       <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">

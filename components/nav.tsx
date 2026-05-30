@@ -7,6 +7,7 @@ import { ArrowRight, LayoutDashboard, LogOut, MapPin, Menu, Phone, Shield, User,
 import { Logo } from "@/components/logo";
 import { logout } from "@/app/actions/auth";
 import { navLinks, site } from "@/lib/site";
+import { motion, AnimatePresence } from "framer-motion";
 
 type Account = { email: string; name: string; role: "player" | "admin" } | null;
 
@@ -146,74 +147,114 @@ export function Nav() {
       </div>
 
       {/* Mobile drawer */}
-      {open && (
-        <div className="fixed inset-0 top-[96px] z-40 lg:hidden">
-          <div className="absolute inset-0 bg-ink/30 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div className="relative mx-3 mt-3 rounded-3xl border border-brand/10 bg-white p-4 shadow-card">
-            <div className="grid gap-1">
-              {navLinks.map((link) => {
-                const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`flex items-center justify-between rounded-2xl px-4 py-3 text-base font-semibold transition ${
-                      active ? "bg-brand/10 text-brand" : "text-ink hover:bg-brand/5"
-                    }`}
-                  >
-                    {link.label}
-                    <ArrowRight className="h-4 w-4 opacity-50" />
-                  </Link>
-                );
-              })}
-            </div>
-            <Link
-              href="/book"
-              className="mt-3 flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3.5 text-base font-bold text-white shadow-glow"
-            >
-              Book a Slot <ArrowRight className="h-4 w-4" />
-            </Link>
+      <AnimatePresence>
+        {open && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-ink/40 backdrop-blur-sm"
+              onClick={() => setOpen(false)}
+            />
 
-            <div className="mt-3 grid gap-2 border-t border-brand/10 pt-3">
-              {account ? (
-                <>
-                  <Link
-                    href={account.role === "admin" ? "/admin" : "/dashboard"}
-                    className="flex items-center justify-between rounded-2xl bg-brand/5 px-4 py-3 text-sm font-semibold text-ink"
+            {/* Drawer Panel */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="fixed inset-y-0 right-0 w-72 bg-white shadow-2xl z-50 flex flex-col justify-between p-6 pb-[max(env(safe-area-inset-bottom),1.5rem)] overflow-y-auto"
+            >
+              <div>
+                <div className="flex items-center justify-between border-b border-brand/10 pb-4 mb-4">
+                  <Logo />
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand/15 text-ink"
+                    aria-label="Close menu"
                   >
-                    <span className="flex items-center gap-2">
-                      {account.role === "admin" ? <Shield className="h-4 w-4 text-brand" /> : <LayoutDashboard className="h-4 w-4 text-brand" />}
-                      {account.role === "admin" ? "Owner console" : "My dashboard"}
-                    </span>
-                    <ArrowRight className="h-4 w-4 opacity-50" />
-                  </Link>
-                  <form action={logout}>
-                    <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand">
-                      <LogOut className="h-4 w-4" /> Log out ({account.name})
-                    </button>
-                  </form>
-                </>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <Link href="/login" className="flex items-center justify-center rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand">
-                    Log in
-                  </Link>
-                  <Link href="/signup" className="flex items-center justify-center rounded-2xl bg-ink px-4 py-3 text-sm font-bold text-white">
-                    Sign up
-                  </Link>
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-              )}
-            </div>
 
-            <a
-              href={site.phoneHref}
-              className="mt-2 flex items-center justify-center gap-2 rounded-2xl border border-brand/20 px-5 py-3 text-sm font-bold text-brand"
-            >
-              <Phone className="h-4 w-4" /> {site.phoneDisplay}
-            </a>
+                <div className="grid gap-1">
+                  {navLinks.map((link, idx) => {
+                    const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+                    return (
+                      <motion.div
+                        key={link.href}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                      >
+                        <Link
+                          href={link.href}
+                          className={`flex items-center justify-between rounded-2xl px-4 py-3 text-base font-semibold transition ${
+                            active ? "bg-brand/10 text-brand" : "text-ink hover:bg-brand/5"
+                          }`}
+                        >
+                          {link.label}
+                          <ArrowRight className="h-4 w-4 opacity-50" />
+                        </Link>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-6 border-t border-brand/10 pt-4">
+                <Link
+                  href="/book"
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3.5 text-base font-bold text-white shadow-glow mb-4 animate-pulse-slow"
+                >
+                  Book a Slot <ArrowRight className="h-4 w-4" />
+                </Link>
+
+                <div className="grid gap-2">
+                  {account ? (
+                    <>
+                      <Link
+                        href={account.role === "admin" ? "/admin" : "/dashboard"}
+                        className="flex items-center justify-between rounded-2xl bg-brand/5 px-4 py-3 text-sm font-semibold text-ink"
+                      >
+                        <span className="flex items-center gap-2">
+                          {account.role === "admin" ? <Shield className="h-4 w-4 text-brand" /> : <LayoutDashboard className="h-4 w-4 text-brand" />}
+                          {account.role === "admin" ? "Owner console" : "My dashboard"}
+                        </span>
+                        <ArrowRight className="h-4 w-4 opacity-50" />
+                      </Link>
+                      <form action={logout}>
+                        <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand">
+                          <LogOut className="h-4 w-4" /> Log out ({account.name})
+                        </button>
+                      </form>
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <Link href="/login" className="flex items-center justify-center rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand">
+                        Log in
+                      </Link>
+                      <Link href="/signup" className="flex items-center justify-center rounded-2xl bg-ink px-4 py-3 text-sm font-bold text-white">
+                        Sign up
+                      </Link>
+                    </div>
+                  )}
+                </div>
+
+                <a
+                  href={site.phoneHref}
+                  className="flex items-center justify-center gap-2 rounded-2xl border border-brand/20 px-5 py-3 text-sm font-bold text-brand"
+                >
+                  <Phone className="h-4 w-4" /> {site.phoneDisplay}
+                </a>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </header>
   );
 }
