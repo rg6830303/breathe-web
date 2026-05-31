@@ -1,31 +1,34 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth";
-import { sendMail, verifyMailer } from "@/lib/mailer";
+import { mailerConfigState, sendMail, verifyMailer } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Admin-only Gmail SMTP probe.
+ * Admin-only Gmail SMTP probe + sender.
  *
- *   GET  /api/admin/test-email          → verify transport config only (no send)
- *   POST /api/admin/test-email          → send a test email to the admin's own address
- *   POST /api/admin/test-email { to }   → send a test email to a chosen address
+ *   GET  /api/admin/test-email           → verify transport config + return env presence map
+ *   POST /api/admin/test-email           → send a test email to ADMIN_EMAIL or admin.email
+ *   POST /api/admin/test-email { to }    → send a test email to a chosen address
  *
- * Returns the actual error message from nodemailer if SMTP auth fails — so you
- * can see exactly whether GMAIL_USER / GMAIL_APP_PASSWORD are correct.
+ * Returns the actual error message + code from nodemailer if SMTP fails so
+ * you can see whether GMAIL_USER / GMAIL_APP_PASSWORD are wrong, missing,
+ * malformed, or blocked.
  */
 export async function GET() {
   const admin = await getAdminSession();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const v = await verifyMailer();
+  const state = mailerConfigState();
+  const verify = state.gmailUserPresent && state.gmailAppPasswordPresent
+    ? await verifyMailer()
+    : { ok: false, error: "GMAIL_USER or GMAIL_APP_PASSWORD missing in Vercel env" };
+
   return NextResponse.json({
-    ok: v.ok,
-    error: v.ok ? undefined : v.error,
-    gmailUserSet: !!process.env.GMAIL_USER,
-    gmailAppPasswordSet: !!process.env.GMAIL_APP_PASSWORD,
-    adminEmailSet: !!process.env.ADMIN_EMAIL,
+    config: state,
+    smtpVerify: verify,
+    signedInAs: admin.email,
   });
 }
 
@@ -34,17 +37,33 @@ export async function POST(req: Request) {
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const to = String(body?.to ?? admin.email);
+  const to = String(body?.to ?? process.env.ADMIN_EMAIL ?? admin.email);
+  const now = new Date().toISOString();
 
   const result = await sendMail({
     to,
     subject: "Breathe Pickleball — SMTP test",
-    text: `This is a Gmail SMTP test from the admin console at ${new Date().toISOString()}. If you got this, GMAIL_USER + GMAIL_APP_PASSWORD are working.`,
-    html: `<p>This is a Gmail SMTP test from the admin console at <strong>${new Date().toISOString()}</strong>.</p><p>If you got this, <code>GMAIL_USER</code> + <code>GMAIL_APP_PASSWORD</code> are working.</p>`,
+    text:
+      `Gmail SMTP test sent at ${now}.\n\n` +
+      `If you received this email at ${to}, your GMAIL_USER + GMAIL_APP_PASSWORD env vars are working ` +
+      `and bookings/password-reset/admin-notification emails will go out correctly.`,
+    html:
+      `<p>Gmail SMTP test sent at <strong>${now}</strong>.</p>` +
+      `<p>If you received this email at <code>${to}</code>, your <code>GMAIL_USER</code> + <code>GMAIL_APP_PASSWORD</code> ` +
+      `env vars are working and bookings/password-reset/admin-notification emails will go out correctly.</p>`,
   });
 
   if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.error }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, to, error: result.error, code: result.code, config: mailerConfigState() },
+      { status: 500 },
+    );
   }
-  return NextResponse.json({ ok: true, messageId: result.messageId, to });
+  return NextResponse.json({
+    ok: true,
+    to,
+    messageId: result.messageId,
+    accepted: result.accepted,
+    rejected: result.rejected,
+  });
 }
