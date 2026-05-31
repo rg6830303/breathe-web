@@ -99,6 +99,19 @@ const STATEMENTS: string[] = [
     updated_at INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS idx_notices_active_created ON notices (active, created_at DESC)`,
+
+  // 9. blocked_slots — first-class admin block model (separate from bookings)
+  //    NULL slot_time = entire day; NULL court_number = all courts.
+  `CREATE TABLE IF NOT EXISTS blocked_slots (
+    id TEXT PRIMARY KEY,
+    slot_date TEXT NOT NULL,
+    slot_time TEXT,
+    court_number INTEGER,
+    reason TEXT,
+    created_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_blocked_slots_date ON blocked_slots (slot_date)`,
+  `CREATE INDEX IF NOT EXISTS idx_blocked_slots_lookup ON blocked_slots (slot_date, court_number, slot_time)`,
 ];
 
 // ALTER statements that may fail with "duplicate column" on already-migrated DBs
@@ -192,6 +205,7 @@ export async function GET() {
         "rate_limits",
         "password_reset_tokens",
         "notices",
+        "blocked_slots",
       ],
       adminCreated,
       adminEmail,

@@ -76,38 +76,70 @@ export async function GET(request: NextRequest) {
         args: [date],
       });
     } catch (dbErr) {
-      console.error("[slots route db error]", dbErr);
+      console.error("[slots route bookings error]", dbErr);
       bookingsResult = { rows: [] };
     }
 
-    // For each (court, time) compute whether it's blocked/booked.
-    // A confirmed booking with duration_min D starting at time T occupies all
-    // 30-min slots from T to T + D (exclusive).
+    // Read first-class admin blocks for the date. Soft-fail (treat as empty)
+    // if blocked_slots table hasn't been created yet so the page still loads.
+    let blockRows: Array<Record<string, unknown>> = [];
+    try {
+      const r = await turso.execute({
+        sql: `SELECT slot_time, court_number, reason
+              FROM blocked_slots WHERE slot_date = ?`,
+        args: [date],
+      });
+      blockRows = r.rows as unknown as Array<Record<string, unknown>>;
+    } catch (blockErr) {
+      console.warn("[slots blocked_slots not ready — hit /api/db-init]", blockErr);
+    }
+
     type CellState = "blocked" | "booked";
     const occupancy = new Map<string, CellState>();
     const key = (court: number, time: string) => `${court}@${time}`;
 
+    // 1. Confirmed bookings → booked (60-min overlap honored)
     for (const b of bookingsResult.rows) {
       const startTime = String(b.slot_time).slice(0, 5);
       const dur = Number(b.duration_min) || 60;
       const court = Number(b.court_number) || 1;
       const notes = b.notes ? String(b.notes) : null;
-      const isAdminBlock =
+      const isAdminBlockLegacy =
         notes === "Admin block" || (notes ?? "").toLowerCase().includes("admin block");
-      const state: CellState = isAdminBlock ? "blocked" : "booked";
+      const state: CellState = isAdminBlockLegacy ? "blocked" : "booked";
 
       for (let offset = 0; offset < dur; offset += 30) {
         const cellTime = addMinutes(startTime, offset);
         const k = key(court, cellTime);
-        // "blocked" takes precedence over "booked" if both apply
         const prev = occupancy.get(k);
         if (prev === "blocked") continue;
         occupancy.set(k, state);
       }
     }
 
+    // 2. blocked_slots overlay — sets the cell as 'blocked' if it isn't
+    //    already 'booked' on a real reservation
+    const allTimes = generateTimes();
+    for (const row of blockRows) {
+      const blockTime = row.slot_time ? String(row.slot_time).slice(0, 5) : null;
+      const blockCourtRaw = row.court_number;
+      const blockCourt =
+        blockCourtRaw === null || blockCourtRaw === undefined ? null : Number(blockCourtRaw);
+
+      const targetCourts = blockCourt === null ? [...COURTS] : [blockCourt];
+      const targetTimes = blockTime === null ? allTimes : [blockTime];
+
+      for (const court of targetCourts) {
+        for (const time of targetTimes) {
+          const k = key(court, time);
+          if (occupancy.get(k) === "booked") continue;
+          occupancy.set(k, "blocked");
+        }
+      }
+    }
+
     const slots: Slot[] = [];
-    for (const time of generateTimes()) {
+    for (const time of allTimes) {
       for (const court of COURTS) {
         const state = occupancy.get(key(court, time));
         const status: Slot["status"] = state ?? "open";

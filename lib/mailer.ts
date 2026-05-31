@@ -1,6 +1,7 @@
 import nodemailer, { type Transporter } from "nodemailer";
 
 let cached: Transporter | null = null;
+let verifyAttempted = false;
 
 /**
  * Build a nodemailer transport against Gmail SMTP.
@@ -31,6 +32,35 @@ function getTransport(): Transporter {
     socketTimeout: 30_000,
     tls: { minVersion: "TLSv1.2" },
   });
+
+  // Loudly verify the transport on first build so Vercel function logs show
+  // exactly whether Gmail accepts the credentials — fire and forget so it
+  // doesn't block sends. Runs at most once per cold start.
+  if (!verifyAttempted) {
+    verifyAttempted = true;
+    cached
+      .verify()
+      .then(() =>
+        console.log("[mailer] Gmail SMTP verify OK", {
+          user,
+          passLength: pass.length,
+          host: "smtp.gmail.com:465",
+        }),
+      )
+      .catch((err: unknown) => {
+        const code = (err as { code?: string })?.code;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("[mailer] Gmail SMTP verify FAILED", {
+          code,
+          msg,
+          userPresent: !!user,
+          userLength: user.length,
+          passPresent: !!pass,
+          passLength: pass.length,
+        });
+      });
+  }
+
   return cached;
 }
 

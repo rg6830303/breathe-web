@@ -5,6 +5,10 @@ import { turso } from "@/lib/turso";
 
 export const runtime = "nodejs";
 
+/**
+ * Single-slot block. Writes to the new `blocked_slots` table.
+ * Body: { slot_date, slot_time, court_number, reason? }
+ */
 export async function POST(req: Request) {
   try {
     const admin = await getAdminSession();
@@ -24,46 +28,39 @@ export async function POST(req: Request) {
     const now = Date.now();
     try {
       await turso.execute({
-        sql: `INSERT INTO bookings (
-          id, user_id, slot_date, slot_time, duration_min, court_number,
-          guest_name, subtotal, gst, total, amount_paid,
-          status, source, notes, created_at
-        ) VALUES (?, NULL, ?, ?, 60, ?, 'Admin Block', 0, 0, 0, 0, 'confirmed', 'walk_in', ?, ?)`,
+        sql: `INSERT INTO blocked_slots (id, slot_date, slot_time, court_number, reason, created_at)
+              VALUES (?, ?, ?, ?, ?, ?)`,
         args: [id, date, time, court, reason, now],
       });
     } catch (dbErr) {
       console.error("[admin block db error]", dbErr);
-      return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+      return NextResponse.json(
+        {
+          error:
+            "Could not block the slot. If this is the first time you're using blocked_slots, hit /api/db-init once to create the table.",
+        },
+        { status: 500 },
+      );
     }
 
     try {
       const { supabase, hasSupabase } = require("@/lib/supabase");
       if (hasSupabase) {
-        await supabase.from("bookings").insert({
+        await supabase.from("blocked_slots").insert({
           id,
-          user_id: null,
           slot_date: date,
           slot_time: time,
-          duration_min: 60,
           court_number: court,
-          guest_name: "Admin Block",
-          subtotal: 0,
-          gst: 0,
-          total: 0,
-          amount_paid: 0,
-          status: "confirmed",
-          source: "walk_in",
-          notes: reason,
-          created_at: now,
+          reason,
         });
       }
     } catch (sbErr) {
       console.error("[admin block supabase sync error]", sbErr);
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, id });
   } catch (err: unknown) {
     console.error("[admin block error]", err);
-    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   }
 }
