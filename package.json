@@ -10,12 +10,14 @@
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",
-    "@react-email/components": "^0.0.36",
+    "@react-email/components": "^1.0.12",
+    "@react-pdf/renderer": "^4.5.1",
     "@supabase/supabase-js": "^2.106.2",
     "@types/papaparse": "^5.5.2",
     "@vercel/blob": "^2.4.0",
     "@vercel/functions": "^3.6.1",
     "bcryptjs": "^3.0.3",
+    "date-fns": "^4.4.0",
     "framer-motion": "^12.40.0",
     "jose": "^6.2.3",
     "lucide-react": "^0.468.0",
@@ -24,12 +26,14 @@
     "postgres": "^3.4.9",
     "razorpay": "^2.9.6",
     "react": "^19.0.0",
+    "react-day-picker": "^10.0.1",
     "react-dom": "^19.0.0",
     "react-dropzone": "^15.0.0",
     "recharts": "^3.8.1",
     "resend": "^4.0.1",
     "uuid": "^14.0.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
