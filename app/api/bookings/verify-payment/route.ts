@@ -6,6 +6,7 @@ import { turso } from "@/lib/turso";
 import { getSlotPrice, calculateTotals } from "@/lib/pricing";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 type SlotInput = { date: string; time: string; court: number };
 type AddonInput = { id: string; label: string; price: number; qty?: number };

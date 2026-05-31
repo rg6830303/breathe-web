@@ -3,6 +3,7 @@ import { getAdminSession } from "@/lib/auth";
 import { mailerConfigState, sendMail, verifyMailer } from "@/lib/mailer";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 export const dynamic = "force-dynamic";
 
 /**

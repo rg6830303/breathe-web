@@ -27,59 +27,74 @@ type Customer = {
 type Stats = { sessions: number; hours: number; spent: number };
 
 async function loadCustomer(id: string): Promise<{ customer: Customer; bookings: Booking[]; stats: Stats } | null> {
+  // 1. Fetch the user first. A genuine "not found" is the ONLY reason to 404.
+  let u;
   try {
-    const [userRes, bookingsRes, statsRes] = await Promise.all([
-      turso.execute({
-        sql: "SELECT id, full_name, email, phone, created_at FROM users WHERE id = ? LIMIT 1",
-        args: [id],
-      }),
-      turso.execute({
-        sql: `SELECT id, slot_date, slot_time, court_number, duration_min,
-                     total, amount_paid, status
-              FROM bookings WHERE user_id = ?
-              ORDER BY slot_date DESC, slot_time DESC LIMIT 500`,
-        args: [id],
-      }),
-      turso.execute({
-        sql: `SELECT
-                COUNT(CASE WHEN status='confirmed' THEN 1 END) as sessions,
-                COALESCE(SUM(CASE WHEN status='confirmed' THEN duration_min ELSE 0 END), 0) as minutes,
-                COALESCE(SUM(CASE WHEN status='confirmed' THEN amount_paid ELSE 0 END), 0) as spent
-              FROM bookings WHERE user_id = ?`,
-        args: [id],
-      }),
-    ]);
-
-    const u = userRes.rows[0];
-    if (!u) return null;
-    const s = statsRes.rows[0];
-    return {
-      customer: {
-        id: String(u.id),
-        full_name: String(u.full_name),
-        email: String(u.email),
-        phone: u.phone ? String(u.phone) : null,
-        created_at: Number(u.created_at),
-      },
-      stats: {
-        sessions: Number(s?.sessions ?? 0),
-        hours: Math.round((Number(s?.minutes ?? 0) / 60) * 10) / 10,
-        spent: Number(s?.spent ?? 0),
-      },
-      bookings: bookingsRes.rows.map((row) => ({
-        id: String(row.id),
-        slot_date: String(row.slot_date),
-        slot_time: String(row.slot_time).slice(0, 5),
-        court_number: Number(row.court_number) || 1,
-        duration_min: Number(row.duration_min) || 60,
-        total: Number(row.total) || Number(row.amount_paid) || 0,
-        status: String(row.status),
-      })),
-    };
+    const userRes = await turso.execute({
+      sql: "SELECT id, full_name, email, phone, created_at FROM users WHERE id = ? LIMIT 1",
+      args: [id],
+    });
+    u = userRes.rows[0];
   } catch (err) {
-    console.error("[admin customer page load error]", err);
+    console.error("[admin customer user lookup error]", err);
     return null;
   }
+  if (!u) return null;
+
+  const customer: Customer = {
+    id: String(u.id),
+    full_name: String(u.full_name),
+    email: String(u.email),
+    phone: u.phone ? String(u.phone) : null,
+    created_at: Number(u.created_at),
+  };
+
+  // 2. Bookings + stats are best-effort — a query hiccup must NOT turn a real
+  //    customer into a 404. Degrade to an empty list instead.
+  let bookings: Booking[] = [];
+  let stats: Stats = { sessions: 0, hours: 0, spent: 0 };
+
+  try {
+    const bookingsRes = await turso.execute({
+      sql: `SELECT id, slot_date, slot_time, court_number, duration_min,
+                   total, amount_paid, status
+            FROM bookings WHERE user_id = ?
+            ORDER BY slot_date DESC, slot_time DESC LIMIT 500`,
+      args: [id],
+    });
+    bookings = bookingsRes.rows.map((row) => ({
+      id: String(row.id),
+      slot_date: String(row.slot_date),
+      slot_time: String(row.slot_time).slice(0, 5),
+      court_number: Number(row.court_number) || 1,
+      duration_min: Number(row.duration_min) || 60,
+      total: Number(row.total) || Number(row.amount_paid) || 0,
+      status: String(row.status),
+    }));
+  } catch (err) {
+    console.error("[admin customer bookings error]", err);
+  }
+
+  try {
+    const statsRes = await turso.execute({
+      sql: `SELECT
+              COUNT(CASE WHEN status='confirmed' THEN 1 END) as sessions,
+              COALESCE(SUM(CASE WHEN status='confirmed' THEN duration_min ELSE 0 END), 0) as minutes,
+              COALESCE(SUM(CASE WHEN status='confirmed' THEN amount_paid ELSE 0 END), 0) as spent
+            FROM bookings WHERE user_id = ?`,
+      args: [id],
+    });
+    const s = statsRes.rows[0];
+    stats = {
+      sessions: Number(s?.sessions ?? 0),
+      hours: Math.round((Number(s?.minutes ?? 0) / 60) * 10) / 10,
+      spent: Number(s?.spent ?? 0),
+    };
+  } catch (err) {
+    console.error("[admin customer stats error]", err);
+  }
+
+  return { customer, bookings, stats };
 }
 
 function formatDate(d: string) {

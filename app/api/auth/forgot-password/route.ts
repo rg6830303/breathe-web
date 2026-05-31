@@ -9,6 +9,7 @@ import { sendMail } from "@/lib/mailer";
 import PasswordReset from "@/emails/PasswordReset";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 const RESET_TTL_MS = 60 * 60 * 1000;
 const RESET_TTL_MIN = 60;

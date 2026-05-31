@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
@@ -538,8 +538,8 @@ function UsersTab() {
             </thead>
             <tbody>
               {filtered.map((u) => (
-                <>
-                  <tr key={u.id} className="border-t border-brand/10">
+                <Fragment key={u.id}>
+                  <tr className="border-t border-brand/10">
                     <td className="p-3 font-bold text-ink">{u.name}</td>
                     <td className="p-3 text-slatey">{u.email}</td>
                     <td className="p-3 text-slatey">{u.phone ?? "—"}</td>
@@ -571,7 +571,7 @@ function UsersTab() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

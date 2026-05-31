@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { mailerConfigState, verifyMailer } from "@/lib/mailer";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 export const dynamic = "force-dynamic";
 
 /**

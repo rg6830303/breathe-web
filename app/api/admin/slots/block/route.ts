@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { v4 as uuid } from "uuid";
 import { getAdminSession } from "@/lib/auth";
-import { turso } from "@/lib/turso";
+import { turso, ensureBlockedSlotsTable } from "@/lib/turso";
 
 export const runtime = "nodejs";
 
@@ -27,6 +27,7 @@ export async function POST(req: Request) {
     const id = uuid();
     const now = Date.now();
     try {
+      await ensureBlockedSlotsTable();
       await turso.execute({
         sql: `INSERT INTO blocked_slots (id, slot_date, slot_time, court_number, reason, created_at)
               VALUES (?, ?, ?, ?, ?, ?)`,
