@@ -15,6 +15,9 @@ export async function notifyBookingConfirmed(b: {
   slotTime: string;
   durationMin: number;
   amount: number;
+  courtNumber?: number;
+  subtotal?: number;
+  gst?: number;
 }) {
   try {
     const date = new Date(b.slotDate);

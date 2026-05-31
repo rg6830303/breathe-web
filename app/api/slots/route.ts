@@ -27,13 +27,20 @@ function todayIST(): string {
   }).format(new Date());
 }
 
+function addMinutes(hhmm: string, mins: number): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const total = h * 60 + m + mins;
+  const hh = Math.floor(total / 60);
+  const mm = total % 60;
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const params = request.nextUrl.searchParams;
     const from = params.get("from");
     const to = params.get("to");
 
-    // ── Calendar range mode ──────────────────────────────────────
     if (from && to) {
       let result;
       try {
@@ -58,14 +65,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ from, to, slots });
     }
 
-    // ── Single-date mode (existing behavior) ─────────────────────
     const date = params.get("date") ?? todayIST();
 
-    // Query active bookings for this date
     let bookingsResult;
     try {
       bookingsResult = await turso.execute({
-        sql: "SELECT id, slot_time, notes FROM bookings WHERE slot_date = ? AND status = 'confirmed' ORDER BY created_at ASC",
+        sql: `SELECT slot_time, duration_min, court_number, notes
+              FROM bookings
+              WHERE slot_date = ? AND status = 'confirmed'`,
         args: [date],
       });
     } catch (dbErr) {
@@ -73,45 +80,38 @@ export async function GET(request: NextRequest) {
       bookingsResult = { rows: [] };
     }
 
-    // Group bookings by slot_time
-    const bookingsByTime: Record<string, Array<{ id: string; notes: string | null }>> = {};
-    for (const row of bookingsResult.rows) {
-      const time = String(row.slot_time).slice(0, 5);
-      if (!bookingsByTime[time]) {
-        bookingsByTime[time] = [];
+    // For each (court, time) compute whether it's blocked/booked.
+    // A confirmed booking with duration_min D starting at time T occupies all
+    // 30-min slots from T to T + D (exclusive).
+    type CellState = "blocked" | "booked";
+    const occupancy = new Map<string, CellState>();
+    const key = (court: number, time: string) => `${court}@${time}`;
+
+    for (const b of bookingsResult.rows) {
+      const startTime = String(b.slot_time).slice(0, 5);
+      const dur = Number(b.duration_min) || 60;
+      const court = Number(b.court_number) || 1;
+      const notes = b.notes ? String(b.notes) : null;
+      const isAdminBlock =
+        notes === "Admin block" || (notes ?? "").toLowerCase().includes("admin block");
+      const state: CellState = isAdminBlock ? "blocked" : "booked";
+
+      for (let offset = 0; offset < dur; offset += 30) {
+        const cellTime = addMinutes(startTime, offset);
+        const k = key(court, cellTime);
+        // "blocked" takes precedence over "booked" if both apply
+        const prev = occupancy.get(k);
+        if (prev === "blocked") continue;
+        occupancy.set(k, state);
       }
-      bookingsByTime[time].push({
-        id: String(row.id),
-        notes: row.notes ? String(row.notes) : null,
-      });
     }
 
     const slots: Slot[] = [];
-    const allTimes = generateTimes();
-
-    for (const time of allTimes) {
-      const activeBookings = bookingsByTime[time] ?? [];
+    for (const time of generateTimes()) {
       for (const court of COURTS) {
-        // Assign bookings to courts based on index (court 1 for index 0, court 2 for index 1, etc.)
-        const bookingIndex = court - 1;
-        const b = activeBookings[bookingIndex];
-
-        let status: Slot["status"] = "open";
-        if (b) {
-          // If notes matches "Admin block", mark it as blocked
-          if (b.notes === "Admin block" || String(b.notes).toLowerCase().includes("admin block")) {
-            status = "blocked";
-          } else {
-            status = "booked";
-          }
-        }
-
-        slots.push({
-          court,
-          time,
-          status,
-          price: getSlotPrice(time),
-        });
+        const state = occupancy.get(key(court, time));
+        const status: Slot["status"] = state ?? "open";
+        slots.push({ court, time, status, price: getSlotPrice(time) });
       }
     }
 
@@ -121,5 +121,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
 }
-
-

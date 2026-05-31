@@ -27,21 +27,22 @@ export async function POST(req: Request) {
 
     const date = String(body.slot_date ?? "");
     const time = String(body.slot_time ?? "").slice(0, 5);
-    if (!date || !time) {
+    const court = Number(body.court_number);
+    if (!date || !time || !Number.isFinite(court) || court < 1 || court > 9) {
       return NextResponse.json({ error: "Invalid unblock payload." }, { status: 400 });
     }
 
     try {
-      // Delete exactly one admin block booking at this date/time slot to decrement capacity
       await turso.execute({
         sql: `DELETE FROM bookings WHERE id = (
-          SELECT id FROM bookings 
-          WHERE slot_date = ? 
-            AND slot_time = ? 
-            AND guest_name = 'Admin Block' 
+          SELECT id FROM bookings
+          WHERE slot_date = ?
+            AND slot_time = ?
+            AND court_number = ?
+            AND guest_name = 'Admin Block'
           LIMIT 1
         )`,
-        args: [date, time],
+        args: [date, time, court],
       });
     } catch (dbErr) {
       console.error("[admin unblock db error]", dbErr);

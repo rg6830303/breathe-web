@@ -33,23 +33,19 @@ export async function GET(req: NextRequest) {
     let result;
     try {
       result = await turso.execute({
-        sql: `SELECT b.id, b.user_id, 
-                     COALESCE(u.full_name, b.guest_name, 'Guest') as user_name, 
-                     COALESCE(u.email, b.guest_email, '—') as user_email, 
+        sql: `SELECT b.id, b.user_id,
+                     COALESCE(u.full_name, b.guest_name, 'Guest') as user_name,
+                     COALESCE(u.email, b.guest_email, '—') as user_email,
                      COALESCE(u.phone, b.guest_phone, '—') as user_phone,
-                     b.slot_date, b.slot_time, b.amount_paid as total_amount, b.status, b.created_at,
-                     COALESCE((
-                       SELECT COUNT(*) FROM bookings b2 
-                       WHERE b2.slot_date = b.slot_date 
-                         AND b2.slot_time = b.slot_time 
-                         AND b2.status = 'confirmed' 
-                         AND b2.created_at <= b.created_at
-                     ), 1) as court_number
+                     b.court_number,
+                     b.slot_date, b.slot_time, b.duration_min,
+                     b.subtotal, b.gst, b.total, b.amount_paid,
+                     b.status, b.source, b.notes, b.created_at
               FROM bookings b
               LEFT JOIN users u ON u.id = b.user_id
               ${where}
               ORDER BY b.created_at DESC
-              LIMIT 200`,
+              LIMIT 500`,
         args,
       });
     } catch (dbErr) {
@@ -66,9 +62,15 @@ export async function GET(req: NextRequest) {
       court_number: Number(row.court_number) || 1,
       slot_date: String(row.slot_date),
       slot_time: String(row.slot_time).slice(0, 5),
-      price: Math.round(Number(row.total_amount) * 0.847),
-      total_amount: Number(row.total_amount),
+      duration_min: Number(row.duration_min) || 60,
+      subtotal: Number(row.subtotal) || 0,
+      gst: Number(row.gst) || 0,
+      total: Number(row.total) || Number(row.amount_paid) || 0,
+      price: Number(row.subtotal) || 0,
+      total_amount: Number(row.amount_paid) || Number(row.total) || 0,
       status: String(row.status),
+      source: String(row.source ?? "online"),
+      notes: row.notes ? String(row.notes) : null,
       created_at: String(row.created_at),
     }));
 

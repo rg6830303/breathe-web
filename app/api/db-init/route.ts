@@ -16,7 +16,7 @@ const STATEMENTS: string[] = [
     phone TEXT,
     created_at INTEGER NOT NULL
   )`,
-  
+
   // 2. admins
   `CREATE TABLE IF NOT EXISTS admins (
     id TEXT PRIMARY KEY,
@@ -24,17 +24,21 @@ const STATEMENTS: string[] = [
     password_hash TEXT NOT NULL,
     created_at INTEGER NOT NULL
   )`,
-  
-  // 3. bookings
+
+  // 3. bookings (court_number/subtotal/gst/total added via ALTER below for existing DBs)
   `CREATE TABLE IF NOT EXISTS bookings (
     id TEXT PRIMARY KEY,
     user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
     slot_date TEXT NOT NULL,
     slot_time TEXT NOT NULL,
     duration_min INTEGER NOT NULL DEFAULT 60,
+    court_number INTEGER NOT NULL DEFAULT 1 CHECK (court_number BETWEEN 1 AND 9),
     guest_name TEXT,
     guest_phone TEXT,
     guest_email TEXT,
+    subtotal INTEGER NOT NULL DEFAULT 0,
+    gst INTEGER NOT NULL DEFAULT 0,
+    total INTEGER NOT NULL DEFAULT 0,
     amount_paid INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'confirmed' CHECK (status IN ('confirmed','cancelled','no_show')),
     source TEXT NOT NULL DEFAULT 'online' CHECK (source IN ('online','import','walk_in')),
@@ -42,12 +46,13 @@ const STATEMENTS: string[] = [
     cancelled_at INTEGER,
     created_at INTEGER NOT NULL
   )`,
-  
+
   // Indexes
   `CREATE INDEX IF NOT EXISTS idx_bookings_date_time ON bookings (slot_date, slot_time)`,
   `CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings (user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (status)`,
-  
+  `CREATE INDEX IF NOT EXISTS idx_bookings_court_date ON bookings (court_number, slot_date, slot_time)`,
+
   // 4. gallery_images
   `CREATE TABLE IF NOT EXISTS gallery_images (
     id TEXT PRIMARY KEY,
@@ -57,7 +62,7 @@ const STATEMENTS: string[] = [
     active INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER NOT NULL
   )`,
-  
+
   // 5. venue_config
   `CREATE TABLE IF NOT EXISTS venue_config (
     key TEXT PRIMARY KEY,
@@ -81,20 +86,66 @@ const STATEMENTS: string[] = [
     created_at INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS idx_password_reset_user ON password_reset_tokens (user_id)`,
-  `CREATE INDEX IF NOT EXISTS idx_password_reset_expires ON password_reset_tokens (expires_at)`
+  `CREATE INDEX IF NOT EXISTS idx_password_reset_expires ON password_reset_tokens (expires_at)`,
+
+  // 8. notices — admin notice board (rendered on homepage/dashboard)
+  `CREATE TABLE IF NOT EXISTS notices (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    body TEXT,
+    category TEXT NOT NULL DEFAULT 'daily' CHECK (category IN ('daily','weekly','monthly')),
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_notices_active_created ON notices (active, created_at DESC)`,
 ];
+
+// ALTER statements that may fail with "duplicate column" on already-migrated DBs
+// — wrap in tryAlter so a partial-migration replay is a no-op.
+const ALTERS: string[] = [
+  `ALTER TABLE bookings ADD COLUMN court_number INTEGER NOT NULL DEFAULT 1`,
+  `ALTER TABLE bookings ADD COLUMN subtotal INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE bookings ADD COLUMN gst INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE bookings ADD COLUMN total INTEGER NOT NULL DEFAULT 0`,
+];
+
+async function tryAlter(sql: string) {
+  try {
+    await turso.execute(sql);
+  } catch (e: unknown) {
+    const msg = String((e as Error)?.message ?? "").toLowerCase();
+    if (!msg.includes("duplicate column")) throw e;
+  }
+}
 
 export async function GET() {
   const adminEmail = process.env.SEED_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "breathepickleball@gmail.com";
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || "breathe-admin";
-  
+
   try {
-    // Execute all table creations
     for (const sql of STATEMENTS) {
       await turso.execute(sql);
     }
 
-    // Seed venue configurations
+    for (const sql of ALTERS) {
+      await tryAlter(sql);
+    }
+
+    // Backfill total from amount_paid for any rows where total = 0 but amount_paid > 0
+    // (rows created before the GST split). Subtotal ≈ 84.7% of total, GST = 15.3%.
+    try {
+      await turso.execute(`
+        UPDATE bookings
+        SET total = amount_paid,
+            subtotal = CAST(amount_paid * 0.847 AS INTEGER),
+            gst = amount_paid - CAST(amount_paid * 0.847 AS INTEGER)
+        WHERE total = 0 AND amount_paid > 0
+      `);
+    } catch (err) {
+      console.warn("[db-init backfill warning]", err);
+    }
+
     const now = Date.now();
     const configSeeds = [
       { key: "total_courts", value: "3" },
@@ -104,28 +155,27 @@ export async function GET() {
       { key: "default_price", value: "700" },
       { key: "prime_price", value: "900" },
       { key: "prime_start", value: "17:00" },
-      { key: "prime_end", value: "22:00" }
+      { key: "prime_end", value: "22:00" },
     ];
-    
+
     for (const seed of configSeeds) {
       await turso.execute({
         sql: `INSERT OR IGNORE INTO venue_config (key, value, updated_at) VALUES (?, ?, ?)`,
-        args: [seed.key, seed.value, now]
+        args: [seed.key, seed.value, now],
       });
     }
 
-    // Seed admin credentials
     const existingAdmin = await turso.execute({
       sql: "SELECT id FROM admins WHERE email = ? LIMIT 1",
-      args: [adminEmail.toLowerCase()]
+      args: [adminEmail.toLowerCase()],
     });
-    
+
     let adminCreated = false;
     if (existingAdmin.rows.length === 0) {
       const hash = await bcrypt.hash(adminPassword, 12);
       await turso.execute({
         sql: "INSERT INTO admins (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
-        args: [uuid(), adminEmail.toLowerCase(), hash, now]
+        args: [uuid(), adminEmail.toLowerCase(), hash, now],
       });
       adminCreated = true;
     }
@@ -133,15 +183,24 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       message: "Database initialized and seeded successfully",
-      tables: ["users", "admins", "bookings", "gallery_images", "venue_config", "rate_limits", "password_reset_tokens"],
+      tables: [
+        "users",
+        "admins",
+        "bookings",
+        "gallery_images",
+        "venue_config",
+        "rate_limits",
+        "password_reset_tokens",
+        "notices",
+      ],
       adminCreated,
-      adminEmail
+      adminEmail,
     });
   } catch (err: unknown) {
     console.error("[db-init]", err);
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : "Initialization failed" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -13,18 +13,12 @@ export async function GET() {
     let result;
     try {
       result = await turso.execute({
-        sql: `SELECT id, slot_date, slot_time, duration_min as duration_minutes, amount_paid as total_amount, status, created_at,
-                     COALESCE((
-                       SELECT COUNT(*) FROM bookings b2 
-                       WHERE b2.slot_date = b.slot_date 
-                         AND b2.slot_time = b.slot_time 
-                         AND b2.status = 'confirmed' 
-                         AND b2.created_at <= b.created_at
-                     ), 1) as court_number
-              FROM bookings b 
-              WHERE user_id = ? 
-              ORDER BY slot_date DESC, slot_time DESC 
-              LIMIT 100`,
+        sql: `SELECT id, slot_date, slot_time, duration_min, court_number,
+                     subtotal, gst, total, amount_paid, status, created_at
+              FROM bookings
+              WHERE user_id = ?
+              ORDER BY slot_date DESC, slot_time DESC
+              LIMIT 200`,
         args: [session.id],
       });
     } catch (dbErr) {
@@ -37,11 +31,11 @@ export async function GET() {
       court_number: Number(row.court_number) || 1,
       slot_date: String(row.slot_date),
       slot_time: String(row.slot_time).slice(0, 5),
-      duration_minutes: Number(row.duration_minutes) || 60,
-      price: Number(row.total_amount),
-      subtotal: Math.round(Number(row.total_amount) * 0.847),
-      gst: Math.round(Number(row.total_amount) * 0.153),
-      total_amount: Number(row.total_amount),
+      duration_minutes: Number(row.duration_min) || 60,
+      subtotal: Number(row.subtotal) || 0,
+      gst: Number(row.gst) || 0,
+      total: Number(row.total) || Number(row.amount_paid) || 0,
+      total_amount: Number(row.amount_paid) || Number(row.total) || 0,
       status: String(row.status),
       created_at: String(row.created_at),
     }));

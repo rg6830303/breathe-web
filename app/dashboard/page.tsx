@@ -23,16 +23,11 @@ type Row = {
 async function getBookings(userId: string): Promise<Row[]> {
   try {
     const result = await turso.execute({
-      sql: `SELECT id, slot_date, slot_time, amount_paid as total_amount, status, created_at,
-                   COALESCE((
-                     SELECT COUNT(*) FROM bookings b2 
-                     WHERE b2.slot_date = b.slot_date 
-                       AND b2.slot_time = b.slot_time 
-                       AND b2.status = 'confirmed' 
-                       AND b2.created_at <= b.created_at
-                   ), 1) as court_number
-            FROM bookings b WHERE user_id = ?
-            ORDER BY slot_date DESC, slot_time DESC LIMIT 60`,
+      sql: `SELECT id, slot_date, slot_time, court_number, amount_paid as total_amount, status, created_at
+            FROM bookings
+            WHERE user_id = ?
+            ORDER BY slot_date DESC, slot_time DESC
+            LIMIT 60`,
       args: [userId],
     });
     return result.rows.map((r) => ({

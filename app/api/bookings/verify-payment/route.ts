@@ -37,7 +37,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid payment signature." }, { status: 401 });
     }
 
-    // Get user details
     let user;
     try {
       const userRow = await turso.execute({
@@ -56,42 +55,46 @@ export async function POST(req: Request) {
     const addonTotal = addons.reduce((sum, a) => sum + (Number(a.price) || 0) * (Number(a.qty) || 1), 0);
     const now = Date.now();
     const bookingIds: string[] = [];
+    const slotCount = Math.max(slots.length, 1);
 
     for (const s of slots) {
       const price = getSlotPrice(s.time);
-      const totals = calculateTotals(price, addonTotal / Math.max(slots.length, 1));
+      const totals = calculateTotals(price, addonTotal / slotCount);
       const id = uuid();
       bookingIds.push(id);
+      const court = Number.isFinite(Number(s.court)) ? Math.max(1, Math.min(9, Number(s.court))) : 1;
 
-      // Serialize payment and addons info into the notes column
       const notesObj = {
         razorpay_order_id: orderId,
         razorpay_payment_id: paymentId,
         razorpay_signature: signature,
         addons,
-        subtotal: totals.subtotal,
-        taxes: totals.taxes,
-        original_court: s.court
+        requested_court: court,
       };
 
       try {
         await turso.execute({
           sql: `INSERT INTO bookings (
-            id, user_id, slot_date, slot_time, duration_min,
-            guest_name, guest_phone, guest_email, amount_paid,
+            id, user_id, slot_date, slot_time, duration_min, court_number,
+            guest_name, guest_phone, guest_email,
+            subtotal, gst, total, amount_paid,
             status, source, notes, created_at
-          ) VALUES (?, ?, ?, ?, 60, ?, ?, ?, ?, 'confirmed', 'online', ?, ?)`,
+          ) VALUES (?, ?, ?, ?, 60, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'online', ?, ?)`,
           args: [
             id,
             session.id,
             s.date,
             s.time,
+            court,
             userName,
             userPhone,
             userEmail,
+            Math.round(totals.subtotal),
+            Math.round(totals.taxes),
+            Math.round(totals.total),
             Math.round(totals.total),
             JSON.stringify(notesObj),
-            now
+            now,
           ],
         });
       } catch (insertErr) {
@@ -99,7 +102,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
       }
 
-      // Sync booking to Supabase
       try {
         const { supabase, hasSupabase } = require("@/lib/supabase");
         if (hasSupabase) {
@@ -109,14 +111,18 @@ export async function POST(req: Request) {
             slot_date: s.date,
             slot_time: s.time,
             duration_min: 60,
+            court_number: court,
             guest_name: userName,
             guest_phone: userPhone,
             guest_email: userEmail,
+            subtotal: Math.round(totals.subtotal),
+            gst: Math.round(totals.taxes),
+            total: Math.round(totals.total),
             amount_paid: Math.round(totals.total),
             status: "confirmed",
             source: "online",
             notes: JSON.stringify(notesObj),
-            created_at: now
+            created_at: now,
           });
         }
       } catch (sbErr) {
@@ -124,30 +130,35 @@ export async function POST(req: Request) {
       }
     }
 
-    // Try to perform notification triggers asynchronously if notifyBookingConfirmed is set up
     try {
       const { notifyBookingConfirmed } = require("@/lib/notifications");
       const { waitUntil } = require("@vercel/functions");
       if (notifyBookingConfirmed && waitUntil) {
-        for (const s of slots) {
+        for (let i = 0; i < slots.length; i++) {
+          const s = slots[i];
           const price = getSlotPrice(s.time);
-          const totals = calculateTotals(price, addonTotal / Math.max(slots.length, 1));
+          const totals = calculateTotals(price, addonTotal / slotCount);
+          const court = Number.isFinite(Number(s.court))
+            ? Math.max(1, Math.min(9, Number(s.court)))
+            : 1;
           waitUntil(
             notifyBookingConfirmed({
-              id: bookingIds[0], // use the first generated booking ID as main reference
+              id: bookingIds[i],
               userEmail,
               userName,
               userPhone: userPhone || undefined,
               slotDate: s.date,
               slotTime: s.time,
               durationMin: 60,
-              amount: Math.round(totals.total)
-            })
+              amount: Math.round(totals.total),
+              courtNumber: court,
+              subtotal: Math.round(totals.subtotal),
+              gst: Math.round(totals.taxes),
+            }),
           ).catch((e: unknown) => console.error("[notify error]", e));
         }
       }
     } catch (notifErr) {
-      // notification modules might not be created or fully imported yet; ignore and return success
       console.warn("Notifications deferred or module not loaded yet.", notifErr);
     }
 
