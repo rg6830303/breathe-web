@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
+import { EmailPanel } from "@/components/admin/email-panel";
 import { WalkInModal } from "@/components/admin/walk-in-modal";
 import { BulkBlockModal } from "@/components/admin/bulk-block-modal";
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -14,6 +15,7 @@ import {
   Grid3x3,
   Loader2,
   LogOut,
+  Mail,
   RefreshCw,
   ShieldOff,
   UserPlus,
@@ -21,7 +23,7 @@ import {
   X,
 } from "lucide-react";
 
-type Tab = "overview" | "bookings" | "courts" | "users";
+type Tab = "overview" | "bookings" | "courts" | "users" | "email";
 type Stats = {
   total_users: number;
   total_bookings: number;
@@ -77,6 +79,7 @@ const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: s
   { key: "bookings", label: "All bookings", icon: Calendar },
   { key: "courts", label: "Court management", icon: Grid3x3 },
   { key: "users", label: "Users", icon: Users },
+  { key: "email", label: "Email", icon: Mail },
 ];
 
 export function AdminConsole() {
@@ -152,6 +155,7 @@ export function AdminConsole() {
       {tab === "bookings" && <BookingsTab />}
       {tab === "courts" && <CourtTab />}
       {tab === "users" && <UsersTab />}
+      {tab === "email" && <EmailPanel />}
 
       <WalkInModal open={walkInOpen} onClose={() => setWalkInOpen(false)} />
       <BulkBlockModal open={bulkBlockOpen} onClose={() => setBulkBlockOpen(false)} />
