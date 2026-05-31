@@ -1,10 +1,10 @@
-import { Resend } from "resend";
 import React from "react";
-import BookingConfirmation from "@/emails/BookingConfirmation";
+import { render } from "@react-email/render";
 import { renderToBuffer } from "@react-pdf/renderer";
+import BookingConfirmation from "@/emails/BookingConfirmation";
 import { BookingInvoice } from "@/lib/pdf/BookingInvoice";
+import { sendMail } from "@/lib/mailer";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT = process.env.TELEGRAM_ADMIN_CHAT_ID;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
@@ -43,6 +43,7 @@ export async function notifyBookingConfirmed(b: {
     const subtotal = b.subtotal ?? Math.round(total * 0.847);
     const gst = b.gst ?? total - subtotal;
 
+    // Render PDF invoice (best-effort — never block the email send if it fails).
     let pdfBuffer: Buffer | null = null;
     try {
       pdfBuffer = await renderToBuffer(
@@ -65,38 +66,53 @@ export async function notifyBookingConfirmed(b: {
       console.error("[pdf render error]", pdfErr);
     }
 
-    resend.emails
-      .send({
-        from: "Breathe Pickleball <bookings@breathepickleball.in>",
-        to: b.userEmail,
-        subject: `Confirmed: ${dateStr} at ${format12h(b.slotTime)} | Ref ${shortRef}`,
-        react: React.createElement(BookingConfirmation, {
-          customerName: b.userName,
-          bookingId: shortRef,
-          slotDate: dateStr,
-          slotTime: slotRange,
-          duration: `${b.durationMin} minutes`,
-          amount: total,
-          venueAddress: VENUE_ADDRESS,
-          bookingUrl: `${siteUrl}/dashboard?booking=${b.id}`,
-        }),
-        ...(pdfBuffer
-          ? {
-              attachments: [
-                {
-                  filename: `Breathe-Invoice-${shortRef}.pdf`,
-                  content: pdfBuffer.toString("base64"),
-                },
-              ],
-            }
-          : {}),
-      })
-      .then((res) => {
-        if (res.error) console.error("[email error details]", res.error);
-        else console.log(`Email sent to ${b.userEmail} for booking ${shortRef}`);
-      })
-      .catch((e) => console.error("[email send exception]", e));
+    const attachments = pdfBuffer
+      ? [
+          {
+            filename: `Breathe-Invoice-${shortRef}.pdf`,
+            content: pdfBuffer,
+            contentType: "application/pdf",
+          },
+        ]
+      : undefined;
 
+    // 1. Player confirmation email with PDF attached.
+    const playerHtml = await render(
+      <BookingConfirmation
+        customerName={b.userName}
+        bookingId={shortRef}
+        slotDate={dateStr}
+        slotTime={slotRange}
+        duration={`${b.durationMin} minutes`}
+        amount={total}
+        venueAddress={VENUE_ADDRESS}
+        bookingUrl={`${siteUrl}/dashboard?booking=${b.id}`}
+      />,
+    );
+
+    const playerText =
+      `Hi ${b.userName},\n\n` +
+      `Your booking is confirmed.\n\n` +
+      `Date: ${dateStr}\n` +
+      `Time: ${slotRange}\n` +
+      (b.courtNumber ? `Court: ${b.courtNumber}\n` : "") +
+      `Amount: Rs. ${total.toLocaleString("en-IN")}\n` +
+      `Reference: ${shortRef}\n\n` +
+      `Venue: ${VENUE_ADDRESS}\n\n` +
+      `Manage your booking: ${siteUrl}/dashboard\n\n` +
+      `Free cancellation up to 4 hours before your slot.`;
+
+    const playerResult = await sendMail({
+      to: b.userEmail,
+      subject: `Confirmed: ${dateStr} at ${format12h(b.slotTime)} | Ref ${shortRef}`,
+      html: playerHtml,
+      text: playerText,
+      attachments,
+    });
+    if (!playerResult.ok) console.error("[player email failed]", playerResult.error);
+    else console.log(`Player email sent for booking ${shortRef} (${playerResult.messageId})`);
+
+    // 2. Admin notification email with the same PDF attached.
     if (ADMIN_EMAIL) {
       const courtLine = b.courtNumber ? `Court: ${b.courtNumber}\n` : "";
       const phoneLine = b.userPhone ? `Phone: ${b.userPhone}\n` : "";
@@ -108,35 +124,23 @@ export async function notifyBookingConfirmed(b: {
         `Date: ${dateStr}\n` +
         `Time: ${slotRange}\n` +
         `${courtLine}` +
-        `Amount: ₹${total.toLocaleString("en-IN")} (subtotal ₹${subtotal.toLocaleString("en-IN")} + GST ₹${gst.toLocaleString("en-IN")})\n` +
-        `Ref: ${shortRef}`;
+        `Amount: Rs. ${total.toLocaleString("en-IN")} (subtotal Rs. ${subtotal.toLocaleString("en-IN")} + GST Rs. ${gst.toLocaleString("en-IN")})\n` +
+        `Ref: ${shortRef}\n\n` +
+        `Admin: ${siteUrl}/admin/customers`;
 
-      resend.emails
-        .send({
-          from: "Breathe Bookings <bookings@breathepickleball.in>",
-          to: ADMIN_EMAIL,
-          subject: `New booking: ${b.userName} — ${b.slotDate} ${b.slotTime}`,
-          text: adminText,
-          ...(pdfBuffer
-            ? {
-                attachments: [
-                  {
-                    filename: `Breathe-Invoice-${shortRef}.pdf`,
-                    content: pdfBuffer.toString("base64"),
-                  },
-                ],
-              }
-            : {}),
-        })
-        .then((res) => {
-          if (res.error) console.error("[admin email error]", res.error);
-          else console.log(`Admin notified for booking ${shortRef}`);
-        })
-        .catch((e) => console.error("[admin email exception]", e));
+      const adminResult = await sendMail({
+        to: ADMIN_EMAIL,
+        subject: `New booking: ${b.userName} — ${b.slotDate} ${b.slotTime}`,
+        text: adminText,
+        attachments,
+      });
+      if (!adminResult.ok) console.error("[admin email failed]", adminResult.error);
+      else console.log(`Admin email sent for booking ${shortRef} (${adminResult.messageId})`);
     } else {
       console.warn("ADMIN_EMAIL not configured — skipping admin email notification.");
     }
 
+    // 3. Telegram alert (unchanged).
     if (TG_TOKEN && TG_CHAT) {
       const courtText = b.courtNumber ? ` · Court ${b.courtNumber}` : "";
       const phoneText = b.userPhone ? ` (${b.userPhone})` : "";
@@ -156,8 +160,6 @@ export async function notifyBookingConfirmed(b: {
           }
         })
         .catch((e) => console.error("[telegram send exception]", e));
-    } else {
-      console.warn("Telegram notifications skipped: TELEGRAM_BOT_TOKEN or TELEGRAM_ADMIN_CHAT_ID not configured.");
     }
   } catch (err) {
     console.error("[notification dispatcher error]", err);

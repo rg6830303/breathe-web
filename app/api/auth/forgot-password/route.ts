@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { Resend } from "resend";
 import React from "react";
+import { render } from "@react-email/render";
 import { turso } from "@/lib/turso";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { forgotPasswordSchema, formatZodError } from "@/lib/validation";
+import { sendMail } from "@/lib/mailer";
 import PasswordReset from "@/emails/PasswordReset";
 
 export const runtime = "nodejs";
 
-const RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
+const RESET_TTL_MS = 60 * 60 * 1000;
 const RESET_TTL_MIN = 60;
 
 export async function POST(req: Request) {
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
     }
     const { email } = parsed.data;
 
-    // Always respond as if successful — prevent email enumeration.
+    // Generic success response — prevent email enumeration.
     const genericResponse = NextResponse.json({
       ok: true,
       message: "If an account exists for that email, a reset link has been sent.",
@@ -71,21 +72,30 @@ export async function POST(req: Request) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://breathe-web-six.vercel.app";
     const resetUrl = `${siteUrl}/reset-password?token=${rawToken}`;
 
-    try {
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      await resend.emails.send({
-        from: "Breathe Pickleball <bookings@breathepickleball.in>",
-        to: email,
-        subject: "Reset your Breathe Pickleball password",
-        react: React.createElement(PasswordReset, {
-          customerName: userName,
-          resetUrl,
-          expiresInMinutes: RESET_TTL_MIN,
-        }),
-      });
-    } catch (emailErr) {
-      console.error("[forgot-password email error]", emailErr);
-      // Fall through to generic response — don't leak email-send failure.
+    const html = await render(
+      React.createElement(PasswordReset, {
+        customerName: userName,
+        resetUrl,
+        expiresInMinutes: RESET_TTL_MIN,
+      }),
+    );
+    const text =
+      `Hi ${userName},\n\n` +
+      `We received a request to reset your Breathe Pickleball password.\n\n` +
+      `Click this link to choose a new password (expires in ${RESET_TTL_MIN} minutes):\n${resetUrl}\n\n` +
+      `If you didn't request this, you can ignore this email — your password won't change.`;
+
+    const result = await sendMail({
+      to: email,
+      subject: "Reset your Breathe Pickleball password",
+      html,
+      text,
+    });
+
+    if (!result.ok) {
+      // Email failed — log details but still return the generic success message
+      // to avoid leaking SMTP configuration state to the caller.
+      console.error("[forgot-password mail send failed]", result.error);
     }
 
     return genericResponse;
