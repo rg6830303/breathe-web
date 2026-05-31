@@ -149,17 +149,21 @@ function InstaCards({ posts }: { posts: InstaPost[] }) {
                   unoptimized
                 />
               </div>
-              {posts[activeIdx].caption && (
+              {(posts[activeIdx].caption ||
+                !posts[activeIdx].permalink.includes("blob.vercel-storage.com")) && (
                 <div className="p-5 text-sm text-white/90">
-                  <p className="line-clamp-4">{posts[activeIdx].caption}</p>
-                  <a
-                    href={posts[activeIdx].permalink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-lime px-4 py-2 text-xs font-bold text-gray-900 hover:bg-lime-dark"
-                  >
-                    <Instagram className="h-3.5 w-3.5" /> View on Instagram ↗
-                  </a>
+                  {posts[activeIdx].caption && <p className="line-clamp-4">{posts[activeIdx].caption}</p>}
+                  {!posts[activeIdx].permalink.includes("blob.vercel-storage.com") &&
+                    posts[activeIdx].permalink !== posts[activeIdx].media_url && (
+                      <a
+                        href={posts[activeIdx].permalink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-lime px-4 py-2 text-xs font-bold text-gray-900 hover:bg-lime-dark"
+                      >
+                        <Instagram className="h-3.5 w-3.5" /> View on Instagram ↗
+                      </a>
+                    )}
                 </div>
               )}
             </motion.div>

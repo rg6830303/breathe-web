@@ -99,6 +99,68 @@ export async function POST(req: Request) {
   }
 }
 
+export async function PATCH(req: Request) {
+  try {
+    const admin = await getAdminSession();
+    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const body = await req.json().catch(() => ({}));
+
+    if (Array.isArray(body.order)) {
+      // Reorder: body.order is an array of { id, display_order } in the new order
+      try {
+        for (let i = 0; i < body.order.length; i++) {
+          const item = body.order[i];
+          if (!item?.id) continue;
+          await turso.execute({
+            sql: "UPDATE gallery_images SET display_order = ? WHERE id = ?",
+            args: [i, String(item.id)],
+          });
+        }
+      } catch (dbErr) {
+        console.error("[gallery reorder db error]", dbErr);
+        return NextResponse.json({ error: "Could not save order." }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    const id = body.id ? String(body.id) : "";
+    if (!id) return NextResponse.json({ error: "Image ID is required." }, { status: 400 });
+
+    const updates: string[] = [];
+    const args: (string | number | null)[] = [];
+    if (typeof body.caption === "string") {
+      updates.push("caption = ?");
+      args.push(body.caption.trim() || null);
+    }
+    if (typeof body.active === "boolean") {
+      updates.push("active = ?");
+      args.push(body.active ? 1 : 0);
+    }
+    if (typeof body.display_order === "number") {
+      updates.push("display_order = ?");
+      args.push(body.display_order);
+    }
+    if (updates.length === 0) return NextResponse.json({ ok: true });
+    args.push(id);
+
+    try {
+      await turso.execute({
+        sql: `UPDATE gallery_images SET ${updates.join(", ")} WHERE id = ?`,
+        args,
+      });
+    } catch (dbErr) {
+      console.error("[gallery patch db error]", dbErr);
+      return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[gallery patch error]", err);
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: Request) {
   try {
     const admin = await getAdminSession();
