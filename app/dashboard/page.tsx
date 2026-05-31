@@ -10,6 +10,7 @@ import { WeatherWidget } from "@/components/weather-widget";
 import { ActivityHeatmap } from "./activity-heatmap";
 import { ProfileForm } from "./profile-form";
 import { CancelBookingButton } from "./cancel-button";
+import { NextSessionCard } from "./next-session-card";
 
 export const dynamic = "force-dynamic";
 
@@ -201,12 +202,14 @@ export default async function DashboardPage() {
   const favBand = favouriteBand(bookings);
   const FavIcon = favBand.icon === "sun" ? Sun : favBand.icon === "sunset" ? Sunset : MoonStar;
 
-  const stats = [
-    { icon: ListChecks, label: "Sessions", value: String(totalSessions) },
-    { icon: Clock, label: "Hours played", value: String(totalHours) },
-    { icon: CalendarDays, label: "This month", value: String(thisMonth) },
-    { icon: Flame, label: "Current streak", value: `${streak}d` },
+  const stats: { icon: typeof ListChecks; label: string; value: string; tint: string }[] = [
+    { icon: ListChecks, label: "Sessions", value: String(totalSessions), tint: "bg-brand/10 text-brand" },
+    { icon: Clock, label: "Hours played", value: String(totalHours), tint: "bg-emerald-100 text-emerald-700" },
+    { icon: CalendarDays, label: "This month", value: String(thisMonth), tint: "bg-amber-100 text-amber-700" },
+    { icon: Flame, label: "Current streak", value: `${streak}d`, tint: "bg-rose-100 text-rose-700" },
   ];
+
+  const nextUpcoming = upcoming[upcoming.length - 1]; // upcoming is desc, so last is the soonest
 
   const fullName = profile?.full_name ?? session.name;
   const email = profile?.email ?? session.email;
@@ -254,16 +257,31 @@ export default async function DashboardPage() {
         </section>
 
         <Container className="py-8">
+          {nextUpcoming && (
+            <div className="mb-6">
+              <NextSessionCard
+                bookingId={nextUpcoming.id}
+                slotDate={nextUpcoming.slot_date}
+                slotTime={nextUpcoming.slot_time}
+                endTime={endTime(nextUpcoming.slot_time, nextUpcoming.duration_min)}
+                courtNumber={nextUpcoming.court_number}
+                total={nextUpcoming.total_amount}
+              />
+            </div>
+          )}
+
           <div className="mb-6">
             <WeatherWidget />
           </div>
 
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
-            {stats.map(({ icon: Icon, label, value }) => (
-              <div key={label} className="rounded-3xl border border-brand/10 bg-white p-5 shadow-soft">
+            {stats.map(({ icon: Icon, label, value, tint }) => (
+              <div key={label} className="rounded-3xl border border-brand/10 bg-white p-5 shadow-soft transition hover:shadow-card">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wide text-slatey">{label}</span>
-                  <Icon className="h-4 w-4 text-brand" />
+                  <span className={`flex h-7 w-7 items-center justify-center rounded-full ${tint}`}>
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
                 </div>
                 <div className="mt-2 font-display text-2xl font-extrabold text-ink sm:text-3xl">{value}</div>
               </div>

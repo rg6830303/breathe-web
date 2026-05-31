@@ -79,6 +79,20 @@ async function main() {
     check(`GET ${path}`, r.statusCode === 200, `status ${r.statusCode}`);
   }
 
+  // 1b. Email health probe — public, no auth
+  const emailHealth = await request("GET", "/api/health/email");
+  let healthOk = false;
+  try {
+    const body = JSON.parse(emailHealth.data);
+    healthOk = body?.config?.gmailUserPresent && body?.config?.gmailAppPasswordPresent && body?.smtpVerify?.ok;
+    console.log(`    email health: ${JSON.stringify(body)}`);
+  } catch {}
+  check(
+    "GET /api/health/email — Gmail SMTP healthy",
+    emailHealth.statusCode === 200 && healthOk,
+    `status ${emailHealth.statusCode}`,
+  );
+
   // 2. Protected pages should redirect when unauthenticated
   const dashAnon = await request("GET", "/dashboard");
   check(
@@ -167,10 +181,21 @@ async function main() {
     "/api/admin/config",
     "/api/admin/customers/00000000-0000-0000-0000-000000000000",
     "/api/admin/gallery",
+    "/api/admin/test-email",
   ];
   for (const path of adminEndpoints) {
     const r = await request("GET", path);
     check(`GET ${path} without admin → 401`, r.statusCode === 401, `status ${r.statusCode}`);
+  }
+
+  // 5b. New admin write endpoints should also 401 without admin
+  const adminWriteChecks = [
+    ["POST", "/api/admin/bookings/walk-in"],
+    ["POST", "/api/admin/slots/bulk-block"],
+  ];
+  for (const [method, path] of adminWriteChecks) {
+    const r = await request(method, path, {});
+    check(`${method} ${path} without admin → 401`, r.statusCode === 401, `status ${r.statusCode}`);
   }
 
   // 6. Rate-limit smoke: hammer signup endpoint, expect 429 eventually

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
+import { WalkInModal } from "@/components/admin/walk-in-modal";
+import { BulkBlockModal } from "@/components/admin/bulk-block-modal";
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   ArrowRight,
@@ -14,6 +16,7 @@ import {
   LogOut,
   RefreshCw,
   ShieldOff,
+  UserPlus,
   Users,
   X,
 } from "lucide-react";
@@ -80,6 +83,8 @@ export function AdminConsole() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
   const [loggingOut, setLoggingOut] = useState(false);
+  const [walkInOpen, setWalkInOpen] = useState(false);
+  const [bulkBlockOpen, setBulkBlockOpen] = useState(false);
 
   async function logout() {
     setLoggingOut(true);
@@ -106,17 +111,31 @@ export function AdminConsole() {
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setWalkInOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-brand px-3 py-2 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600"
+          >
+            <UserPlus className="h-4 w-4" /> Walk-in
+          </button>
+          <button
+            type="button"
+            onClick={() => setBulkBlockOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-brand/15 px-3 py-2 text-sm font-bold text-ink/80 transition hover:bg-brand/5"
+          >
+            <ShieldOff className="h-4 w-4" /> Close slots
+          </button>
           <Link
             href="/admin/gallery"
             className="inline-flex items-center gap-2 rounded-xl border border-brand/15 px-3 py-2 text-sm font-bold text-brand transition hover:bg-brand/5"
           >
-            Gallery Manager
+            Gallery
           </Link>
           <Link
             href="/admin/import"
             className="inline-flex items-center gap-2 rounded-xl border border-brand/15 px-3 py-2 text-sm font-bold text-brand transition hover:bg-brand/5"
           >
-            Import Wizard
+            Import
           </Link>
           <button
             type="button"
@@ -133,6 +152,9 @@ export function AdminConsole() {
       {tab === "bookings" && <BookingsTab />}
       {tab === "courts" && <CourtTab />}
       {tab === "users" && <UsersTab />}
+
+      <WalkInModal open={walkInOpen} onClose={() => setWalkInOpen(false)} />
+      <BulkBlockModal open={bulkBlockOpen} onClose={() => setBulkBlockOpen(false)} />
     </div>
   );
 }
@@ -449,6 +471,7 @@ function UsersTab() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [userBookings, setUserBookings] = useState<Record<string, Booking[]>>({});
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     fetch("/api/admin/users")
@@ -471,12 +494,33 @@ function UsersTab() {
 
   if (loading) return <LoadingCard />;
 
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? users.filter(
+        (u) =>
+          u.name.toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q) ||
+          (u.phone ?? "").toLowerCase().includes(q),
+      )
+    : users;
+
   return (
     <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
-      <h3 className="mb-4 font-display text-lg font-extrabold text-ink">Registered users</h3>
-      {users.length === 0 ? (
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h3 className="font-display text-lg font-extrabold text-ink">
+          Registered users <span className="text-xs font-semibold text-slatey">({filtered.length} of {users.length})</span>
+        </h3>
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, email, or phone…"
+          className="w-full max-w-xs rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand sm:w-72"
+        />
+      </div>
+      {filtered.length === 0 ? (
         <p className="rounded-xl border border-dashed border-brand/20 bg-brand/[0.03] p-6 text-center text-sm text-slatey">
-          No users yet.
+          {q ? `No users match "${search}".` : "No users yet."}
         </p>
       ) : (
         <div className="overflow-x-auto">
@@ -493,7 +537,7 @@ function UsersTab() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {filtered.map((u) => (
                 <>
                   <tr key={u.id} className="border-t border-brand/10">
                     <td className="p-3 font-bold text-ink">{u.name}</td>
