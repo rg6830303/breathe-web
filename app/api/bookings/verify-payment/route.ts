@@ -133,39 +133,58 @@ export async function POST(req: Request) {
       }
     }
 
+    // Dispatch confirmation notifications. The FIRST booking's email is awaited
+    // so we can report real delivery status to the UI (no more "email sent"
+    // when it actually failed); any additional bookings + admin/telegram alerts
+    // run best-effort in the background.
+    let emailed = false;
     try {
       const { notifyBookingConfirmed } = require("@/lib/notifications");
       const { waitUntil } = require("@vercel/functions");
-      if (notifyBookingConfirmed && waitUntil) {
-        for (let i = 0; i < slots.length; i++) {
+      if (notifyBookingConfirmed) {
+        const payloadFor = (i: number) => {
           const s = slots[i];
           const price = getSlotPrice(s.time);
           const totals = calculateTotals(price, addonTotal / slotCount);
           const court = Number.isFinite(Number(s.court))
             ? Math.max(1, Math.min(9, Number(s.court)))
             : 1;
-          waitUntil(
-            notifyBookingConfirmed({
-              id: bookingIds[i],
-              userEmail,
-              userName,
-              userPhone: userPhone || undefined,
-              slotDate: s.date,
-              slotTime: s.time,
-              durationMin: 60,
-              amount: Math.round(totals.total),
-              courtNumber: court,
-              subtotal: Math.round(totals.subtotal),
-              gst: Math.round(totals.taxes),
-            }),
-          ).catch((e: unknown) => console.error("[notify error]", e));
+          return {
+            id: bookingIds[i],
+            userEmail,
+            userName,
+            userPhone: userPhone || undefined,
+            slotDate: s.date,
+            slotTime: s.time,
+            durationMin: 60,
+            amount: Math.round(totals.total),
+            courtNumber: court,
+            subtotal: Math.round(totals.subtotal),
+            gst: Math.round(totals.taxes),
+          };
+        };
+
+        if (slots.length > 0) {
+          try {
+            const result = await notifyBookingConfirmed(payloadFor(0));
+            emailed = Boolean(result?.emailed);
+          } catch (e) {
+            console.error("[notify first error]", e);
+          }
+        }
+
+        for (let i = 1; i < slots.length; i++) {
+          const run = notifyBookingConfirmed(payloadFor(i)).catch((e: unknown) =>
+            console.error("[notify error]", e),
+          );
+          if (waitUntil) waitUntil(run);
         }
       }
     } catch (notifErr) {
       console.warn("Notifications deferred or module not loaded yet.", notifErr);
     }
 
-    return NextResponse.json({ ok: true, bookingIds });
+    return NextResponse.json({ ok: true, bookingIds, emailed });
   } catch (err: unknown) {
     console.error("[verify-payment error]", err);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
