@@ -4,24 +4,28 @@ import { v4 as uuid } from "uuid";
 import { cookies } from "next/headers";
 import { turso } from "@/lib/turso";
 import { signToken, COOKIE_NAME } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { signupSchema, formatZodError } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
-function isEmail(v: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-}
-
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const name = String(body.name ?? "").trim();
-    const email = String(body.email ?? "").trim().toLowerCase();
-    const password = String(body.password ?? "");
-    const phone = body.phone ? String(body.phone).trim() : null;
+    const ip = getClientIp(req);
+    const rl = await checkRateLimit(`auth-signup:${ip}`, 5, 60 * 60 * 1000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: `Too many signup attempts. Try again in ${rl.retryAfterSec}s.` },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+      );
+    }
 
-    if (!name) return NextResponse.json({ error: "Name is required." }, { status: 400 });
-    if (!isEmail(email)) return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
-    if (password.length < 8) return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
+    const body = await req.json().catch(() => ({}));
+    const parsed = signupSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 });
+    }
+    const { name, email, password, phone } = parsed.data;
 
     let existing;
     try {
@@ -45,14 +49,13 @@ export async function POST(req: Request) {
     try {
       await turso.execute({
         sql: "INSERT INTO users (id, email, password_hash, full_name, phone, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        args: [id, email, hash, name, phone, now],
+        args: [id, email, hash, name, phone ?? null, now],
       });
     } catch (insertErr) {
       console.error("[signup db-insert error]", insertErr);
       return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
     }
 
-    // Dual-write user signup to Supabase
     try {
       const { supabase, hasSupabase } = require("@/lib/supabase");
       if (hasSupabase) {
@@ -61,8 +64,8 @@ export async function POST(req: Request) {
           email,
           password_hash: hash,
           full_name: name,
-          phone,
-          created_at: now
+          phone: phone ?? null,
+          created_at: now,
         });
       }
     } catch (sbErr) {

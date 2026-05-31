@@ -1,9 +1,19 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const secret = new TextEncoder().encode(
-  process.env.SESSION_SECRET ?? process.env.JWT_SECRET ?? "breathe-pickleball-dev-secret-change-me-64-chars-long-or-more"
-);
+const DEV_FALLBACK = "breathe-pickleball-dev-secret-change-me-64-chars-long-or-more";
+
+function loadSecret(): Uint8Array {
+  const raw = process.env.SESSION_SECRET ?? process.env.JWT_SECRET;
+  if (raw && raw.length >= 32) return new TextEncoder().encode(raw);
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "SESSION_SECRET (or JWT_SECRET) must be set to at least 32 chars in production. Generate one with: openssl rand -hex 32",
+    );
+  }
+  return new TextEncoder().encode(DEV_FALLBACK);
+}
+
 const COOKIE_NAME = "breathe_player_session";
 const ADMIN_COOKIE = "breathe_admin_session";
 
@@ -15,12 +25,12 @@ export async function signToken(payload: UserPayload | AdminPayload) {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(secret);
+    .sign(loadSecret());
 }
 
 export async function verifyToken(token: string): Promise<UserPayload | AdminPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, loadSecret());
     return payload as unknown as UserPayload | AdminPayload;
   } catch {
     return null;

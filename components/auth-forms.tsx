@@ -153,6 +153,11 @@ export function LoginForm() {
       <form onSubmit={onSubmit} className="mt-6 grid gap-3">
         <Field label="Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} autoComplete="email" required />
         <Field label="Password" type="password" value={form.password} onChange={(v) => setForm({ ...form, password: v })} autoComplete="current-password" required />
+        <div className="-mt-1 text-right">
+          <Link href="/forgot-password" className="text-xs font-semibold text-brand hover:underline">
+            Forgot password?
+          </Link>
+        </div>
         {error && (
           <div role="alert" className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}

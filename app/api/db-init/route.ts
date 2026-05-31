@@ -63,7 +63,25 @@ const STATEMENTS: string[] = [
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
     updated_at INTEGER NOT NULL
-  )`
+  )`,
+
+  // 6. rate_limits — per-IP throttling for auth endpoints
+  `CREATE TABLE IF NOT EXISTS rate_limits (
+    key TEXT PRIMARY KEY,
+    count INTEGER NOT NULL DEFAULT 0,
+    window_start INTEGER NOT NULL
+  )`,
+
+  // 7. password_reset_tokens — sha256 hashes of single-use reset tokens
+  `CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    token_hash TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at INTEGER,
+    created_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_password_reset_user ON password_reset_tokens (user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_password_reset_expires ON password_reset_tokens (expires_at)`
 ];
 
 export async function GET() {
@@ -115,7 +133,7 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       message: "Database initialized and seeded successfully",
-      tables: ["users", "admins", "bookings", "gallery_images", "venue_config"],
+      tables: ["users", "admins", "bookings", "gallery_images", "venue_config", "rate_limits", "password_reset_tokens"],
       adminCreated,
       adminEmail
     });

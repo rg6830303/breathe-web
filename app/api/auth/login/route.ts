@@ -3,18 +3,28 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { turso } from "@/lib/turso";
 import { signToken, COOKIE_NAME } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { loginSchema, formatZodError } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const email = String(body.email ?? "").trim().toLowerCase();
-    const password = String(body.password ?? "");
-
-    if (!email || !password) {
-      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+    const ip = getClientIp(req);
+    const rl = await checkRateLimit(`auth-login:${ip}`, 8, 15 * 60 * 1000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: `Too many attempts. Try again in ${rl.retryAfterSec}s.` },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+      );
     }
+
+    const body = await req.json().catch(() => ({}));
+    const parsed = loginSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 });
+    }
+    const { email, password } = parsed.data;
 
     let result;
     try {
@@ -29,7 +39,6 @@ export async function POST(req: Request) {
 
     let row = result.rows[0];
     if (!row) {
-      // Supabase user lookup fallback
       try {
         const { supabase, hasSupabase } = require("@/lib/supabase");
         if (hasSupabase) {
@@ -64,7 +73,7 @@ export async function POST(req: Request) {
     const id = String(row.id);
     const name = String(row.full_name);
     const token = await signToken({ id, email, name, role: "user" });
-    
+
     const cookieStore = await cookies();
     cookieStore.set(COOKIE_NAME, token, {
       httpOnly: true,
