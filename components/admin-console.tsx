@@ -503,13 +503,21 @@ function UsersTab() {
                     <td className="p-3 text-ink">{u.booking_count}</td>
                     <td className="p-3 font-semibold text-ink">{money(u.total_spent)}</td>
                     <td className="p-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => toggle(u.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-brand/15 px-2.5 py-1.5 text-xs font-bold text-brand hover:bg-brand/5"
-                      >
-                        {expanded === u.id ? "Hide" : "View"} <ArrowRight className="h-3 w-3" />
-                      </button>
+                      <div className="inline-flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => toggle(u.id)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-brand/15 px-2.5 py-1.5 text-xs font-bold text-brand hover:bg-brand/5"
+                        >
+                          {expanded === u.id ? "Hide" : "View"}
+                        </button>
+                        <Link
+                          href={`/admin/customers/${u.id}`}
+                          className="inline-flex items-center gap-1 rounded-lg border border-brand/15 px-2.5 py-1.5 text-xs font-bold text-ink/70 hover:bg-brand/5"
+                        >
+                          Profile <ArrowRight className="h-3 w-3" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                   {expanded === u.id && (
