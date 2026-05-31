@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ensureSchema } from "@/lib/db/ensure";
 import { getAdminSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 
