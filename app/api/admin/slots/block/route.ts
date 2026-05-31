@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ensureSchema } from "@/lib/db/ensure";
 import { v4 as uuid } from "uuid";
 import { getAdminSession } from "@/lib/auth";
 import { turso, ensureBlockedSlotsTable } from "@/lib/turso";
@@ -11,6 +12,7 @@ export const runtime = "nodejs";
  */
 export async function POST(req: Request) {
   try {
+    await ensureSchema();
     const admin = await getAdminSession();
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

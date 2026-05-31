@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ensureSchema } from "@/lib/db/ensure";
 import crypto from "node:crypto";
 import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
@@ -13,6 +14,7 @@ type AddonInput = { id: string; label: string; price: number; qty?: number };
 
 export async function POST(req: Request) {
   try {
+    await ensureSchema();
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

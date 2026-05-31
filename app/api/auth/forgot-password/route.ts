@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ensureSchema } from "@/lib/db/ensure";
 import crypto from "node:crypto";
 import React from "react";
 import { render } from "@react-email/render";
@@ -16,6 +17,7 @@ const RESET_TTL_MIN = 60;
 
 export async function POST(req: Request) {
   try {
+    await ensureSchema();
     const ip = getClientIp(req);
     const rl = await checkRateLimit(`auth-forgot:${ip}`, 5, 60 * 60 * 1000);
     if (!rl.ok) {

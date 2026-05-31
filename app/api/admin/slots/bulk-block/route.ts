@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ensureSchema } from "@/lib/db/ensure";
 import { v4 as uuid } from "uuid";
 import { z } from "zod";
 import { getAdminSession } from "@/lib/auth";
@@ -41,6 +42,8 @@ function generateTimes(startHHMM: string, endHHMM: string): string[] {
 export async function POST(req: Request) {
   const admin = await getAdminSession();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  await ensureSchema();
 
   const body = await req.json().catch(() => ({}));
   const parsed = schema.safeParse(body);

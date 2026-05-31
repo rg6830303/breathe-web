@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ensureSchema } from "@/lib/db/ensure";
 import bcrypt from "bcryptjs";
 import { v4 as uuid } from "uuid";
 import { cookies } from "next/headers";
@@ -11,6 +12,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
+    await ensureSchema();
     const ip = getClientIp(req);
     const rl = await checkRateLimit(`auth-signup:${ip}`, 5, 60 * 60 * 1000);
     if (!rl.ok) {
