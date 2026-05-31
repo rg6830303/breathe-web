@@ -8,6 +8,7 @@ import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { WeatherWidget } from "@/components/weather-widget";
 import { ActivityHeatmap } from "./activity-heatmap";
+import { GameStats } from "./game-stats";
 import { ProfileForm } from "./profile-form";
 import { CancelBookingButton } from "./cancel-button";
 import { NextSessionCard } from "./next-session-card";
@@ -257,6 +258,13 @@ export default async function DashboardPage() {
         </section>
 
         <Container className="py-8">
+          <div className="mb-6">
+            <GameStats
+              bookings={confirmedAll.map((b) => ({ court_number: b.court_number, slot_time: b.slot_time, status: b.status }))}
+              stats={{ totalSessions, totalSpent, currentStreak: streak, longestStreak: streak }}
+            />
+          </div>
+
           {nextUpcoming && (
             <div className="mb-6">
               <NextSessionCard

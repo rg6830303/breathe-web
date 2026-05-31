@@ -2,29 +2,31 @@
 
 import { motion } from "framer-motion";
 import { Award, Flame, Lock, Sparkles, Star, Trophy, Zap } from "lucide-react";
-import type { Booking } from "@/lib/types";
 
-type Stats = {
+export type GameBooking = {
+  court_number: number;
+  slot_time: string;
+  status: string;
+};
+
+export type GameStatsInput = {
   totalSessions: number;
-  totalHours: number;
   totalSpent: number;
   currentStreak: number;
   longestStreak: number;
-  thisMonthSessions: number;
 };
 
-// 100 XP per confirmed session + 1 XP per ₹10 spent. Levels scale quadratically.
-function deriveXp(stats: Stats) {
-  return stats.totalSessions * 100 + Math.floor(stats.totalSpent / 10);
+// 100 XP per confirmed session + 1 XP per ₹10 spent. Levels scale gently.
+function deriveXp(s: GameStatsInput) {
+  return s.totalSessions * 100 + Math.floor(s.totalSpent / 10);
 }
 function levelFromXp(xp: number) {
-  // level n requires 500 * n^1.5 cumulative XP (gentle curve)
   let level = 1;
   while (xp >= Math.round(500 * Math.pow(level, 1.5))) level++;
   const floor = level === 1 ? 0 : Math.round(500 * Math.pow(level - 1, 1.5));
   const ceil = Math.round(500 * Math.pow(level, 1.5));
   const pct = Math.min(100, Math.round(((xp - floor) / (ceil - floor)) * 100));
-  return { level, floor, ceil, pct, into: xp - floor, span: ceil - floor };
+  return { level, into: xp - floor, span: ceil - floor, pct };
 }
 
 const TIERS = ["Rookie", "Rallyer", "Contender", "Challenger", "Pro", "Ace", "Legend"];
@@ -32,7 +34,7 @@ function tierName(level: number) {
   return TIERS[Math.min(TIERS.length - 1, Math.floor((level - 1) / 2))];
 }
 
-export function GameStats({ bookings, stats }: { bookings: Booking[]; stats: Stats }) {
+export function GameStats({ bookings, stats }: { bookings: GameBooking[]; stats: GameStatsInput }) {
   const xp = deriveXp(stats);
   const lvl = levelFromXp(xp);
 
@@ -55,7 +57,6 @@ export function GameStats({ bookings, stats }: { bookings: Booking[]; stats: Sta
 
   return (
     <div className="grid gap-4">
-      {/* Level + XP hero */}
       <div className="relative overflow-hidden rounded-3xl bg-ink p-6 text-white shadow-glow">
         <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-brand/30 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-16 left-1/3 h-40 w-40 rounded-full bg-lime/20 blur-3xl" />
@@ -104,7 +105,6 @@ export function GameStats({ bookings, stats }: { bookings: Booking[]; stats: Sta
         </div>
       </div>
 
-      {/* Achievements */}
       <div className="rounded-3xl border border-brand/10 bg-white p-5 shadow-soft">
         <h3 className="mb-4 flex items-center gap-2 font-display text-base font-extrabold text-ink">
           <Award className="h-5 w-5 text-brand" /> Achievements
@@ -118,15 +118,9 @@ export function GameStats({ bookings, stats }: { bookings: Booking[]; stats: Sta
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className={`relative rounded-2xl border p-4 text-center ${
-                  b.unlocked ? "border-brand/20 bg-brand/[0.04]" : "border-brand/10 bg-white"
-                }`}
+                className={`relative rounded-2xl border p-4 text-center ${b.unlocked ? "border-brand/20 bg-brand/[0.04]" : "border-brand/10 bg-white"}`}
               >
-                <div
-                  className={`mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-xl ${
-                    b.unlocked ? "bg-gradient-to-br from-brand to-brand-700 text-white shadow-soft" : "bg-slate-100 text-slate-400"
-                  }`}
-                >
+                <div className={`mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-xl ${b.unlocked ? "bg-gradient-to-br from-brand to-brand-700 text-white shadow-soft" : "bg-slate-100 text-slate-400"}`}>
                   {b.unlocked ? <Icon className="h-5 w-5" /> : <Lock className="h-4 w-4" />}
                 </div>
                 <p className={`text-xs font-bold ${b.unlocked ? "text-ink" : "text-slate-400"}`}>{b.label}</p>
@@ -136,9 +130,7 @@ export function GameStats({ bookings, stats }: { bookings: Booking[]; stats: Sta
                     <div className="h-full rounded-full bg-brand/50" style={{ width: `${b.progress}%` }} />
                   </div>
                 )}
-                {b.unlocked && (
-                  <span className="absolute right-2 top-2 text-[9px] font-bold uppercase tracking-wide text-brand">✓</span>
-                )}
+                {b.unlocked && <span className="absolute right-2 top-2 text-[9px] font-bold uppercase tracking-wide text-brand">✓</span>}
               </motion.div>
             );
           })}
