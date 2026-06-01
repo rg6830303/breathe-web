@@ -4,11 +4,13 @@ import { PageHero } from "@/components/ui/page-hero";
 import { CTABand } from "@/components/ui";
 import { GalleryGrid, type InstaPost } from "@/components/gallery-grid";
 import { turso } from "@/lib/turso";
+import { ensureSchema } from "@/lib/db/ensure";
 
 export const revalidate = 60; // short cache so new uploads show up fast
 
 async function getGalleryImages(): Promise<InstaPost[] | null> {
   try {
+    await ensureSchema();
     const result = await turso.execute({
       sql: "SELECT id, blob_url, caption, created_at FROM gallery_images WHERE active = 1 ORDER BY display_order ASC, created_at DESC",
       args: [],

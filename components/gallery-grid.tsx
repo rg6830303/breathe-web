@@ -19,21 +19,6 @@ export type InstaPost = {
   timestamp: string;
 };
 
-const FALLBACK = [
-  { label: "Floodlit evening rally", gradient: "from-brand-900 to-brand-700" },
-  { label: "Junior academy", gradient: "from-emerald-800 to-brand-700" },
-  { label: "Open tournament", gradient: "from-amber-800 to-brand-800" },
-  { label: "Community doubles", gradient: "from-brand-700 to-purple-800" },
-  { label: "Coaching drills", gradient: "from-brand-800 to-cyan-800" },
-  { label: "Weekend ladder", gradient: "from-rose-800 to-brand-800" },
-  { label: "Prize night", gradient: "from-amber-700 to-rose-800" },
-  { label: "Morning practice", gradient: "from-brand-600 to-cyan-700" },
-  { label: "Net play mastery", gradient: "from-brand-800 to-indigo-800" },
-  { label: "Mixed doubles social", gradient: "from-teal-700 to-brand-700" },
-  { label: "Beginner clinic", gradient: "from-fuchsia-800 to-brand-800" },
-  { label: "Match point", gradient: "from-brand-700 to-amber-700" },
-];
-
 export function GalleryGrid({ posts }: { posts: InstaPost[] | null }) {
   return (
     <>
@@ -175,46 +160,32 @@ function InstaCards({ posts }: { posts: InstaPost[] }) {
 }
 
 function FallbackCards() {
+  // No uploaded photos yet — show one honest, on-brand panel that points
+  // visitors to Instagram (and tells the owner to upload from /admin/gallery)
+  // instead of a wall of empty placeholder boxes.
   return (
-    <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3">
-      {FALLBACK.map((item, i) => (
-        <ScrollReveal key={item.label} delay={i * 0.04} direction="up" className="relative aspect-square overflow-hidden rounded-2xl border border-brand/5 shadow-soft">
-          <motion.div whileHover={{ scale: 1.03 }} className={`group relative h-full w-full bg-gradient-to-br ${item.gradient}`}>
-            <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-15" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 text-center">
-              <CourtLineLogo />
-              <span className="line-clamp-2 text-sm font-bold leading-tight text-white">{item.label}</span>
-            </div>
-          </motion.div>
-        </ScrollReveal>
-      ))}
-      <ScrollReveal delay={FALLBACK.length * 0.04} direction="up" className="relative aspect-square overflow-hidden rounded-2xl border border-brand/5 shadow-soft sm:col-span-2 md:col-span-1">
-        <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-pink-600 via-purple-700 to-brand-800 p-4 text-center">
-          <Instagram className="h-10 w-10 text-white" />
-          <p className="text-sm font-bold text-white">Follow @breathepickleball on Instagram</p>
-          <a
-            href={site.instagram}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 text-xs font-bold text-purple-800 transition hover:bg-gray-100"
-          >
-            Follow now
-          </a>
+    <div className="relative overflow-hidden rounded-3xl border border-brand/10 bg-gradient-to-br from-brand-800 via-brand-700 to-brand-900 shadow-glow">
+      <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-20" />
+      <div className="relative flex flex-col items-center gap-5 px-6 py-16 text-center sm:py-20">
+        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 backdrop-blur">
+          <Instagram className="h-8 w-8 text-white" />
+        </span>
+        <div>
+          <h3 className="font-display text-2xl font-extrabold text-white sm:text-3xl">Match-day photos are on the way</h3>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-white/80">
+            We&apos;re putting together a gallery of rallies, tournaments, and coaching sessions at the club.
+            In the meantime, catch all the latest on our Instagram.
+          </p>
         </div>
-      </ScrollReveal>
+        <a
+          href={site.instagram}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-full bg-lime px-6 py-3 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark"
+        >
+          <Instagram className="h-4 w-4" /> @breathepickleball
+        </a>
+      </div>
     </div>
-  );
-}
-
-function CourtLineLogo() {
-  return (
-    <svg viewBox="0 0 80 80" className="h-12 w-12 text-white/60" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <rect x="8" y="14" width="64" height="52" rx="2" />
-      <line x1="8" y1="40" x2="72" y2="40" strokeWidth="2" />
-      <line x1="8" y1="30" x2="72" y2="30" strokeDasharray="3 3" />
-      <line x1="8" y1="50" x2="72" y2="50" strokeDasharray="3 3" />
-      <line x1="40" y1="14" x2="40" y2="30" />
-      <line x1="40" y1="50" x2="40" y2="66" />
-    </svg>
   );
 }

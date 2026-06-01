@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { put, del } from "@vercel/blob";
 import { getAdminSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
+import { ensureSchema } from "@/lib/db/ensure";
 import { v4 as uuid } from "uuid";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 export async function GET() {
   try {
@@ -43,6 +45,7 @@ export async function POST(req: Request) {
     const admin = await getAdminSession();
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    await ensureSchema();
     const form = await req.formData();
     const files = form.getAll("files") as File[];
     const captions = form.getAll("captions") as string[];
