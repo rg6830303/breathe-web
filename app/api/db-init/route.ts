@@ -47,11 +47,11 @@ const STATEMENTS: string[] = [
     created_at INTEGER NOT NULL
   )`,
 
-  // Indexes
+  // Indexes (only the ones that don't need court_number — that column may not exist on old DBs
+  // until the ALTERS below run; see LATE_INDEXES for the court_number index)
   `CREATE INDEX IF NOT EXISTS idx_bookings_date_time ON bookings (slot_date, slot_time)`,
   `CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings (user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (status)`,
-  `CREATE INDEX IF NOT EXISTS idx_bookings_court_date ON bookings (court_number, slot_date, slot_time)`,
 
   // 4. gallery_images
   `CREATE TABLE IF NOT EXISTS gallery_images (
@@ -123,14 +123,24 @@ const ALTERS: string[] = [
   `ALTER TABLE bookings ADD COLUMN total INTEGER NOT NULL DEFAULT 0`,
 ];
 
+// Indexes that depend on columns added by ALTERS — must run after ALTERS complete.
+const LATE_INDEXES: string[] = [
+  `CREATE INDEX IF NOT EXISTS idx_bookings_court_date ON bookings (court_number, slot_date, slot_time)`,
+];
+
 async function tryAlter(sql: string) {
   try {
     await turso.execute(sql);
   } catch (e: unknown) {
     const msg = String((e as Error)?.message ?? "").toLowerCase();
-    if (!msg.includes("duplicate column")) throw e;
+    // Ignore expected idempotency errors:
+    // - "duplicate column" when ALTER TABLE re-runs on an already-migrated DB
+    // - "already exists" when CREATE INDEX re-runs
+    if (msg.includes("duplicate column") || msg.includes("already exists")) return;
+    throw e;
   }
 }
+
 
 export async function GET() {
   const adminEmail = process.env.SEED_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "breathepickleball@gmail.com";
@@ -142,6 +152,11 @@ export async function GET() {
     }
 
     for (const sql of ALTERS) {
+      await tryAlter(sql);
+    }
+
+    // Create indexes that depend on columns added in ALTERS
+    for (const sql of LATE_INDEXES) {
       await tryAlter(sql);
     }
 

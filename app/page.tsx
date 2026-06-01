@@ -3,35 +3,40 @@ import { Nav } from "@/components/nav";
 import { CTABand } from "@/components/ui";
 import type { Notice } from "@/lib/types";
 import { HomeMotion } from "@/components/home-motion";
+import { turso } from "@/lib/turso";
 
-const notices: Notice[] = [
-  {
-    id: 1,
-    title: "Tonight: prime-time courts filling fast",
-    content: "7–9 PM slots on Courts 1 & 2 are nearly gone — lock yours in now.",
-    type: "daily",
-    created_at: "",
-    updated_at: "",
-  },
-  {
-    id: 2,
-    title: "Weekend Doubles Ladder",
-    content: "Saturday social ladder, all levels welcome. Registration closes Friday 6 PM.",
-    type: "weekly",
-    created_at: "",
-    updated_at: "",
-  },
-  {
-    id: 3,
-    title: "Breathe Monthly Open",
-    content: "Open & beginner brackets with cash prizes. Early-bird passes now available.",
-    type: "monthly",
-    created_at: "",
-    updated_at: "",
-  },
-];
+export const dynamic = "force-dynamic";
 
-export default function Home() {
+async function getLiveNotices(): Promise<Notice[]> {
+  try {
+    const result = await turso.execute({
+      sql: `SELECT id, title, body, category, active, created_at, updated_at
+            FROM notices
+            WHERE active = 1
+            ORDER BY created_at DESC
+            LIMIT 6`,
+      args: [],
+    });
+    return result.rows.map((r) => ({
+      id: String(r.id),
+      title: String(r.title),
+      content: String(r.body ?? ""),
+      type: (["daily", "weekly", "monthly"].includes(String(r.category))
+        ? String(r.category)
+        : "daily") as Notice["type"],
+      created_at: String(r.created_at),
+      updated_at: String(r.updated_at),
+    }));
+  } catch (err) {
+    console.error("[homepage notices error]", err);
+    // Graceful fallback — show no notices if DB unreachable
+    return [];
+  }
+}
+
+export default async function Home() {
+  const notices = await getLiveNotices();
+
   return (
     <>
       <Nav />

@@ -8,13 +8,14 @@ export type Slot = {
 };
 
 export type Notice = {
-  id: number;
+  id: string | number;
   title: string;
   content: string;
   type: NoticeType;
   created_at: string;
   updated_at: string;
 };
+
 
 export type DbUser = {
   id: string;

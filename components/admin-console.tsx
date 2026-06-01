@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+
 import Link from "next/link";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import { WalkInModal } from "@/components/admin/walk-in-modal";
@@ -80,7 +80,7 @@ const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: s
 ];
 
 export function AdminConsole() {
-  const router = useRouter();
+
   const [tab, setTab] = useState<Tab>("overview");
   const [loggingOut, setLoggingOut] = useState(false);
   const [walkInOpen, setWalkInOpen] = useState(false);
@@ -89,8 +89,9 @@ export function AdminConsole() {
   async function logout() {
     setLoggingOut(true);
     await fetch("/api/admin/auth/logout", { method: "POST" });
-    router.push("/admin/login");
-    router.refresh();
+    // Hard redirect ensures the cleared admin session cookie is visible to
+    // the server-side middleware immediately, bypassing Next.js App Router cache.
+    window.location.href = "/admin/login";
   }
 
   return (
