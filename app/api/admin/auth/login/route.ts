@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { v4 as uuid } from "uuid";
 import { cookies } from "next/headers";
@@ -138,7 +139,11 @@ export async function POST(req: Request) {
         }
       }
       if (!ok && envPassPlain) {
-        ok = password.trim() === envPassPlain.trim();
+        // Constant-time compare to avoid leaking password length/contents via
+        // response timing. Falls back to false on length mismatch.
+        const a = Buffer.from(password.trim());
+        const b = Buffer.from(envPassPlain.trim());
+        ok = a.length === b.length && timingSafeEqual(a, b);
         if (ok) viaPath = "env-plaintext";
       }
     }
@@ -184,9 +189,12 @@ export async function POST(req: Request) {
     const cookieStore = await cookies();
     cookieStore.set(ADMIN_COOKIE, token, {
       httpOnly: true,
-      sameSite: "lax",
+      // strict: the admin console is never reached via a cross-site link, so
+      // this fully neutralises CSRF on admin actions.
+      sameSite: "strict",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      // Shorter admin session (24h) than player sessions — re-auth daily.
+      maxAge: 60 * 60 * 24,
       secure: process.env.NODE_ENV === "production",
     });
 

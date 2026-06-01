@@ -20,17 +20,23 @@ const ADMIN_COOKIE = "breathe_admin_session";
 export type UserPayload = { id: string; email: string; name: string; role: "user" };
 export type AdminPayload = { id: string; email: string; role: "admin" };
 
-export async function signToken(payload: UserPayload | AdminPayload) {
+export async function signToken(
+  payload: UserPayload | AdminPayload,
+  // Admin sessions are short-lived (24h); players get 7 days.
+  expiresIn: string = (payload as { role?: string }).role === "admin" ? "24h" : "7d",
+) {
   return new SignJWT(payload as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("7d")
+    .setExpirationTime(expiresIn)
     .sign(loadSecret());
 }
 
 export async function verifyToken(token: string): Promise<UserPayload | AdminPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, loadSecret());
+    // Pin the algorithm to HS256 — without this, a token forged with alg:"none"
+    // or a different scheme could otherwise be accepted (alg-confusion attack).
+    const { payload } = await jwtVerify(token, loadSecret(), { algorithms: ["HS256"] });
     return payload as unknown as UserPayload | AdminPayload;
   } catch {
     return null;
