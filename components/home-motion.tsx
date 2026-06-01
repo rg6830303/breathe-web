@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { LiveAvailability } from "@/components/live-availability";
 import { NoticeBoard } from "@/components/notice-board";
-import { PaddleMark } from "@/components/logo";
 import { Container, SectionHeading } from "@/components/ui";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { StatCounter } from "@/components/motion/stat-counter";

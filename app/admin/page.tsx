@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { Activity, Megaphone, Settings as SettingsIcon } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
-import { Container, Eyebrow } from "@/components/ui";
+import { Container } from "@/components/ui";
+import { PortalHero } from "@/components/ui/portal-hero";
 import { AdminConsole } from "@/components/admin-console";
 import { getAdminSession } from "@/lib/auth";
 import { TodayPanel } from "./today-panel";
@@ -18,17 +19,13 @@ export default async function AdminPage() {
     <>
       <Nav />
       <main className="bg-brand-50/30">
-        <section className="brand-gradient brand-mesh relative overflow-hidden text-white">
-          <Container className="relative flex flex-col gap-4 py-12 sm:py-14 md:flex-row md:items-end md:justify-between">
-            <div>
-              <Eyebrow light>Owner console</Eyebrow>
-              <h1 className="mt-3 font-display text-3xl font-extrabold sm:text-4xl">Breathe Pickleball admin</h1>
-              <p className="mt-3 max-w-2xl text-white/85">
-                Bookings, court availability, users, and revenue — live from Turso.
-              </p>
-            </div>
+        <PortalHero
+          eyebrow="Owner console"
+          title={<h1 className="font-display text-3xl font-extrabold sm:text-4xl">Breathe Pickleball admin</h1>}
+          subtitle="Bookings, court availability, users, and revenue — live from Turso."
+          right={
             <div className="flex flex-col items-start gap-2 md:items-end">
-              <span className="rounded-full bg-white/12 px-4 py-2 text-xs font-semibold text-white">
+              <span className="rounded-full bg-white/12 px-4 py-2 text-xs font-semibold text-white ring-1 ring-white/15">
                 Signed in as {admin.email}
               </span>
               <div className="flex flex-wrap gap-2">
@@ -52,8 +49,8 @@ export default async function AdminPage() {
                 </Link>
               </div>
             </div>
-          </Container>
-        </section>
+          }
+        />
 
         <Container className="py-8 space-y-6">
           <TodayPanel />

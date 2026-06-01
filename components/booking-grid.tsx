@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CalendarDays, Check, Loader2, Lock, LogIn, ReceiptText } from "lucide-react";
+import { CalendarDays, Check, Gift, Loader2, Lock, LogIn, ReceiptText } from "lucide-react";
 import { calculateTotals } from "@/lib/pricing";
 
 type Slot = { court: number; time: string; status: "open" | "booked" | "blocked"; price: number };
@@ -65,10 +65,8 @@ function loadRazorpay(): Promise<boolean> {
   });
 }
 
-const ADDONS: Addon[] = [
-  { id: "paddles", label: "Pro paddles ×2", price: 300, qty: 1, on: false },
-  { id: "balls", label: "Premium ball tube", price: 120, qty: 1, on: false },
-];
+// Paddles and balls are complimentary at the club, so there are no paid add-ons.
+const ADDONS: Addon[] = [];
 
 export function BookingGrid() {
   const router = useRouter();
@@ -78,12 +76,13 @@ export function BookingGrid() {
   const [loading, setLoading] = useState(true);
   const [account, setAccount] = useState<Account>(null);
   const [authLoaded, setAuthLoaded] = useState(false);
-  const [addons, setAddons] = useState(ADDONS);
+  const [addons] = useState(ADDONS);
   const [mobileCourt, setMobileCourt] = useState<number>(1);
   const [band, setBand] = useState<Band>("evening");
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [emailed, setEmailed] = useState(true);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -179,9 +178,11 @@ export function BookingGrid() {
             });
             const verify = await verifyRes.json();
             if (!verifyRes.ok) throw new Error(verify.error ?? "Payment verification failed");
+            setEmailed(verify.emailed !== false);
             setConfirmed(true);
-            refreshSlots();
-            setTimeout(() => router.push("/dashboard"), 1600);
+            setSelected([]);
+            fetch(`/api/slots?date=${date}`).then((r) => r.json()).then((d) => setSlots(d.slots ?? []));
+            setTimeout(() => router.push("/dashboard"), 2600);
           } catch (e) {
             setError(e instanceof Error ? e.message : "Verification failed");
           } finally {
@@ -364,22 +365,11 @@ export function BookingGrid() {
           ))}
         </div>
 
-        <div className="mt-4 space-y-1 border-t border-brand/10 pt-4">
-          {addons.map((a) => (
-            <label key={a.id} className="flex cursor-pointer items-center justify-between rounded-xl px-2 py-2 text-sm hover:bg-brand/5">
-              <span className="text-ink">
-                {a.label} <span className="text-slatey">(₹{a.price})</span>
-              </span>
-              <input
-                type="checkbox"
-                checked={a.on}
-                onChange={(e) =>
-                  setAddons((cur) => cur.map((x) => (x.id === a.id ? { ...x, on: e.target.checked } : x)))
-                }
-                className="h-4 w-4 accent-brand"
-              />
-            </label>
-          ))}
+        <div className="mt-4 flex items-start gap-2 rounded-xl border border-lime/40 bg-lime/10 px-3 py-2.5 text-xs text-ink">
+          <Gift className="mt-0.5 h-4 w-4 shrink-0 text-lime-dark" />
+          <span>
+            <strong>Paddles &amp; balls are complimentary</strong> — they&apos;re included free with every court booking.
+          </span>
         </div>
 
         <div className="mt-4 space-y-2 border-t border-brand/10 pt-4 text-sm">
@@ -401,8 +391,15 @@ export function BookingGrid() {
           <div className="mt-3 rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>
         )}
         {confirmed && (
-          <div className="mt-3 flex items-center gap-2 rounded-xl border border-lime/40 bg-lime/10 px-3 py-2 text-xs text-lime-dark">
-            <Check className="h-4 w-4" /> Payment confirmed — redirecting to your dashboard…
+          <div className="mt-3 flex items-start gap-2 rounded-xl border border-lime/40 bg-lime/10 px-3 py-2 text-xs text-lime-dark">
+            <Check className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Booking confirmed! 🎉{" "}
+              {emailed
+                ? "A confirmation email is on its way."
+                : "Your booking is safe and shows on your dashboard — the confirmation email couldn't be sent just now."}{" "}
+              Redirecting…
+            </span>
           </div>
         )}
 

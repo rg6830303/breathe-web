@@ -3,11 +3,14 @@ import { redirect } from "next/navigation";
 import { ArrowRight, CalendarDays, Clock, Flame, IndianRupee, ListChecks, MoonStar, Sun, Sunset } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
-import { Container, Eyebrow } from "@/components/ui";
+import { Container } from "@/components/ui";
+import { PortalHero } from "@/components/ui/portal-hero";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { WeatherWidget } from "@/components/weather-widget";
 import { ActivityHeatmap } from "./activity-heatmap";
+import { GameStats } from "./game-stats";
+import { StatTiles } from "./stat-tile";
 import { ProfileForm } from "./profile-form";
 import { CancelBookingButton } from "./cancel-button";
 import { NextSessionCard } from "./next-session-card";
@@ -202,12 +205,6 @@ export default async function DashboardPage() {
   const favBand = favouriteBand(bookings);
   const FavIcon = favBand.icon === "sun" ? Sun : favBand.icon === "sunset" ? Sunset : MoonStar;
 
-  const stats: { icon: typeof ListChecks; label: string; value: string; tint: string }[] = [
-    { icon: ListChecks, label: "Sessions", value: String(totalSessions), tint: "bg-brand/10 text-brand" },
-    { icon: Clock, label: "Hours played", value: String(totalHours), tint: "bg-emerald-100 text-emerald-700" },
-    { icon: CalendarDays, label: "This month", value: String(thisMonth), tint: "bg-amber-100 text-amber-700" },
-    { icon: Flame, label: "Current streak", value: `${streak}d`, tint: "bg-rose-100 text-rose-700" },
-  ];
 
   const nextUpcoming = upcoming[upcoming.length - 1]; // upcoming is desc, so last is the soonest
 
@@ -226,37 +223,42 @@ export default async function DashboardPage() {
     <>
       <Nav />
       <main className="min-h-screen bg-brand-50/20">
-        <section className="brand-gradient brand-mesh relative overflow-hidden text-white">
-          <Container className="relative flex flex-col gap-4 py-12 sm:py-14 md:flex-row md:items-center md:justify-between">
-            <div>
-              <Eyebrow light>Player dashboard</Eyebrow>
-              <div className="mt-4 flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 font-display text-xl font-extrabold uppercase">
-                  {initials}
-                </div>
-                <div>
-                  <h1 className="font-display text-2xl font-extrabold sm:text-3xl">Hi, {fullName.split(" ")[0]}</h1>
-                  <p className="text-sm text-white/80">
-                    {email} · Member since {memberSince(memberSinceMs)}
-                  </p>
-                </div>
+        <PortalHero
+          eyebrow="Player dashboard"
+          title={
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 font-display text-xl font-extrabold uppercase ring-1 ring-white/20 backdrop-blur">
+                {initials}
+              </div>
+              <div>
+                <h1 className="font-display text-2xl font-extrabold sm:text-3xl">Hi, {fullName.split(" ")[0]}</h1>
+                <p className="text-sm text-white/75">{email} · Member since {memberSince(memberSinceMs)}</p>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white">
+          }
+          right={
+            <div className="flex flex-col items-start gap-2 md:items-end">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white ring-1 ring-white/15">
                 <FavIcon className="h-3.5 w-3.5" /> {favBand.label}
               </span>
               <Link
                 href="/book"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-lime px-5 py-3 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-lime px-5 py-3 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark active:scale-[0.98]"
               >
                 Book another slot <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-          </Container>
-        </section>
+          }
+        />
 
         <Container className="py-8">
+          <div className="mb-6">
+            <GameStats
+              bookings={confirmedAll.map((b) => ({ court_number: b.court_number, slot_time: b.slot_time, status: b.status }))}
+              stats={{ totalSessions, totalSpent, currentStreak: streak, longestStreak: streak }}
+            />
+          </div>
+
           {nextUpcoming && (
             <div className="mb-6">
               <NextSessionCard
@@ -274,19 +276,20 @@ export default async function DashboardPage() {
             <WeatherWidget />
           </div>
 
-          <section className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
-            {stats.map(({ icon: Icon, label, value, tint }) => (
-              <div key={label} className="rounded-3xl border border-brand/10 bg-white p-5 shadow-soft transition hover:shadow-card">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-slatey">{label}</span>
-                  <span className={`flex h-7 w-7 items-center justify-center rounded-full ${tint}`}>
-                    <Icon className="h-3.5 w-3.5" />
-                  </span>
-                </div>
-                <div className="mt-2 font-display text-2xl font-extrabold text-ink sm:text-3xl">{value}</div>
-              </div>
-            ))}
-          </section>
+          <StatTiles
+            tiles={[
+              { label: "Sessions", value: totalSessions, tint: "bg-brand/10 text-brand" },
+              { label: "Hours played", value: totalHours, tint: "bg-emerald-100 text-emerald-700" },
+              { label: "This month", value: thisMonth, tint: "bg-amber-100 text-amber-700" },
+              { label: "Current streak", value: streak, suffix: "d", tint: "bg-rose-100 text-rose-700" },
+            ]}
+            icons={[
+              <ListChecks key="a" className="h-4 w-4" />,
+              <Clock key="b" className="h-4 w-4" />,
+              <CalendarDays key="c" className="h-4 w-4" />,
+              <Flame key="d" className="h-4 w-4" />,
+            ]}
+          />
 
           <section className="mt-6 rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
             <div className="flex flex-wrap items-center justify-between gap-2">

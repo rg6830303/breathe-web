@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ensureSchema } from "@/lib/db/ensure";
 import { getAdminSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 
@@ -12,6 +13,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const { id } = await ctx.params;
 
   try {
+    await ensureSchema();
     const [userRes, bookingsRes, statsRes] = await Promise.all([
       turso.execute({
         sql: "SELECT id, full_name, email, phone, created_at FROM users WHERE id = ? LIMIT 1",

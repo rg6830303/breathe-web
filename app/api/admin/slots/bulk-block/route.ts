@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { ensureSchema } from "@/lib/db/ensure";
 import { v4 as uuid } from "uuid";
 import { z } from "zod";
 import { getAdminSession } from "@/lib/auth";
-import { turso } from "@/lib/turso";
+import { turso, ensureBlockedSlotsTable } from "@/lib/turso";
 
 export const runtime = "nodejs";
 
@@ -41,6 +42,8 @@ function generateTimes(startHHMM: string, endHHMM: string): string[] {
 export async function POST(req: Request) {
   const admin = await getAdminSession();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  await ensureSchema();
 
   const body = await req.json().catch(() => ({}));
   const parsed = schema.safeParse(body);
@@ -96,6 +99,7 @@ export async function POST(req: Request) {
   }
 
   try {
+    await ensureBlockedSlotsTable();
     for (const r of rows) {
       await turso.execute({
         sql: `INSERT INTO blocked_slots (id, slot_date, slot_time, court_number, reason, created_at)

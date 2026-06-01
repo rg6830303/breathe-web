@@ -1,67 +1,58 @@
 import nodemailer, { type Transporter } from "nodemailer";
 
-let cached: Transporter | null = null;
-let verifyAttempted = false;
-
 /**
- * Build a nodemailer transport against Gmail SMTP.
- *
- * Uses explicit host/port (smtp.gmail.com:465 SSL) rather than the `service:
- * "gmail"` shortcut so behaviour is the same in local dev and on Vercel's
- * Lambda runtime. Trims whitespace from the App Password because Gmail
- * displays them grouped like "abcd efgh ijkl mnop" and operators frequently
- * paste them with spaces or trailing newlines.
+ * Resolve Gmail SMTP credentials from env. Accepts several common variable
+ * names because operators frequently name them differently in Vercel
+ * (GMAIL_APP_PASSWORD vs GMAIL_PASS vs SMTP_PASS, etc.). Whitespace is stripped
+ * from the App Password since Gmail displays it grouped like "abcd efgh ijkl".
  */
-function getTransport(): Transporter {
-  if (cached) return cached;
-  const user = process.env.GMAIL_USER?.trim();
-  const passRaw = process.env.GMAIL_APP_PASSWORD;
-  const pass = passRaw ? passRaw.replace(/\s+/g, "") : undefined;
-  if (!user || !pass) {
-    throw new Error(
-      "GMAIL_USER and GMAIL_APP_PASSWORD must be set. Enable 2FA on the Gmail account and create an App Password (16 chars) at https://myaccount.google.com/apppasswords.",
-    );
-  }
-  cached = nodemailer.createTransport({
+function resolveCreds(): { user: string; pass: string } {
+  const user = (
+    process.env.GMAIL_USER ||
+    process.env.SMTP_USER ||
+    process.env.EMAIL_USER ||
+    ""
+  ).trim();
+  const passRaw =
+    process.env.GMAIL_APP_PASSWORD ||
+    process.env.GMAIL_APP_PASS ||
+    process.env.GMAIL_PASSWORD ||
+    process.env.GMAIL_PASS ||
+    process.env.SMTP_PASSWORD ||
+    process.env.SMTP_PASS ||
+    process.env.EMAIL_PASS ||
+    "";
+  return { user, pass: passRaw.replace(/\s+/g, "") };
+}
+
+type TransportKind = "465-ssl" | "587-starttls";
+
+function buildTransport(kind: TransportKind): Transporter {
+  const { user, pass } = resolveCreds();
+  const is465 = kind === "465-ssl";
+  return nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+    port: is465 ? 465 : 587,
+    secure: is465, // 465 implicit TLS, 587 STARTTLS
     auth: { user, pass },
-    connectionTimeout: 20_000,
-    greetingTimeout: 20_000,
-    socketTimeout: 30_000,
+    connectionTimeout: 12_000,
+    greetingTimeout: 8_000,
+    socketTimeout: 18_000,
     tls: { minVersion: "TLSv1.2" },
   });
+}
 
-  // Loudly verify the transport on first build so Vercel function logs show
-  // exactly whether Gmail accepts the credentials — fire and forget so it
-  // doesn't block sends. Runs at most once per cold start.
-  if (!verifyAttempted) {
-    verifyAttempted = true;
-    cached
-      .verify()
-      .then(() =>
-        console.log("[mailer] Gmail SMTP verify OK", {
-          user,
-          passLength: pass.length,
-          host: "smtp.gmail.com:465",
-        }),
-      )
-      .catch((err: unknown) => {
-        const code = (err as { code?: string })?.code;
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error("[mailer] Gmail SMTP verify FAILED", {
-          code,
-          msg,
-          userPresent: !!user,
-          userLength: user.length,
-          passPresent: !!pass,
-          passLength: pass.length,
-        });
-      });
+let primary: Transporter | null = null;
+function getPrimary(): Transporter {
+  const { user, pass } = resolveCreds();
+  if (!user || !pass) {
+    throw new Error(
+      "Gmail credentials missing. Set GMAIL_USER and GMAIL_APP_PASSWORD in Vercel (Production). " +
+        "The App Password is a 16-char code from https://myaccount.google.com/apppasswords (requires 2FA).",
+    );
   }
-
-  return cached;
+  primary ??= buildTransport("465-ssl");
+  return primary;
 }
 
 export type MailAttachment = {
@@ -81,71 +72,106 @@ export type MailOptions = {
 };
 
 export function fromAddress(displayName = "Breathe Pickleball"): string {
-  const user = (process.env.GMAIL_USER ?? "bookings@breathepickleball.in").trim();
-  return `${displayName} <${user}>`;
+  const { user } = resolveCreds();
+  const addr = process.env.GMAIL_FROM?.trim() || user || "bookings@breathepickleball.in";
+  return `${displayName} <${addr}>`;
 }
 
 export type SendResult =
-  | { ok: true; messageId: string; accepted: string[]; rejected: string[] }
+  | { ok: true; messageId: string; accepted: string[]; rejected: string[]; transport: TransportKind }
   | { ok: false; error: string; code?: string };
 
+const RETRYABLE = new Set(["ETIMEDOUT", "ECONNECTION", "ESOCKET", "ECONNRESET", "EDNS", "EAI_AGAIN"]);
+
+async function trySend(transport: Transporter, opts: MailOptions) {
+  return transport.sendMail({
+    from: fromAddress(),
+    to: opts.to,
+    subject: opts.subject,
+    html: opts.html,
+    text: opts.text,
+    replyTo: opts.replyTo,
+    attachments: opts.attachments,
+  });
+}
+
+/**
+ * Send mail. Tries 465 (implicit SSL); on a connection-level failure (common
+ * on serverless egress) falls back once to 587 (STARTTLS).
+ */
 export async function sendMail(opts: MailOptions): Promise<SendResult> {
   try {
-    const transport = getTransport();
-    const info = await transport.sendMail({
-      from: fromAddress(),
-      to: opts.to,
-      subject: opts.subject,
-      html: opts.html,
-      text: opts.text,
-      replyTo: opts.replyTo,
-      attachments: opts.attachments,
-    });
+    const info = await trySend(getPrimary(), opts);
     return {
       ok: true,
       messageId: info.messageId,
       accepted: (info.accepted ?? []).map(String),
       rejected: (info.rejected ?? []).map(String),
+      transport: "465-ssl",
     };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
     const code = (err as { code?: string })?.code;
-    console.error("[mailer sendMail error]", { code, msg });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[mailer 465 send error]", { code, msg });
+    if (code && RETRYABLE.has(code)) {
+      try {
+        const info = await trySend(buildTransport("587-starttls"), opts);
+        console.log("[mailer] delivered via 587 STARTTLS fallback");
+        return {
+          ok: true,
+          messageId: info.messageId,
+          accepted: (info.accepted ?? []).map(String),
+          rejected: (info.rejected ?? []).map(String),
+          transport: "587-starttls",
+        };
+      } catch (err2) {
+        const code2 = (err2 as { code?: string })?.code;
+        const msg2 = err2 instanceof Error ? err2.message : String(err2);
+        console.error("[mailer 587 fallback error]", { code: code2, msg: msg2 });
+        return { ok: false, error: msg2, code: code2 };
+      }
+    }
     return { ok: false, error: msg, code };
   }
 }
 
-export type VerifyResult = { ok: boolean; error?: string; code?: string };
+export type VerifyResult = { ok: boolean; error?: string; code?: string; transport?: TransportKind };
 
 export async function verifyMailer(): Promise<VerifyResult> {
+  const { user, pass } = resolveCreds();
+  if (!user || !pass) return { ok: false, error: "GMAIL_USER / GMAIL_APP_PASSWORD missing in env." };
   try {
-    const transport = getTransport();
-    await transport.verify();
-    return { ok: true };
+    await buildTransport("465-ssl").verify();
+    return { ok: true, transport: "465-ssl" };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
     const code = (err as { code?: string })?.code;
-    return { ok: false, error: msg, code };
+    try {
+      await buildTransport("587-starttls").verify();
+      return { ok: true, transport: "587-starttls" };
+    } catch (err2) {
+      const msg2 = err2 instanceof Error ? err2.message : String(err2);
+      return { ok: false, error: msg2, code: (err2 as { code?: string })?.code ?? code };
+    }
   }
 }
 
-/**
- * Diagnostic surface — safe to expose publicly; no values are returned, only
- * presence + length checks.
- */
+/** Public-safe diagnostic: presence + length only, never secret values. */
 export function mailerConfigState() {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-  const fromOverride = process.env.GMAIL_FROM;
-  const adminEmail = process.env.ADMIN_EMAIL;
+  const { user, pass } = resolveCreds();
+  const rawUser = process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER || "";
   return {
     gmailUserPresent: !!user,
-    gmailUserTrimmedLength: user?.trim().length ?? 0,
-    gmailUserHasSpaces: user ? user !== user.trim() : false,
+    gmailUserTrimmedLength: user.length,
+    gmailUserHasSpaces: rawUser ? rawUser !== rawUser.trim() : false,
     gmailAppPasswordPresent: !!pass,
-    gmailAppPasswordCleanedLength: pass ? pass.replace(/\s+/g, "").length : 0,
-    gmailAppPasswordHadSpaces: pass ? pass.replace(/\s+/g, "") !== pass : false,
-    adminEmailPresent: !!adminEmail,
-    fromOverridePresent: !!fromOverride,
+    gmailAppPasswordCleanedLength: pass.length,
+    gmailAppPasswordHadSpaces: false,
+    resolvedUserVar:
+      (process.env.GMAIL_USER && "GMAIL_USER") ||
+      (process.env.SMTP_USER && "SMTP_USER") ||
+      (process.env.EMAIL_USER && "EMAIL_USER") ||
+      null,
+    adminEmailPresent: !!process.env.ADMIN_EMAIL,
+    fromOverridePresent: !!process.env.GMAIL_FROM,
   };
 }

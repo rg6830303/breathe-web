@@ -23,7 +23,7 @@ export async function notifyBookingConfirmed(b: {
   courtNumber?: number;
   subtotal?: number;
   gst?: number;
-}) {
+}): Promise<{ emailed: boolean }> {
   try {
     const date = new Date(b.slotDate);
     const dateStr = date.toLocaleDateString("en-IN", {
@@ -109,6 +109,7 @@ export async function notifyBookingConfirmed(b: {
       text: playerText,
       attachments,
     });
+    const emailed = playerResult.ok;
     if (!playerResult.ok) console.error("[player email failed]", playerResult.error);
     else console.log(`Player email sent for booking ${shortRef} (${playerResult.messageId})`);
 
@@ -161,8 +162,11 @@ export async function notifyBookingConfirmed(b: {
         })
         .catch((e) => console.error("[telegram send exception]", e));
     }
+
+    return { emailed };
   } catch (err) {
     console.error("[notification dispatcher error]", err);
+    return { emailed: false };
   }
 }
 

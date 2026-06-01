@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, Loader2, Save, ShieldCheck, Check } from "lucide-react";
+import { Loader2, Save, Settings as SettingsIcon, ShieldCheck, Check } from "lucide-react";
+import { AdminSubHeader } from "@/components/admin/admin-sub-header";
 
 type Config = Record<string, string>;
 
@@ -112,17 +112,8 @@ export default function AdminSettingsPage() {
   return (
     <main className="min-h-screen bg-brand-50/30 px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-3xl">
-        <div className="mb-6 flex items-center gap-3">
-          <Link
-            href="/admin"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand/15 bg-white text-ink hover:bg-brand/5"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="font-display text-2xl font-extrabold text-ink sm:text-3xl">Settings</h1>
-            <p className="text-xs text-slatey">Venue configuration and admin account.</p>
-          </div>
+        <div className="mb-6">
+          <AdminSubHeader title="Settings" subtitle="Venue configuration and admin account." icon={<SettingsIcon className="h-6 w-6 text-lime" />} />
         </div>
 
         {loading ? (

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ensureSchema } from "@/lib/db/ensure";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { turso } from "@/lib/turso";
@@ -9,6 +10,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
+    await ensureSchema();
     const ip = getClientIp(req);
     const rl = await checkRateLimit(`auth-reset:${ip}`, 10, 60 * 60 * 1000);
     if (!rl.ok) {

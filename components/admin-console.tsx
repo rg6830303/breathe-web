@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
+import { EmailPanel } from "@/components/admin/email-panel";
 import { WalkInModal } from "@/components/admin/walk-in-modal";
 import { BulkBlockModal } from "@/components/admin/bulk-block-modal";
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -14,6 +16,7 @@ import {
   Grid3x3,
   Loader2,
   LogOut,
+  Mail,
   RefreshCw,
   ShieldOff,
   UserPlus,
@@ -21,7 +24,7 @@ import {
   X,
 } from "lucide-react";
 
-type Tab = "overview" | "bookings" | "courts" | "users";
+type Tab = "overview" | "bookings" | "courts" | "users" | "email";
 type Stats = {
   total_users: number;
   total_bookings: number;
@@ -77,10 +80,11 @@ const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: s
   { key: "bookings", label: "All bookings", icon: Calendar },
   { key: "courts", label: "Court management", icon: Grid3x3 },
   { key: "users", label: "Users", icon: Users },
+  { key: "email", label: "Email", icon: Mail },
 ];
 
 export function AdminConsole() {
-
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
   const [loggingOut, setLoggingOut] = useState(false);
   const [walkInOpen, setWalkInOpen] = useState(false);
@@ -89,10 +93,11 @@ export function AdminConsole() {
   async function logout() {
     setLoggingOut(true);
     await fetch("/api/admin/auth/logout", { method: "POST" });
-    // Hard redirect ensures the cleared admin session cookie is visible to
-    // the server-side middleware immediately, bypassing Next.js App Router cache.
+    // Hard redirect ensures the cleared admin session cookie is visible
+    // to the server-side middleware immediately, bypassing App Router cache.
     window.location.href = "/admin/login";
   }
+
 
   return (
     <div className="grid gap-4">
@@ -103,11 +108,20 @@ export function AdminConsole() {
               key={key}
               type="button"
               onClick={() => setTab(key)}
-              className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-bold transition ${
-                tab === key ? "bg-brand text-white shadow-soft" : "text-ink/70 hover:bg-brand/5"
+              className={`relative inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-bold transition ${
+                tab === key ? "text-white" : "text-ink/70 hover:bg-brand/5"
               }`}
             >
-              <Icon className="h-4 w-4" /> {label}
+              {tab === key && (
+                <motion.span
+                  layoutId="admin-tab-pill"
+                  className="absolute inset-0 rounded-xl bg-brand shadow-soft"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className="relative z-10 inline-flex items-center gap-2">
+                <Icon className="h-4 w-4" /> {label}
+              </span>
             </button>
           ))}
         </div>
@@ -149,10 +163,21 @@ export function AdminConsole() {
         </div>
       </div>
 
-      {tab === "overview" && <AnalyticsDashboard />}
-      {tab === "bookings" && <BookingsTab />}
-      {tab === "courts" && <CourtTab />}
-      {tab === "users" && <UsersTab />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {tab === "overview" && <AnalyticsDashboard />}
+          {tab === "bookings" && <BookingsTab />}
+          {tab === "courts" && <CourtTab />}
+          {tab === "users" && <UsersTab />}
+          {tab === "email" && <EmailPanel />}
+        </motion.div>
+      </AnimatePresence>
 
       <WalkInModal open={walkInOpen} onClose={() => setWalkInOpen(false)} />
       <BulkBlockModal open={bulkBlockOpen} onClose={() => setBulkBlockOpen(false)} />
@@ -539,8 +564,8 @@ function UsersTab() {
             </thead>
             <tbody>
               {filtered.map((u) => (
-                <>
-                  <tr key={u.id} className="border-t border-brand/10">
+                <Fragment key={u.id}>
+                  <tr className="border-t border-brand/10">
                     <td className="p-3 font-bold text-ink">{u.name}</td>
                     <td className="p-3 text-slatey">{u.email}</td>
                     <td className="p-3 text-slatey">{u.phone ?? "—"}</td>
@@ -572,7 +597,7 @@ function UsersTab() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

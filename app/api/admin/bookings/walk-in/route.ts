@@ -6,6 +6,7 @@ import { turso } from "@/lib/turso";
 import { calculateTotals } from "@/lib/pricing";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 const schema = z.object({
   slot_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD."),
