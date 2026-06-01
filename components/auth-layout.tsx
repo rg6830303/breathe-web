@@ -61,7 +61,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
               North Kolkata&apos;s home of pickleball
             </h2>
             <p className="mt-3 max-w-md text-sm text-white/70">
-              Three pro courts in Kaikhali. Coaching for all ages. Tournaments with real prizes.
+              Three pro courts in Kaikhali. Complimentary equipment. Tournaments with real prizes.
             </p>
 
             <ul className="mt-8 grid gap-3">

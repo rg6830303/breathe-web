@@ -19,7 +19,7 @@ export function Footer() {
             <div>
               <Logo variant="light" />
               <p className="mt-4 max-w-xs text-sm leading-6 text-white/80">
-                {site.tagline}. Three professional courts, coaching for every age, and a community that plays hard and breathes easy.
+                {site.tagline}. Three professional courts, complimentary equipment, and a community that plays hard and breathes easy.
               </p>
               
               {/* Social icons with hover scaling */}

@@ -23,7 +23,7 @@ const values = [
 const timeline = [
   { year: "The spark", text: "A handful of friends fell for pickleball and wanted a real home for the game in North Kolkata." },
   { year: "The courts", text: "Breathe opened in Kaikhali with professional courts, floodlights, and a courtside kitchen." },
-  { year: "The community", text: "Coaching, social ladders, and open tournaments turned a venue into a thriving club." },
+  { year: "The community", text: "Social ladders and open tournaments turned a venue into a thriving club." },
   { year: "Today", text: "One of Kolkata's go-to pickleball destinations — and now bookable instantly online." },
 ];
 
@@ -37,7 +37,7 @@ export default function AboutPage() {
           dark={true}
           label="About Breathe"
           title="More than a court — a place to breathe and play"
-          subtitle="North Kolkata's community-first pickleball club. Great courts, real coaching, and a welcoming crowd."
+          subtitle="North Kolkata's community-first pickleball club. Great courts, complimentary equipment, and a welcoming crowd."
         />
 
         {/* Mission & Stats */}
@@ -58,7 +58,7 @@ export default function AboutPage() {
                   Make pickleball easy to love in Kolkata
                 </h2>
                 <p className="mt-4 text-base leading-7 text-slatey">
-                  Pickleball is the fastest-growing sport in the country, and we want everyone in the city to experience why. That means courts that are easy to reach, slots that are easy to book, coaching that's easy to start, and a community that's easy to belong to.
+                  Pickleball is the fastest-growing sport in the country, and we want everyone in the city to experience why. That means courts that are easy to reach, slots that are easy to book, equipment that's included, and a community that's easy to belong to.
                 </p>
 
                 {/* Stats grid */}
@@ -186,7 +186,7 @@ export default function AboutPage() {
                 <ul className="grid gap-3">
                   {[
                     "Open play sessions where you can rotate in and meet new partners",
-                    "Beginner-friendly coaching with zero judgement",
+                    "Beginner-friendly community with zero judgement",
                     "Social ladders and leagues for friendly competition",
                     "Courtside kitchen and changing rooms for the full experience",
                   ].map((item, idx) => (

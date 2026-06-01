@@ -19,12 +19,35 @@ export type InstaPost = {
   timestamp: string;
 };
 
+/** Real club photos shipped with the app so the gallery is never empty. Any
+ *  images the owner uploads via /admin/gallery are shown first, then these. */
+const DEFAULT_PHOTOS: InstaPost[] = [
+  "court-aerial-1.jpg",
+  "court-aerial-2.jpg",
+  "court-night-wide.jpg",
+  "court-portrait.jpg",
+  "court-aerial-3.jpg",
+].map((file, i) => ({
+  id: `house-${i}`,
+  caption: "Breathe Pickleball · Kaikhali",
+  media_type: "IMAGE" as const,
+  media_url: `/gallery/${file}`,
+  thumbnail_url: `/gallery/${file}`,
+  permalink: `/gallery/${file}`,
+  timestamp: "",
+}));
+
 export function GalleryGrid({ posts }: { posts: InstaPost[] | null }) {
+  // Merge owner-uploaded posts ahead of the built-in club photos, de-duped by URL.
+  const uploaded = posts ?? [];
+  const seen = new Set(uploaded.map((p) => p.media_url));
+  const merged = [...uploaded, ...DEFAULT_PHOTOS.filter((p) => !seen.has(p.media_url))];
+
   return (
     <>
       <section className="px-4 py-16 sm:px-6 lg:px-8 bg-white">
         <Container className="!px-0">
-          {posts && posts.length > 0 ? <InstaCards posts={posts} /> : <FallbackCards />}
+          {merged.length > 0 ? <InstaCards posts={merged} /> : <FallbackCards />}
         </Container>
       </section>
       <SectionDivider />
@@ -173,7 +196,7 @@ function FallbackCards() {
         <div>
           <h3 className="font-display text-2xl font-extrabold text-white sm:text-3xl">Match-day photos are on the way</h3>
           <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-white/80">
-            We&apos;re putting together a gallery of rallies, tournaments, and coaching sessions at the club.
+            We&apos;re putting together a gallery of rallies, tournaments, and community sessions at the club.
             In the meantime, catch all the latest on our Instagram.
           </p>
         </div>

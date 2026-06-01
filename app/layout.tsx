@@ -27,18 +27,17 @@ export const metadata: Metadata = {
     template: "%s | Breathe Pickleball",
   },
   description:
-    "Breathe Pickleball is North Kolkata's premier pickleball destination in Kaikhali — three professional courts, coaching for all ages, tournaments with cash prizes, and instant online slot booking.",
+    "Breathe Pickleball is North Kolkata's premier pickleball destination in Kaikhali — three professional courts, complimentary equipment, tournaments with cash prizes, and instant online slot booking.",
   keywords: [
     "pickleball Kolkata",
     "Breathe Pickleball",
     "pickleball court booking Kaikhali",
-    "pickleball coaching Kolkata",
     "pickleball tournament Kolkata",
   ],
   openGraph: {
     title: "Breathe Pickleball | Kaikhali, Kolkata",
     description:
-      "Book a court in seconds. Three professional courts, coaching for all ages, and tournaments with cash prizes in North Kolkata.",
+      "Book a court in seconds. Three professional courts, complimentary equipment, and tournaments with cash prizes in North Kolkata.",
     type: "website",
     locale: "en_IN",
     siteName: site.name,
@@ -99,8 +98,7 @@ const jsonLd = {
       numberOfRooms: 3,
       amenityFeature: [
         { "@type": "LocationFeatureSpecification", name: "Floodlit courts", value: true },
-        { "@type": "LocationFeatureSpecification", name: "Coaching available", value: true },
-        { "@type": "LocationFeatureSpecification", name: "Equipment rental", value: true },
+        { "@type": "LocationFeatureSpecification", name: "Complimentary equipment", value: true },
         { "@type": "LocationFeatureSpecification", name: "In-house kitchen", value: true },
       ],
     },

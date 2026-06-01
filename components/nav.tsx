@@ -67,7 +67,7 @@ export function Nav() {
                 <Phone className="h-3.5 w-3.5" /> {site.phoneDisplay}
               </span>
               <span className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5" /> {site.address.split(",").slice(-3).join(",").trim()}
+                <MapPin className="h-3.5 w-3.5" /> {site.headerAddress}
               </span>
               <span>{site.hoursShort}</span>
               <span>{site.courts} professional courts</span>

@@ -76,7 +76,7 @@ export default function ContactPage() {
           dark={false}
           label="Contact"
           title="Come play with us in Kaikhali"
-          subtitle="Questions about booking, coaching, or tournaments? Reach out any way you like — or just drop by. We're open every day."
+          subtitle="Questions about booking or tournaments? Reach out any way you like — or just drop by. We're open every day."
         />
 
         {/* Contact Method Cards Grid */}
@@ -229,6 +229,40 @@ export default function ContactPage() {
                       <Facebook className="w-5 h-5" />
                     </motion.a>
                   </div>
+                </div>
+              </div>
+            </ScrollReveal>
+          </Container>
+        </section>
+
+        {/* WhatsApp community band */}
+        <section className="px-4 pb-20 sm:px-6 lg:px-8">
+          <Container className="!px-0">
+            <ScrollReveal direction="up">
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#075E54] via-[#128C7E] to-[#25D366] p-8 text-white shadow-glow sm:p-10">
+                <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-[0.12]" />
+                <div className="relative flex flex-col items-start gap-5 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-start gap-4">
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
+                      <MessageCircle className="h-7 w-7" />
+                    </span>
+                    <div>
+                      <h2 className="font-display text-2xl font-extrabold leading-tight">Join the Breathe community</h2>
+                      <p className="mt-1.5 max-w-md text-sm text-white/85">
+                        Game invites, open-play sessions, tournament alerts, and the friendliest pickleball crew in Kolkata — all on WhatsApp.
+                      </p>
+                    </div>
+                  </div>
+                  <motion.a
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.97 }}
+                    href={site.whatsappCommunity}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-bold text-[#128C7E] shadow-soft transition hover:bg-gray-50"
+                  >
+                    <MessageCircle className="h-4 w-4" /> Join the group
+                  </motion.a>
                 </div>
               </div>
             </ScrollReveal>

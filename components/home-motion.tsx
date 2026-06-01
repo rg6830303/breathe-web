@@ -6,7 +6,6 @@ import {
   ArrowRight,
   CalendarCheck,
   Coffee,
-  GraduationCap,
   MapPin,
   ShieldCheck,
   ShowerHead,
@@ -28,8 +27,8 @@ import type { Notice } from "@/lib/types";
 
 const features = [
   { icon: Sun, title: "3 premium asphalt courts", text: "Professional asphalt surface with tournament-grade net systems, floodlit for evening play." },
-  { icon: GraduationCap, title: "Coaching for all ages", text: "Structured programs from first-timers to competitive players, led by certified coaches." },
   { icon: Trophy, title: "Tournaments & cash prizes", text: "Regular open and beginner brackets that bring the city's pickleball community together." },
+  { icon: Sparkles, title: "Equipment included", text: "Pro paddles and balls are complimentary with every court booking — just show up and play." },
   { icon: Coffee, title: "In-house kitchen", text: "Refuel courtside with snacks and beverages between games." },
   { icon: ShowerHead, title: "Changing facilities", text: "Clean changing rooms and washrooms so you arrive and leave fresh." },
   { icon: CalendarCheck, title: "Instant online booking", text: "Live slot availability and confirmed reservations in seconds — no calls needed." },
@@ -43,7 +42,7 @@ const steps = [
 
 const testimonials = [
   { name: "Ananya Roy", role: "Weekend regular", memberType: "Member since 2024", quote: "Booking used to mean five phone calls. Now it's three taps on my phone and I'm on court the same evening." },
-  { name: "Sourav Mukherjee", role: "Intermediate player", memberType: "Coaching student", quote: "The coaching transformed my third-shot drop. Genuinely the best pickleball community in North Kolkata." },
+  { name: "Sourav Mukherjee", role: "Intermediate player", memberType: "Weekend regular", quote: "Floodlit courts, paddles included, and booking takes seconds. Genuinely the best pickleball spot in North Kolkata." },
   { name: "Priya & Karan", role: "Doubles pair", memberType: "Tournament regulars", quote: "The monthly open is so well run — great vibe, real competition, and the courtside kitchen is a bonus." },
 ];
 
@@ -130,7 +129,7 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
             </motion.h1>
 
             <motion.p variants={spanVariants} className="mt-5 max-w-xl text-base leading-7 text-white/85 sm:text-lg">
-              Three professional courts, coaching for every age, and a thriving community — all bookable in seconds from your phone.
+              Three professional courts, complimentary equipment, and a thriving community — all bookable in seconds from your phone.
             </motion.p>
             
             {/* Primary & Secondary CTA Buttons */}
@@ -145,10 +144,10 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
               </motion.div>
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="inline-block">
                 <Link
-                  href="/coaching"
+                  href="/gallery"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white text-white px-7 py-3.5 text-sm font-bold transition hover:bg-white/10"
                 >
-                  Explore Coaching
+                  View the Courts
                 </Link>
               </motion.div>
             </motion.div>
@@ -306,14 +305,14 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
             <TiltCard maxTilt={3} className="h-full">
               <div className="relative overflow-hidden rounded-3xl border border-brand/10 bg-white p-8 shadow-soft h-full flex flex-col justify-between">
                 <div>
-                  <GraduationCap className="h-10 w-10 text-brand" />
-                  <h3 className="mt-4 font-display text-2xl font-extrabold text-ink">Coaching that levels you up</h3>
+                  <CalendarCheck className="h-10 w-10 text-brand" />
+                  <h3 className="mt-4 font-display text-2xl font-extrabold text-ink">Your court, one tap away</h3>
                   <p className="mt-3 text-sm leading-6 text-slatey">
-                    Junior clinics, adult beginner courses, and advanced drilling. Build real fundamentals with coaches who play the game.
+                    Live availability across all three courts, transparent pricing, and instant confirmation. Paddles and balls are on us.
                   </p>
                 </div>
-                <Link href="/coaching" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-brand hover:gap-3 transition-all">
-                  View coaching programs <ArrowRight className="h-4 w-4" />
+                <Link href="/book" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-brand hover:gap-3 transition-all">
+                  Book a slot now <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             </TiltCard>
