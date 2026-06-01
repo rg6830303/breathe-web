@@ -40,22 +40,45 @@ export async function POST(req: Request) {
       message: "If an account exists for that email, a reset link has been sent.",
     });
 
-    let userRow;
+    let userId: string | null = null;
+    let userName = "there";
     try {
       const result = await turso.execute({
         sql: "SELECT id, full_name FROM users WHERE email = ? LIMIT 1",
         args: [email],
       });
-      userRow = result.rows[0];
+      const row = result.rows[0];
+      if (row) {
+        userId = String(row.id);
+        userName = String(row.full_name);
+      }
     } catch (dbErr) {
-      console.error("[forgot-password user lookup error]", dbErr);
-      return genericResponse;
+      console.error("[forgot-password turso lookup error]", dbErr);
     }
 
-    if (!userRow) return genericResponse;
+    // Fallback: the user may only exist in the Supabase mirror (signup wrote
+    // there when Turso was briefly unreachable). Without this a real
+    // registered user would silently get no reset email.
+    if (!userId) {
+      try {
+        const { supabase, hasSupabase } = require("@/lib/supabase");
+        if (hasSupabase) {
+          const { data } = await supabase
+            .from("users")
+            .select("id, full_name")
+            .eq("email", email)
+            .maybeSingle();
+          if (data?.id) {
+            userId = String(data.id);
+            userName = String(data.full_name ?? "there");
+          }
+        }
+      } catch (sbErr) {
+        console.error("[forgot-password supabase lookup error]", sbErr);
+      }
+    }
 
-    const userId = String(userRow.id);
-    const userName = String(userRow.full_name);
+    if (!userId) return genericResponse;
 
     const rawToken = crypto.randomBytes(32).toString("hex");
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
@@ -72,7 +95,7 @@ export async function POST(req: Request) {
       return genericResponse;
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://breathe-web-six.vercel.app";
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in").replace(/\/$/, "");
     const resetUrl = `${siteUrl}/reset-password?token=${rawToken}`;
 
     const html = await render(
@@ -98,7 +121,22 @@ export async function POST(req: Request) {
     if (!result.ok) {
       // Email failed — log details but still return the generic success message
       // to avoid leaking SMTP configuration state to the caller.
-      console.error("[forgot-password mail send failed]", result.error);
+      console.error("[forgot-password mail send failed]", result.error, result.code);
+    } else {
+      console.log("[forgot-password sent]", { to: email, messageId: result.messageId, transport: result.transport });
+    }
+
+    // Optional debug echo (only when the shared TEST_EMAIL_KEY is supplied) so
+    // the owner can see the real send result while diagnosing — never exposed
+    // to normal callers.
+    const debugKey = new URL(req.url).searchParams.get("debug");
+    if (debugKey && debugKey === (process.env.TEST_EMAIL_KEY || "")) {
+      return NextResponse.json({
+        ok: true,
+        debug: result.ok
+          ? { sent: true, messageId: result.messageId, transport: result.transport }
+          : { sent: false, error: result.error, code: result.code },
+      });
     }
 
     return genericResponse;

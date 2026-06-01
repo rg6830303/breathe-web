@@ -51,6 +51,11 @@ export const metadata: Metadata = {
     "pickleball court booking Kaikhali",
     "pickleball tournament Kolkata",
   ],
+  // Google Search Console HTML-tag verification. Set GOOGLE_SITE_VERIFICATION
+  // in Vercel to the token Google gives you, then "Verify" → request indexing.
+  ...(process.env.GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
+    : {}),
   openGraph: {
     title: "Breathe Pickleball | Kaikhali, Kolkata",
     description:
