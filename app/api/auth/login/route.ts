@@ -28,18 +28,18 @@ export async function POST(req: Request) {
     }
     const { email, password } = parsed.data;
 
-    let result;
+    let row: Record<string, unknown> | undefined;
     try {
-      result = await turso.execute({
+      const result = await turso.execute({
         sql: "SELECT id, full_name, email, password_hash FROM users WHERE email = ? LIMIT 1",
         args: [email],
       });
+      row = result.rows[0] as unknown as Record<string, unknown> | undefined;
     } catch (dbErr) {
-      console.error("[login db error]", dbErr);
-      return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+      // Don't 500 — fall through to the Supabase lookup so a Turso outage
+      // doesn't lock everyone out.
+      console.error("[login turso error]", dbErr);
     }
-
-    let row = result.rows[0];
     if (!row) {
       try {
         const { supabase, hasSupabase } = require("@/lib/supabase");

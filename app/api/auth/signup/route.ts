@@ -29,50 +29,66 @@ export async function POST(req: Request) {
     }
     const { name, email, password, phone } = parsed.data;
 
-    let existing;
-    try {
-      existing = await turso.execute({
-        sql: "SELECT id FROM users WHERE email = ? LIMIT 1",
-        args: [email],
-      });
-    } catch (dbErr) {
-      console.error("[signup db-check error]", dbErr);
-      return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
-    }
+    const { supabase, hasSupabase } = require("@/lib/supabase");
 
-    if (existing.rows.length > 0) {
-      return NextResponse.json({ error: "An account with this email already exists." }, { status: 400 });
+    // Duplicate check across BOTH backends (a user may exist in either).
+    try {
+      const t = await turso.execute({ sql: "SELECT id FROM users WHERE email = ? LIMIT 1", args: [email] });
+      if (t.rows.length > 0) {
+        return NextResponse.json({ error: "An account with this email already exists." }, { status: 400 });
+      }
+    } catch (e) {
+      console.error("[signup turso dup-check error]", e);
+    }
+    if (hasSupabase) {
+      try {
+        const { data } = await supabase.from("users").select("id").eq("email", email).maybeSingle();
+        if (data?.id) {
+          return NextResponse.json({ error: "An account with this email already exists." }, { status: 400 });
+        }
+      } catch (e) {
+        console.error("[signup supabase dup-check error]", e);
+      }
     }
 
     const id = uuid();
     const hash = await bcrypt.hash(password, 12);
     const now = Date.now();
 
+    // Write to BOTH backends. Succeed if AT LEAST ONE write lands, so a single
+    // misconfigured/unreachable backend can never block account creation (the
+    // root cause of "signups don't persist → no reset email possible").
+    let tursoOk = false;
+    let supabaseOk = false;
     try {
       await turso.execute({
         sql: "INSERT INTO users (id, email, password_hash, full_name, phone, created_at) VALUES (?, ?, ?, ?, ?, ?)",
         args: [id, email, hash, name, phone ?? null, now],
       });
+      tursoOk = true;
     } catch (insertErr) {
-      console.error("[signup db-insert error]", insertErr);
-      return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+      console.error("[signup turso insert error]", insertErr);
+    }
+    if (hasSupabase) {
+      try {
+        const { error } = await supabase.from("users").insert({
+          id, email, password_hash: hash, full_name: name, phone: phone ?? null, created_at: now,
+        });
+        supabaseOk = !error;
+        if (error) console.error("[signup supabase insert error]", error);
+      } catch (sbErr) {
+        console.error("[signup supabase insert exception]", sbErr);
+      }
     }
 
-    try {
-      const { supabase, hasSupabase } = require("@/lib/supabase");
-      if (hasSupabase) {
-        await supabase.from("users").insert({
-          id,
-          email,
-          password_hash: hash,
-          full_name: name,
-          phone: phone ?? null,
-          created_at: now,
-        });
-      }
-    } catch (sbErr) {
-      console.error("[signup supabase sync error]", sbErr);
+    if (!tursoOk && !supabaseOk) {
+      // Both writes failed — surface a real error instead of a fake success.
+      return NextResponse.json(
+        { error: "We couldn't create your account right now. Please try again shortly." },
+        { status: 500 },
+      );
     }
+    console.log("[signup] created", { email, tursoOk, supabaseOk });
 
     const token = await signToken({ id, email, name, role: "user" });
     const cookieStore = await cookies();
