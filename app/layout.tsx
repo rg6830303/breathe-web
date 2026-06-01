@@ -129,7 +129,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <script
           dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{})})}`,
+            // Register + actively check for SW updates on every load, and reload
+            // once when a new SW takes control so fresh deploys appear immediately
+            // (fixes stale UI on mobile / installed PWAs).
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').then(function(r){r.update();}).catch(function(){});var rl=false;navigator.serviceWorker.addEventListener('controllerchange',function(){if(rl)return;rl=true;window.location.reload();});});}`,
           }}
         />
       </head>

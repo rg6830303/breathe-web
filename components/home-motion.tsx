@@ -90,16 +90,15 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
         <CourtLinesSVG />
         <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-lime/10 blur-3xl animate-blob" />
         <div className="pointer-events-none absolute -right-16 bottom-0 h-80 w-80 rounded-full bg-white/10 blur-3xl animate-blob [animation-delay:3s]" />
-        
-        {/* Animated Floating Paddle (Desktop Only) */}
-        {/* Floating 3D paddle (perspective tilt) */}
+
+        {/* Floating 3D paddle — visible on ALL breakpoints (smaller on mobile) */}
         <motion.div
-          className="hidden md:block absolute right-12 top-1/4 z-10 w-32 h-32 opacity-20 pointer-events-none"
+          className="absolute right-3 top-24 z-0 h-20 w-20 opacity-20 pointer-events-none sm:right-10 sm:top-1/4 sm:h-32 sm:w-32"
           style={{ perspective: 800 }}
           animate={{ y: [0, -14, 0], rotateY: [-18, 18, -18], rotateX: [6, -6, 6] }}
           transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
         >
-          <svg viewBox="0 0 100 100" className="w-full h-full text-white fill-current drop-shadow-[0_12px_24px_rgba(0,0,0,0.3)]">
+          <svg viewBox="0 0 100 100" className="h-full w-full fill-current text-white drop-shadow-[0_12px_24px_rgba(0,0,0,0.3)]">
             <ellipse cx="50" cy="40" rx="22" ry="27" />
             <rect x="46" y="66" width="8" height="22" rx="3" />
             <g fill="#2F5BFF">
@@ -110,20 +109,23 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
           </svg>
         </motion.div>
 
-        {/* Bouncing pickleball accent */}
-        <div className="hidden lg:block absolute left-10 bottom-16 z-10 pointer-events-none">
-          <div className="h-10 w-10 rounded-full bg-lime/80 shadow-[0_0_24px_rgba(198,242,62,0.5)] animate-ball-bounce" style={{ backgroundImage: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6), transparent 40%)" }} />
+        {/* Bouncing pickleball — visible on ALL breakpoints */}
+        <div className="absolute left-4 bottom-8 z-0 pointer-events-none sm:left-10 sm:bottom-16">
+          <div
+            className="h-8 w-8 rounded-full bg-lime/80 shadow-[0_0_24px_rgba(198,242,62,0.5)] animate-ball-bounce sm:h-10 sm:w-10"
+            style={{ backgroundImage: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6), transparent 40%)" }}
+          />
         </div>
 
-        <Container className="relative grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
+        <Container className="relative grid items-center gap-10 py-14 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
           <motion.div variants={containerVariants} initial="hidden" animate="visible">
             <motion.span
               variants={spanVariants}
-              className="glass-pill inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-white"
+              className="glass-pill inline-flex items-center gap-2 px-4 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-white sm:text-xs"
             >
               <MapPin className="h-3.5 w-3.5 text-lime" /> Kaikhali · North Kolkata
             </motion.span>
-            
+
             {/* Split stagger heading — editorial serif + bold display mix */}
             <motion.h1
               variants={containerVariants}
@@ -131,65 +133,65 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
             >
               <motion.span
                 variants={spanVariants}
-                className="block font-serif-hero text-4xl italic text-white/90 sm:text-5xl lg:text-[3.5rem]"
+                className="block font-serif-hero text-[2.5rem] italic leading-none text-white/90 sm:text-5xl lg:text-[3.5rem]"
               >
                 Welcome to
               </motion.span>
               <motion.span
                 variants={spanVariants}
-                className="block bg-gradient-to-r from-lime via-white to-lime bg-clip-text font-display text-5xl font-extrabold text-transparent animate-shimmer sm:text-6xl lg:text-7xl"
+                className="block bg-gradient-to-r from-lime via-white to-lime bg-clip-text font-display text-[3.25rem] font-extrabold leading-none text-transparent animate-shimmer sm:text-6xl lg:text-7xl"
               >
                 Breathe
               </motion.span>
               <motion.span
                 variants={spanVariants}
-                className="block font-serif-hero text-4xl italic text-white sm:text-5xl lg:text-[3.5rem]"
+                className="block font-serif-hero text-[2.5rem] italic leading-tight text-white sm:text-5xl lg:text-[3.5rem]"
               >
                 Pickleball
               </motion.span>
             </motion.h1>
 
-            <motion.p variants={spanVariants} className="mt-5 max-w-xl text-base leading-7 text-white/85 sm:text-lg">
+            <motion.p variants={spanVariants} className="mt-5 max-w-xl text-[0.95rem] leading-7 text-white/85 sm:text-lg">
               Three professional courts, complimentary equipment, and a thriving community — all bookable in seconds from your phone.
             </motion.p>
-            
-            {/* Primary & Secondary CTA Buttons */}
+
+            {/* Primary & Secondary CTA Buttons — full width on mobile */}
             <motion.div variants={spanVariants} className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="inline-block">
+              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
                 <Link
                   href="/book"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-lime px-7 py-3.5 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-lime px-7 py-4 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark sm:py-3.5"
                 >
                   Book Slot Now <ArrowRight className="h-4 w-4" />
                 </Link>
               </motion.div>
-              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="inline-block">
+              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
                 <Link
                   href="/gallery"
-                  className="liquid-glass inline-flex w-full items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-bold text-white transition hover:opacity-90"
+                  className="liquid-glass inline-flex w-full items-center justify-center gap-2 rounded-full px-7 py-4 text-sm font-bold text-white transition hover:opacity-90 sm:py-3.5"
                 >
                   View the Courts
                 </Link>
               </motion.div>
             </motion.div>
-            
-            {/* Stat Counters */}
-            <motion.div variants={spanVariants} className="mt-10 flex flex-wrap gap-x-8 gap-y-4 max-w-md sm:grid sm:grid-cols-3 sm:gap-4">
+
+            {/* Stat Counters — 3-up even on mobile */}
+            <motion.div variants={spanVariants} className="mt-10 grid grid-cols-3 gap-3 sm:gap-4">
               <div>
-                <div className="font-display text-2xl font-extrabold text-lime sm:text-3xl">
+                <div className="font-display text-xl font-extrabold text-lime sm:text-3xl">
                   <StatCounter end={3} />
                 </div>
-                <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/70">Pro courts</div>
+                <div className="mt-1 text-[0.6rem] font-semibold uppercase tracking-wide text-white/70 sm:text-xs">Pro courts</div>
               </div>
               <div>
-                <div className="font-display text-2xl font-extrabold text-lime sm:text-3xl whitespace-nowrap">
-                  <StatCounter end={6} suffix="AM" />–<StatCounter end={11} suffix="PM" />
+                <div className="font-display text-xl font-extrabold text-lime sm:text-3xl whitespace-nowrap">
+                  6<span className="text-sm">AM</span>–11<span className="text-sm">PM</span>
                 </div>
-                <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/70">Open daily</div>
+                <div className="mt-1 text-[0.6rem] font-semibold uppercase tracking-wide text-white/70 sm:text-xs">Open daily</div>
               </div>
               <div>
-                <div className="font-display text-2xl font-extrabold text-lime sm:text-3xl">All</div>
-                <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/70">Skill levels</div>
+                <div className="font-display text-xl font-extrabold text-lime sm:text-3xl">All</div>
+                <div className="mt-1 text-[0.6rem] font-semibold uppercase tracking-wide text-white/70 sm:text-xs">Skill levels</div>
               </div>
             </motion.div>
           </motion.div>
