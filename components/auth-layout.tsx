@@ -73,7 +73,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
                   transition={{ duration: 0.45, delay: 0.2 + i * 0.08 }}
                   className="flex items-center gap-3 text-sm text-white/90"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-lime backdrop-blur">
+                  <span className="liquid-glass flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lime">
                     <Icon className="h-4 w-4" />
                   </span>
                   {text}

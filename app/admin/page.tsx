@@ -25,25 +25,25 @@ export default async function AdminPage() {
           subtitle="Bookings, court availability, users, and revenue — live from Turso."
           right={
             <div className="flex flex-col items-start gap-2 md:items-end">
-              <span className="rounded-full bg-white/12 px-4 py-2 text-xs font-semibold text-white ring-1 ring-white/15">
+              <span className="glass-pill px-4 py-2 text-xs font-semibold text-white">
                 Signed in as {admin.email}
               </span>
               <div className="flex flex-wrap gap-2">
                 <Link
                   href="/admin/notices"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-white/25"
+                  className="glass-pill inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
                 >
                   <Megaphone className="h-3.5 w-3.5" /> Notices
                 </Link>
                 <Link
                   href="/admin/settings"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-white/25"
+                  className="glass-pill inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
                 >
                   <SettingsIcon className="h-3.5 w-3.5" /> Settings
                 </Link>
                 <Link
                   href="/admin/diagnostics"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-white/25"
+                  className="glass-pill inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
                 >
                   <Activity className="h-3.5 w-3.5" /> Diagnostics
                 </Link>

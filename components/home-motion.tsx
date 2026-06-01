@@ -119,7 +119,7 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
           <motion.div variants={containerVariants} initial="hidden" animate="visible">
             <motion.span
               variants={spanVariants}
-              className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-white"
+              className="glass-pill inline-flex items-center gap-2 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-white"
             >
               <MapPin className="h-3.5 w-3.5 text-lime" /> Kaikhali · North Kolkata
             </motion.span>
@@ -166,7 +166,7 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="inline-block">
                 <Link
                   href="/gallery"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white text-white px-7 py-3.5 text-sm font-bold transition hover:bg-white/10"
+                  className="liquid-glass inline-flex w-full items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-bold text-white transition hover:opacity-90"
                 >
                   View the Courts
                 </Link>

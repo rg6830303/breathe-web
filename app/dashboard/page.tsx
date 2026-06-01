@@ -238,7 +238,7 @@ export default async function DashboardPage() {
           }
           right={
             <div className="flex flex-col items-start gap-2 md:items-end">
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white ring-1 ring-white/15">
+              <span className="glass-pill inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white">
                 <FavIcon className="h-3.5 w-3.5" /> {favBand.label}
               </span>
               <Link

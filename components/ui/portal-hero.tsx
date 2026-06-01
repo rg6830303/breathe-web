@@ -82,7 +82,7 @@ export function PortalHero({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           >
-            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-lime">
+            <span className="glass-pill inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.24em] text-lime">
               <span className="h-1.5 w-1.5 rounded-full bg-lime" /> {eyebrow}
             </span>
             <div className="mt-3">{title}</div>

@@ -35,7 +35,7 @@ export function AdminSubHeader({
         <div className="flex items-center gap-3">
           <Link
             href="/admin"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white backdrop-blur transition hover:bg-white/20"
+            className="liquid-glass flex h-10 w-10 items-center justify-center rounded-xl text-white transition hover:opacity-90"
             aria-label="Back to admin"
           >
             <ArrowLeft className="h-4 w-4" />
