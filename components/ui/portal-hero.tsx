@@ -61,6 +61,20 @@ export function PortalHero({
         ))}
       </div>
 
+      {/* Sports-themed 3D paddle accent */}
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute right-8 top-1/2 hidden -translate-y-1/2 lg:block"
+        style={{ perspective: 700 }}
+        animate={{ rotateY: [-16, 16, -16], y: [0, -10, 0] }}
+        transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <svg viewBox="0 0 100 100" className="h-24 w-24 fill-white/15 drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]">
+          <ellipse cx="50" cy="40" rx="22" ry="27" />
+          <rect x="46" y="66" width="8" height="22" rx="3" />
+        </svg>
+      </motion.div>
+
       <div className="relative mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-14 lg:px-8">
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <motion.div

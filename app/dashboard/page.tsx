@@ -231,7 +231,7 @@ export default async function DashboardPage() {
                 {initials}
               </div>
               <div>
-                <h1 className="font-display text-2xl font-extrabold sm:text-3xl">Hi, {fullName.split(" ")[0]}</h1>
+                <h1 className="font-serif-hero text-3xl italic sm:text-4xl">Hi, {fullName.split(" ")[0]}</h1>
                 <p className="text-sm text-white/75">{email} · Member since {memberSince(memberSinceMs)}</p>
               </div>
             </div>

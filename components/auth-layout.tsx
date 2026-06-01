@@ -57,7 +57,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
           >
-            <h2 className="font-display text-3xl font-extrabold leading-tight text-white xl:text-4xl">
+            <h2 className="font-serif-hero text-4xl italic leading-tight text-white xl:text-5xl">
               North Kolkata&apos;s home of pickleball
             </h2>
             <p className="mt-3 max-w-md text-sm text-white/70">

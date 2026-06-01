@@ -21,7 +21,7 @@ export default async function AdminPage() {
       <main className="bg-brand-50/30">
         <PortalHero
           eyebrow="Owner console"
-          title={<h1 className="font-display text-3xl font-extrabold sm:text-4xl">Breathe Pickleball admin</h1>}
+          title={<h1 className="font-serif-hero text-3xl italic sm:text-4xl">Breathe Pickleball admin</h1>}
           subtitle="Bookings, court availability, users, and revenue — live from Turso."
           right={
             <div className="flex flex-col items-start gap-2 md:items-end">
