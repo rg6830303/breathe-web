@@ -84,13 +84,30 @@ export type SendResult =
 const RETRYABLE = new Set(["ETIMEDOUT", "ECONNECTION", "ESOCKET", "ECONNRESET", "EDNS", "EAI_AGAIN"]);
 
 async function trySend(transport: Transporter, opts: MailOptions) {
+  const { user } = resolveCreds();
+  const fromAddr = process.env.GMAIL_FROM?.trim() || user || "bookings@breathepickleball.in";
+  const replyTo = opts.replyTo || process.env.REPLY_TO_EMAIL || fromAddr;
+
   return transport.sendMail({
     from: fromAddress(),
+    // Envelope sender = authenticated Gmail user so SPF/DKIM align (Gmail signs
+    // mail from the authenticated account). Mismatched From is the #1 reason
+    // transactional mail lands in spam.
+    sender: user || fromAddr,
+    envelope: { from: user || fromAddr, to: Array.isArray(opts.to) ? opts.to : [opts.to] },
     to: opts.to,
     subject: opts.subject,
     html: opts.html,
     text: opts.text,
-    replyTo: opts.replyTo,
+    replyTo,
+    // Deliverability headers: a stable List-Unsubscribe (one-click) plus a
+    // transactional Precedence/Auto-Submitted signal reduce spam scoring.
+    headers: {
+      "List-Unsubscribe": `<mailto:${replyTo}?subject=unsubscribe>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      "X-Entity-Ref-ID": `breathe-${Date.now()}`,
+      "Auto-Submitted": "auto-generated",
+    },
     attachments: opts.attachments,
   });
 }

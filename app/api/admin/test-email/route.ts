@@ -39,19 +39,31 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const to = String(body?.to ?? process.env.ADMIN_EMAIL ?? admin.email);
-  const now = new Date().toISOString();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://breathe-web-six.vercel.app";
+  const when = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
 
+  // Branded, transactional-looking content (logo + real copy) so the test
+  // itself doesn't get spam-scored the way a bare "SMTP test" body would.
   const result = await sendMail({
     to,
-    subject: "Breathe Pickleball — SMTP test",
+    subject: "Your Breathe Pickleball email is working ✅",
     text:
-      `Gmail SMTP test sent at ${now}.\n\n` +
-      `If you received this email at ${to}, your GMAIL_USER + GMAIL_APP_PASSWORD env vars are working ` +
-      `and bookings/password-reset/admin-notification emails will go out correctly.`,
+      `Hi from Breathe Pickleball,\n\n` +
+      `This is a confirmation that email delivery from your Breathe Pickleball booking system is working correctly.\n\n` +
+      `Sent: ${when} IST\n\n` +
+      `Booking confirmations, password resets, and notifications will now reach players reliably.\n\n` +
+      `— Breathe Pickleball, Panchwati Complex, Kaikhali, Kolkata\n` +
+      `${siteUrl}`,
     html:
-      `<p>Gmail SMTP test sent at <strong>${now}</strong>.</p>` +
-      `<p>If you received this email at <code>${to}</code>, your <code>GMAIL_USER</code> + <code>GMAIL_APP_PASSWORD</code> ` +
-      `env vars are working and bookings/password-reset/admin-notification emails will go out correctly.</p>`,
+      `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0d1426">` +
+      `<div style="text-align:center;margin-bottom:16px"><img src="${siteUrl}/icons/icon-192.png" alt="Breathe Pickleball" width="64" height="64" style="border-radius:16px"/></div>` +
+      `<h2 style="text-align:center;margin:0 0 8px">Email delivery is working ✅</h2>` +
+      `<p style="color:#475569;line-height:1.6">This confirms that email from your Breathe Pickleball booking system is being delivered correctly. Booking confirmations, password resets, and notifications will now reach players reliably.</p>` +
+      `<p style="color:#94a3b8;font-size:13px">Sent ${when} IST</p>` +
+      `<hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0"/>` +
+      `<p style="color:#94a3b8;font-size:12px;line-height:1.6">Breathe Pickleball · Panchwati Complex, Kaikhali, Kolkata<br/>` +
+      `<a href="${siteUrl}" style="color:#2F5BFF">${siteUrl.replace(/^https?:\/\//, "")}</a></p>` +
+      `</div>`,
   });
 
   if (!result.ok) {

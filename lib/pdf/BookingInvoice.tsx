@@ -1,5 +1,19 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import fs from "node:fs";
+import path from "node:path";
+import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
+
+/** Load the real logo once as a data URI so it embeds reliably in the PDF on
+ *  serverless (no network fetch). Falls back to null if unreadable. */
+const LOGO_DATA_URI: string | null = (() => {
+  try {
+    const file = path.join(process.cwd(), "public", "icons", "icon-192.png");
+    const b64 = fs.readFileSync(file).toString("base64");
+    return `data:image/png;base64,${b64}`;
+  } catch {
+    return null;
+  }
+})();
 
 const styles = StyleSheet.create({
   page: { padding: 36, fontSize: 10, color: "#0F172A", fontFamily: "Helvetica" },
@@ -84,9 +98,12 @@ export function BookingInvoice(props: InvoiceProps) {
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <View>
-            <Text style={styles.brand}>BREATHE PICKLEBALL</Text>
-            <Text style={styles.tagline}>North Kolkata&apos;s home of pickleball</Text>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {LOGO_DATA_URI && <Image src={LOGO_DATA_URI} style={{ width: 40, height: 40, borderRadius: 8, marginRight: 10 }} />}
+            <View>
+              <Text style={styles.brand}>BREATHE PICKLEBALL</Text>
+              <Text style={styles.tagline}>North Kolkata&apos;s home of pickleball</Text>
+            </View>
           </View>
           <View>
             <Text style={styles.invoiceLabel}>TAX INVOICE</Text>

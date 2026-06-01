@@ -4,6 +4,7 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
   Section,
   Text,
@@ -11,6 +12,8 @@ import {
   Hr,
   Tailwind,
 } from "@react-email/components";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://breathe-web-six.vercel.app";
 
 type Props = {
   customerName: string;
@@ -26,6 +29,9 @@ export default function PasswordReset({ customerName, resetUrl, expiresInMinutes
       <Tailwind>
         <Body className="bg-gray-50 font-sans">
           <Container className="bg-white rounded-2xl my-8 mx-auto max-w-xl p-8 border border-gray-100 shadow-sm">
+            <Section className="text-center pb-4">
+              <Img src={`${SITE_URL}/icons/icon-192.png`} alt="Breathe Pickleball" width="64" height="64" className="mx-auto rounded-2xl" />
+            </Section>
             <Section className="text-center pb-6">
               <Heading className="text-2xl font-bold text-gray-900 m-0">Reset your password</Heading>
               <Text className="text-gray-600 mt-2">Hi {customerName}, we received a request to reset your password.</Text>
