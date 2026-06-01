@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, Loader2, Megaphone, Pencil, Plus, Trash2, X, Check } from "lucide-react";
+import { Loader2, Megaphone, Pencil, Plus, Trash2, X, Check } from "lucide-react";
+import { AdminSubHeader } from "@/components/admin/admin-sub-header";
 
 type Notice = {
   id: string;
@@ -124,26 +124,23 @@ export default function AdminNoticesPage() {
   return (
     <main className="min-h-screen bg-brand-50/30 px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center gap-3">
-          <Link
-            href="/admin"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand/15 bg-white text-ink hover:bg-brand/5"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div className="flex-1">
-            <h1 className="font-display text-2xl font-extrabold text-ink sm:text-3xl">Notice board</h1>
-            <p className="text-xs text-slatey">Banner messages shown on the homepage and dashboard.</p>
-          </div>
-          {!showForm && (
-            <button
-              type="button"
-              onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600"
-            >
-              <Plus className="h-4 w-4" /> New notice
-            </button>
-          )}
+        <div className="mb-6">
+          <AdminSubHeader
+            title="Notice board"
+            subtitle="Banner messages shown on the homepage and dashboard."
+            icon={<Megaphone className="h-6 w-6 text-lime" />}
+            actions={
+              !showForm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowForm(true)}
+                  className="inline-flex items-center gap-2 rounded-full bg-lime px-4 py-2 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark"
+                >
+                  <Plus className="h-4 w-4" /> New notice
+                </button>
+              ) : undefined
+            }
+          />
         </div>
 
         {error && (
