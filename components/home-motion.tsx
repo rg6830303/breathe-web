@@ -87,6 +87,13 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
     <>
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-700 to-brand-800 text-white">
+        {/* Real court photo, subtly blended behind the gradient (all screens) */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18] mix-blend-luminosity"
+          style={{ backgroundImage: "url(/gallery/court-night-wide.jpg)" }}
+        />
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-br from-brand-700/80 to-brand-900/80" />
         <CourtLinesSVG />
         <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-lime/10 blur-3xl animate-blob" />
         <div className="pointer-events-none absolute -right-16 bottom-0 h-80 w-80 rounded-full bg-white/10 blur-3xl animate-blob [animation-delay:3s]" />
@@ -117,7 +124,7 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
           />
         </div>
 
-        <Container className="relative grid items-center gap-10 py-14 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
+        <Container className="relative z-10 grid items-center gap-10 py-14 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
           <motion.div variants={containerVariants} initial="hidden" animate="visible">
             <motion.span
               variants={spanVariants}

@@ -201,7 +201,7 @@ export function BookingGrid() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 pb-24 lg:grid-cols-[1fr_360px] lg:pb-0">
       <section className="overflow-hidden rounded-3xl border border-brand/10 bg-white shadow-soft">
         {authLoaded && !account && (
           <div className="flex items-center justify-between gap-3 border-b border-brand/10 bg-brand/5 px-4 py-3 text-xs sm:text-sm">
@@ -421,6 +421,33 @@ export function BookingGrid() {
           Secure payment by Razorpay. Slots are confirmed instantly once payment succeeds.
         </p>
       </aside>
+
+      {/* Sticky mobile pay bar — only when slots are selected, hidden on desktop */}
+      {selected.length > 0 && (
+        <motion.div
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-brand/10 bg-white/95 px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3 shadow-[0_-8px_24px_-12px_rgba(13,20,38,0.25)] backdrop-blur-xl lg:hidden dark:border-white/10 dark:bg-ink/95"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-slatey">
+                {selected.length} slot{selected.length > 1 ? "s" : ""} · incl. GST
+              </div>
+              <div className="font-display text-xl font-extrabold text-ink dark:text-white">₹{totals.total}</div>
+            </div>
+            <button
+              type="button"
+              onClick={payNow}
+              disabled={paying}
+              className="inline-flex flex-1 max-w-[60%] items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3.5 text-sm font-bold text-white shadow-glow transition active:scale-[0.98] disabled:opacity-60"
+            >
+              {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {!account || account.role !== "user" ? "Log in to Pay" : "Confirm & Pay"}
+            </button>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
@@ -438,7 +465,7 @@ function SlotButton({ slot, selected, onClick }: { slot: Slot; selected: boolean
       disabled={slot.status !== "open"}
       animate={state === "open" ? { opacity: [0.85, 1, 0.85] } : { opacity: 1 }}
       transition={state === "open" ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : undefined}
-      className={`flex min-h-[48px] w-full flex-col items-start rounded-xl border p-2 text-left text-xs font-bold transition ${cls}`}
+      className={`flex min-h-[52px] w-full flex-col items-start rounded-xl border p-2.5 text-left text-xs font-bold transition ${cls}`}
     >
       <span className="flex w-full items-center justify-between">
         <span className="capitalize">{state}</span>
@@ -462,7 +489,7 @@ function MobileRow({ slot, selected, onToggle }: { slot: Slot; selected: boolean
   if (state === "blocked") pill = "bg-gray-100 text-gray-500";
   return (
     <li
-      className={`flex min-h-[52px] items-center justify-between border-b border-gray-100 px-4 py-3 ${disabled ? "cursor-default" : "cursor-pointer"}`}
+      className={`flex min-h-[60px] items-center justify-between border-b border-gray-100 px-4 py-3.5 active:bg-brand/5 ${disabled ? "cursor-default" : "cursor-pointer"}`}
       onClick={() => !disabled && onToggle()}
     >
       <div>
