@@ -16,7 +16,7 @@ export default function BookPage() {
   return (
     <>
       <Nav />
-      <main className="bg-brand-50/30">
+      <main className="app-surface bg-brand-50/30 dark:bg-ink">
         <section className="brand-gradient brand-mesh relative overflow-hidden pb-16 pt-8 text-white sm:py-16">
           <div className="court-lines absolute inset-0 opacity-25" />
           <Container className="relative">

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowRight, LayoutDashboard, LogOut, MapPin, Menu, Phone, Shield, User, X } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { navLinks, site } from "@/lib/site";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -80,8 +81,8 @@ export function Nav() {
       <div
         className={`border-b transition-all ${
           scrolled
-            ? "border-brand/10 bg-white/90 shadow-soft backdrop-blur-xl"
-            : "border-transparent bg-white/70 backdrop-blur-md"
+            ? "border-brand/10 bg-white/90 shadow-soft backdrop-blur-xl dark:border-white/10 dark:bg-ink/85"
+            : "border-transparent bg-white/70 backdrop-blur-md dark:bg-ink/60"
         }`}
       >
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
@@ -95,7 +96,9 @@ export function Nav() {
                   key={link.href}
                   href={link.href}
                   className={`relative rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    active ? "text-brand" : "text-ink/70 hover:bg-brand/5 hover:text-brand"
+                    active
+                      ? "text-brand dark:text-brand-300"
+                      : "text-ink/70 hover:bg-brand/5 hover:text-brand dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
                   }`}
                 >
                   {link.label}
@@ -115,7 +118,7 @@ export function Nav() {
               <div className="hidden items-center gap-2 lg:flex">
                 <Link
                   href={account.role === "admin" ? "/admin" : "/dashboard"}
-                  className="inline-flex items-center gap-2 rounded-full border border-brand/15 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-brand/5"
+                  className="inline-flex items-center gap-2 rounded-full border border-brand/15 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-brand/5 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
                 >
                   {account.role === "admin" ? <Shield className="h-4 w-4 text-brand" /> : <User className="h-4 w-4 text-brand" />}
                   <span className="max-w-[120px] truncate">{account.name}</span>
@@ -124,7 +127,7 @@ export function Nav() {
                   type="button"
                   onClick={handleLogout}
                   aria-label="Log out"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand/15 text-ink transition hover:bg-brand/5"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand/15 text-ink transition hover:bg-brand/5 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>
@@ -133,7 +136,7 @@ export function Nav() {
               loaded && (
                 <Link
                   href="/login"
-                  className="hidden rounded-full px-4 py-2.5 text-sm font-semibold text-ink/70 transition hover:text-brand lg:inline-flex"
+                  className="hidden rounded-full px-4 py-2.5 text-sm font-semibold text-ink/70 transition hover:text-brand dark:text-white/70 dark:hover:text-white lg:inline-flex"
                 >
                   Log in
                 </Link>
@@ -157,10 +160,11 @@ export function Nav() {
                 Book a Slot <ArrowRight className="h-4 w-4" />
               </Link>
             </motion.div>
+            <ThemeToggle />
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-brand/15 text-ink lg:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-brand/15 text-ink transition dark:border-white/15 dark:text-white lg:hidden"
               aria-label="Toggle menu"
               aria-expanded={open}
             >
@@ -189,7 +193,7 @@ export function Nav() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed inset-y-0 right-0 w-72 bg-white shadow-2xl z-50 flex flex-col justify-between p-6 pb-[max(env(safe-area-inset-bottom),1.5rem)] overflow-y-auto"
+              className="fixed inset-y-0 right-0 w-72 bg-white dark:bg-ink shadow-2xl z-50 flex flex-col justify-between p-6 pb-[max(env(safe-area-inset-bottom),1.5rem)] overflow-y-auto"
             >
               <div>
                 <div className="flex items-center justify-between border-b border-brand/10 pb-4 mb-4">

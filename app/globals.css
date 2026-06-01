@@ -60,6 +60,63 @@ body {
   backdrop-filter: blur(14px);
 }
 
+/* ---------- Dark theme (class-based, toggled on <html>) ---------- */
+.dark body {
+  background: #0b1530;
+  color: rgba(255, 255, 255, 0.9);
+}
+.dark .glass {
+  background: rgba(17, 28, 56, 0.7);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.dark .section-light {
+  background:
+    radial-gradient(circle at 85% -10%, rgba(47, 91, 255, 0.18), transparent 40%),
+    radial-gradient(circle at 0% 100%, rgba(47, 91, 255, 0.12), transparent 35%);
+}
+.dark ::selection {
+  background: rgba(198, 242, 62, 0.25);
+}
+
+/* Scoped dark surface overrides — applied only inside .app-surface wrappers
+   (the booking grid, dashboard, and admin console opt in via that class) so
+   the marketing pages keep their intentional light/dark section rhythm.
+   These translate the repeated brand-on-white patterns to dark equivalents
+   without touching every component's class list. */
+.dark .app-surface {
+  color: rgba(255, 255, 255, 0.9);
+}
+.dark .app-surface .bg-white,
+.dark .app-surface .bg-white\/90,
+.dark .app-surface .bg-white\/70 {
+  background-color: #111c38 !important;
+}
+.dark .app-surface .bg-brand-50\/30,
+.dark .app-surface .bg-brand-50\/40,
+.dark .app-surface .bg-brand-50\/20,
+.dark .app-surface .bg-brand\/\[0\.03\],
+.dark .app-surface .bg-brand\/\[0\.04\],
+.dark .app-surface .bg-brand\/5 {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+.dark .app-surface .text-ink {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+.dark .app-surface .text-slatey {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+.dark .app-surface .border-brand\/10,
+.dark .app-surface .border-brand\/15,
+.dark .app-surface .border-brand\/5 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+.dark .app-surface input,
+.dark .app-surface select,
+.dark .app-surface textarea {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
 /* Brand gradient blocks */
 .brand-gradient {
   background: linear-gradient(135deg, #2348e0 0%, #2f5bff 45%, #4d77ff 100%);

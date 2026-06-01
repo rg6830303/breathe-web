@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Inter, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/app/providers";
+import { themeNoFlashScript } from "@/components/theme-provider";
 import { site } from "@/lib/site";
 
 const display = Bricolage_Grotesque({
@@ -119,6 +120,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${display.variable} ${body.variable} ${serif.variable}`}>
       <head>
+        {/* Set theme class before paint to avoid a flash of the wrong theme. */}
+        <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
         <script
           type="application/ld+json"
           // JSON.stringify produces clean, escaped output — safe to inject.
@@ -130,7 +133,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="font-sans antialiased">
+      <body className="bg-white font-sans antialiased transition-colors duration-300 dark:bg-ink dark:text-white/90">
         <Providers>{children}</Providers>
       </body>
     </html>

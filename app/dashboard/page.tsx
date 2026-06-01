@@ -222,7 +222,7 @@ export default async function DashboardPage() {
   return (
     <>
       <Nav />
-      <main className="min-h-screen bg-brand-50/20">
+      <main className="app-surface min-h-screen bg-brand-50/20 dark:bg-ink">
         <PortalHero
           eyebrow="Player dashboard"
           title={

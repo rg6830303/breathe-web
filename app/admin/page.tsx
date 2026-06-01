@@ -18,7 +18,7 @@ export default async function AdminPage() {
   return (
     <>
       <Nav />
-      <main className="bg-brand-50/30">
+      <main className="app-surface bg-brand-50/30 dark:bg-ink">
         <PortalHero
           eyebrow="Owner console"
           title={<h1 className="font-serif-hero text-3xl italic sm:text-4xl">Breathe Pickleball admin</h1>}
