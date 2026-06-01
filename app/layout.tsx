@@ -44,14 +44,17 @@ export const metadata: Metadata = {
     siteName: site.name,
   },
   icons: {
-    icon: "/breathe-logo.jpg",
-    apple: "/icons/icon-192.png",
+    icon: [
+      { url: "/icons/icon-64.png", sizes: "64x64", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
   },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Breathe PB",
+    title: "Breathe Pickleball",
   },
 };
 
