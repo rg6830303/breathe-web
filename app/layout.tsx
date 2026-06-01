@@ -3,7 +3,7 @@ import { Bricolage_Grotesque, Inter, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/app/providers";
 import { themeNoFlashScript } from "@/components/theme-provider";
-import { site } from "@/lib/site";
+import { site, SITE_URL } from "@/lib/site";
 
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -32,7 +32,13 @@ const serif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://breathe-web-six.vercel.app"),
+  metadataBase: new URL(SITE_URL),
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
   title: {
     default: "Breathe Pickleball | Court Booking in Kaikhali, Kolkata",
     template: "%s | Breathe Pickleball",
@@ -84,10 +90,10 @@ const jsonLd = {
     {
       "@type": ["SportsActivityLocation", "LocalBusiness"],
       name: "Breathe Pickleball",
-      url: "https://breathe-web-six.vercel.app",
+      url: SITE_URL,
       telephone: "+917439010356",
       email: "play@breathepickleball.in",
-      image: "https://breathe-web-six.vercel.app/og-image.jpg",
+      image: `${SITE_URL}/icons/icon-512.png`,
       address: {
         "@type": "PostalAddress",
         streetAddress: "Panchawati Complex, Plot 2, near Shyam Baba Mandir, Biman Nagar",

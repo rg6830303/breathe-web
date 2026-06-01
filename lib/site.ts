@@ -1,8 +1,19 @@
 // Central business information for Breathe Pickleball, Kaikhali (North Kolkata).
 // Sourced from the club's public listings. Update here to change site-wide details.
 
+/**
+ * Canonical public site URL. Defaults to the business domain so SEO metadata,
+ * sitemap, robots, and structured data all reference breathepickleball.in
+ * (not the Vercel preview URL). Override per-environment with
+ * NEXT_PUBLIC_SITE_URL if needed.
+ */
+export const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in"
+).replace(/\/$/, "");
+
 export const site = {
   name: "Breathe Pickleball",
+  url: SITE_URL,
   tagline: "North Kolkata's home of pickleball",
   area: "Kaikhali, Kolkata",
   phoneDisplay: "+91 74390 10356",

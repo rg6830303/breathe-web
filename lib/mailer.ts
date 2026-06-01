@@ -73,7 +73,15 @@ export type MailOptions = {
 
 export function fromAddress(displayName = "Breathe Pickleball"): string {
   const { user } = resolveCreds();
-  const addr = process.env.GMAIL_FROM?.trim() || user || "bookings@breathepickleball.in";
+  // Gmail SMTP only lets you send "From" the authenticated account (or a
+  // verified alias). For a Gmail-only setup (no company domain), forcing From
+  // to a non-verified address like play@breathepickleball.in makes Gmail
+  // rewrite the header and spam-flag the message. So we ALWAYS send From the
+  // authenticated Gmail user, and surface the business address as Reply-To.
+  // GMAIL_FROM is honoured only if it equals the authenticated user (i.e. a
+  // genuinely verified alias).
+  const override = process.env.GMAIL_FROM?.trim();
+  const addr = override && override === user ? override : user || "bookings@breathepickleball.in";
   return `${displayName} <${addr}>`;
 }
 
@@ -85,16 +93,19 @@ const RETRYABLE = new Set(["ETIMEDOUT", "ECONNECTION", "ESOCKET", "ECONNRESET", 
 
 async function trySend(transport: Transporter, opts: MailOptions) {
   const { user } = resolveCreds();
-  const fromAddr = process.env.GMAIL_FROM?.trim() || user || "bookings@breathepickleball.in";
-  const replyTo = opts.replyTo || process.env.REPLY_TO_EMAIL || fromAddr;
+  const fromAddr = user || "bookings@breathepickleball.in";
+  // Reply-To = the business address so replies reach the club inbox even
+  // though the message is sent (and DKIM-signed) by the Gmail account.
+  const replyTo =
+    opts.replyTo || process.env.REPLY_TO_EMAIL || process.env.GMAIL_FROM?.trim() || fromAddr;
 
   return transport.sendMail({
     from: fromAddress(),
     // Envelope sender = authenticated Gmail user so SPF/DKIM align (Gmail signs
     // mail from the authenticated account). Mismatched From is the #1 reason
     // transactional mail lands in spam.
-    sender: user || fromAddr,
-    envelope: { from: user || fromAddr, to: Array.isArray(opts.to) ? opts.to : [opts.to] },
+    sender: fromAddr,
+    envelope: { from: fromAddr, to: Array.isArray(opts.to) ? opts.to : [opts.to] },
     to: opts.to,
     subject: opts.subject,
     html: opts.html,

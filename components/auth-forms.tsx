@@ -188,12 +188,6 @@ export function LoginForm() {
             Create an account
           </Link>
         </span>
-        <span>
-          Club owner?{" "}
-          <Link href="/admin/login" className="font-semibold text-brand hover:underline">
-            Admin login
-          </Link>
-        </span>
       </div>
     </motion.div>
   );
