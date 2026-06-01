@@ -258,8 +258,8 @@ export function CTABand() {
 export function SectionDivider({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center justify-center gap-3 py-10 ${className}`}>
-      <span className="h-px w-8 bg-brand-200" />
-      <svg className="h-5 w-5 text-brand-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <span className="h-px w-8 bg-brand-200 dark:bg-white/15" />
+      <svg className="h-5 w-5 animate-spin-slow text-brand-300 dark:text-lime/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
         <circle cx="12" cy="12" r="9" />
         <circle cx="9" cy="9" r="0.75" fill="currentColor" />
         <circle cx="12" cy="9" r="0.75" fill="currentColor" />
@@ -270,7 +270,7 @@ export function SectionDivider({ className = "" }: { className?: string }) {
         <circle cx="12" cy="15" r="0.75" fill="currentColor" />
         <circle cx="15" cy="15" r="0.75" fill="currentColor" />
       </svg>
-      <span className="h-px w-8 bg-brand-200" />
+      <span className="h-px w-8 bg-brand-200 dark:bg-white/15" />
     </div>
   );
 }
