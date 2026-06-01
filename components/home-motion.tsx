@@ -92,16 +92,28 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
         <div className="pointer-events-none absolute -right-16 bottom-0 h-80 w-80 rounded-full bg-white/10 blur-3xl animate-blob [animation-delay:3s]" />
         
         {/* Animated Floating Paddle (Desktop Only) */}
+        {/* Floating 3D paddle (perspective tilt) */}
         <motion.div
-          className="hidden md:block absolute right-12 top-1/4 z-10 w-28 h-28 opacity-15 pointer-events-none"
-          animate={{ y: [0, -12, 0], rotate: [-3, 3, -3] }}
-          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          className="hidden md:block absolute right-12 top-1/4 z-10 w-32 h-32 opacity-20 pointer-events-none"
+          style={{ perspective: 800 }}
+          animate={{ y: [0, -14, 0], rotateY: [-18, 18, -18], rotateX: [6, -6, 6] }}
+          transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
         >
-          <svg viewBox="0 0 100 100" className="w-full h-full text-white fill-current">
-            <ellipse cx="50" cy="40" rx="20" ry="25" />
-            <rect x="47" y="65" width="6" height="20" rx="2" />
+          <svg viewBox="0 0 100 100" className="w-full h-full text-white fill-current drop-shadow-[0_12px_24px_rgba(0,0,0,0.3)]">
+            <ellipse cx="50" cy="40" rx="22" ry="27" />
+            <rect x="46" y="66" width="8" height="22" rx="3" />
+            <g fill="#2F5BFF">
+              <circle cx="44" cy="32" r="2" /><circle cx="50" cy="32" r="2" /><circle cx="56" cy="32" r="2" />
+              <circle cx="44" cy="40" r="2" /><circle cx="50" cy="40" r="2" /><circle cx="56" cy="40" r="2" />
+              <circle cx="47" cy="48" r="2" /><circle cx="53" cy="48" r="2" />
+            </g>
           </svg>
         </motion.div>
+
+        {/* Bouncing pickleball accent */}
+        <div className="hidden lg:block absolute left-10 bottom-16 z-10 pointer-events-none">
+          <div className="h-10 w-10 rounded-full bg-lime/80 shadow-[0_0_24px_rgba(198,242,62,0.5)] animate-ball-bounce" style={{ backgroundImage: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6), transparent 40%)" }} />
+        </div>
 
         <Container className="relative grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
           <motion.div variants={containerVariants} initial="hidden" animate="visible">
@@ -112,18 +124,27 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
               <MapPin className="h-3.5 w-3.5 text-lime" /> Kaikhali · North Kolkata
             </motion.span>
             
-            {/* Split stagger heading */}
+            {/* Split stagger heading — editorial serif + bold display mix */}
             <motion.h1
               variants={containerVariants}
-              className="mt-5 font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl"
+              className="mt-5 leading-[1.02] tracking-tight"
             >
-              <motion.span variants={spanVariants} className="block">
+              <motion.span
+                variants={spanVariants}
+                className="block font-serif-hero text-4xl italic text-white/90 sm:text-5xl lg:text-[3.5rem]"
+              >
                 Welcome to
               </motion.span>
-              <motion.span variants={spanVariants} className="block text-lime">
+              <motion.span
+                variants={spanVariants}
+                className="block bg-gradient-to-r from-lime via-white to-lime bg-clip-text font-display text-5xl font-extrabold text-transparent animate-shimmer sm:text-6xl lg:text-7xl"
+              >
                 Breathe
               </motion.span>
-              <motion.span variants={spanVariants} className="block">
+              <motion.span
+                variants={spanVariants}
+                className="block font-serif-hero text-4xl italic text-white sm:text-5xl lg:text-[3.5rem]"
+              >
                 Pickleball
               </motion.span>
             </motion.h1>
