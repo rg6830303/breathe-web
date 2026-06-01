@@ -84,6 +84,7 @@ export function BookingGrid() {
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [emailed, setEmailed] = useState(true);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -179,9 +180,11 @@ export function BookingGrid() {
             });
             const verify = await verifyRes.json();
             if (!verifyRes.ok) throw new Error(verify.error ?? "Payment verification failed");
+            setEmailed(verify.emailed !== false);
             setConfirmed(true);
-            refreshSlots();
-            setTimeout(() => router.push("/dashboard"), 1600);
+            setSelected([]);
+            fetch(`/api/slots?date=${date}`).then((r) => r.json()).then((d) => setSlots(d.slots ?? []));
+            setTimeout(() => router.push("/dashboard"), 2600);
           } catch (e) {
             setError(e instanceof Error ? e.message : "Verification failed");
           } finally {
@@ -401,8 +404,15 @@ export function BookingGrid() {
           <div className="mt-3 rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>
         )}
         {confirmed && (
-          <div className="mt-3 flex items-center gap-2 rounded-xl border border-lime/40 bg-lime/10 px-3 py-2 text-xs text-lime-dark">
-            <Check className="h-4 w-4" /> Payment confirmed — redirecting to your dashboard…
+          <div className="mt-3 flex items-start gap-2 rounded-xl border border-lime/40 bg-lime/10 px-3 py-2 text-xs text-lime-dark">
+            <Check className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Booking confirmed! 🎉{" "}
+              {emailed
+                ? "A confirmation email is on its way."
+                : "Your booking is safe and shows on your dashboard — the confirmation email couldn't be sent just now."}{" "}
+              Redirecting…
+            </span>
           </div>
         )}
 

@@ -162,8 +162,11 @@ export async function notifyBookingConfirmed(b: {
         })
         .catch((e) => console.error("[telegram send exception]", e));
     }
+
+    return { emailed };
   } catch (err) {
     console.error("[notification dispatcher error]", err);
+    return { emailed: false };
   }
 }
 
