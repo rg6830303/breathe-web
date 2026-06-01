@@ -24,7 +24,9 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    const rl = await checkRateLimit(`admin-login:${ip}`, 20, 15 * 60 * 1000);
+    // Tightened from 20 → 6 per 15 min per IP. Admin is a single known account,
+    // so a low ceiling massively shrinks the brute-force surface.
+    const rl = await checkRateLimit(`admin-login:${ip}`, 6, 15 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json(
         { error: `Too many attempts. Try again in ${rl.retryAfterSec}s.` },
@@ -144,6 +146,9 @@ export async function POST(req: Request) {
     console.log("[admin-login] result", { ok, viaPath });
 
     if (!ok) {
+      // Small fixed delay on failure to blunt rapid credential-stuffing and
+      // reduce timing signal between "no such user" and "wrong password".
+      await new Promise((r) => setTimeout(r, 600));
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
 

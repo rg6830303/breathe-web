@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   try {
     await ensureSchema();
     const ip = getClientIp(req);
-    const rl = await checkRateLimit(`auth-login:${ip}`, 8, 15 * 60 * 1000);
+    const rl = await checkRateLimit(`auth-login:${ip}`, 6, 15 * 60 * 1000);
     if (!rl.ok) {
       return NextResponse.json(
         { error: `Too many attempts. Try again in ${rl.retryAfterSec}s.` },
@@ -64,11 +64,16 @@ export async function POST(req: Request) {
     }
 
     if (!row) {
+      // Hash a dummy value so response timing for "no user" matches "wrong
+      // password" (prevents user-enumeration via timing), plus a small delay.
+      await bcrypt.compare(password, "$2a$12$0000000000000000000000000000000000000000000000000000a");
+      await new Promise((r) => setTimeout(r, 400));
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
 
     const ok = await bcrypt.compare(password, String(row.password_hash));
     if (!ok) {
+      await new Promise((r) => setTimeout(r, 400));
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
 

@@ -13,6 +13,7 @@ import {
   ArrowRight,
   BarChart3,
   Calendar,
+  Download,
   Grid3x3,
   Loader2,
   LogOut,
@@ -499,12 +500,36 @@ function UsersTab() {
   const [userBookings, setUserBookings] = useState<Record<string, Booking[]>>({});
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
+  function load() {
+    setLoading(true);
     fetch("/api/admin/users")
       .then((r) => r.json())
       .then((data) => setUsers(data.users ?? []))
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(load, []);
+
+  function exportCsv() {
+    const header = ["Name", "Email", "Phone", "Joined", "Bookings", "Total spent (INR)"];
+    const rows = filtered.map((u) => [
+      u.name,
+      u.email,
+      u.phone ?? "",
+      u.created_at.slice(0, 10),
+      String(u.booking_count),
+      String(u.total_spent),
+    ]);
+    const csv = [header, ...rows]
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `breathe-users-${todayIST()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function toggle(id: string) {
     if (expanded === id) {
@@ -536,13 +561,30 @@ function UsersTab() {
         <h3 className="font-display text-lg font-extrabold text-ink">
           Registered users <span className="text-xs font-semibold text-slatey">({filtered.length} of {users.length})</span>
         </h3>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, email, or phone…"
-          className="w-full max-w-xs rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand sm:w-72"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, email, or phone…"
+            className="w-full max-w-xs rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand sm:w-64"
+          />
+          <button
+            type="button"
+            onClick={load}
+            className="inline-flex items-center gap-1 rounded-xl border border-brand/15 px-2.5 py-2 text-xs font-bold text-ink/70 hover:bg-brand/5"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> Refresh
+          </button>
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={filtered.length === 0}
+            className="inline-flex items-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-bold text-white shadow-soft transition hover:bg-brand-600 disabled:opacity-50"
+          >
+            <Download className="h-3.5 w-3.5" /> Export CSV
+          </button>
+        </div>
       </div>
       {filtered.length === 0 ? (
         <p className="rounded-xl border border-dashed border-brand/20 bg-brand/[0.03] p-6 text-center text-sm text-slatey">
