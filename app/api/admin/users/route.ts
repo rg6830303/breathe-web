@@ -1,10 +1,73 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { v4 as uuid } from "uuid";
+import { z } from "zod";
 import { ensureSchema } from "@/lib/db/ensure";
 import { getAdminSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const createSchema = z.object({
+  full_name: z.string().trim().min(1, "Name is required.").max(120),
+  email: z.string().trim().toLowerCase().email("Valid email required."),
+  phone: z.string().trim().max(20).optional().or(z.literal("")),
+  // Optional: a temporary password the admin can share; otherwise a random one
+  // is set (the user can use "Forgot password" to set their own).
+  password: z.string().min(6).max(200).optional(),
+});
+
+/** Admin manually creates a user (offline / walk-in member). Writes both DBs. */
+export async function POST(req: Request) {
+  const admin = await getAdminSession();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const parsed = createSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input." }, { status: 400 });
+  }
+  const { full_name, email } = parsed.data;
+  const phone = parsed.data.phone || null;
+
+  await ensureSchema().catch(() => {});
+
+  // Reject duplicates across either backend.
+  try {
+    const t = await turso.execute({ sql: "SELECT id FROM users WHERE email = ? LIMIT 1", args: [email] });
+    if (t.rows.length) return NextResponse.json({ error: "A user with this email already exists." }, { status: 400 });
+  } catch (e) { console.error("[admin user create turso dup]", e); }
+  try {
+    const { supabase, hasSupabase } = require("@/lib/supabase");
+    if (hasSupabase) {
+      const { data } = await supabase.from("users").select("id").eq("email", email).maybeSingle();
+      if (data?.id) return NextResponse.json({ error: "A user with this email already exists." }, { status: 400 });
+    }
+  } catch (e) { console.error("[admin user create supabase dup]", e); }
+
+  const id = uuid();
+  const hash = await bcrypt.hash(parsed.data.password || uuid(), 12);
+  const now = Date.now();
+
+  let ok = false;
+  try {
+    await turso.execute({
+      sql: "INSERT INTO users (id, email, password_hash, full_name, phone, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+      args: [id, email, hash, full_name, phone, now],
+    });
+    ok = true;
+  } catch (e) { console.error("[admin user create turso insert]", e); }
+  try {
+    const { supabase, hasSupabase } = require("@/lib/supabase");
+    if (hasSupabase) {
+      const { error } = await supabase.from("users").insert({ id, email, password_hash: hash, full_name, phone, created_at: now });
+      if (!error) ok = true;
+    }
+  } catch (e) { console.error("[admin user create supabase insert]", e); }
+
+  if (!ok) return NextResponse.json({ error: "Could not create the user." }, { status: 500 });
+  return NextResponse.json({ ok: true, id });
+}
 
 export async function GET() {
   try {

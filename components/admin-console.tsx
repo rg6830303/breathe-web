@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { EmailPanel } from "@/components/admin/email-panel";
 import { WalkInModal } from "@/components/admin/walk-in-modal";
 import { BulkBlockModal } from "@/components/admin/bulk-block-modal";
+import { AddUserModal } from "@/components/admin/add-user-modal";
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   ArrowRight,
@@ -508,6 +509,7 @@ function UsersTab() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [userBookings, setUserBookings] = useState<Record<string, Booking[]>>({});
   const [search, setSearch] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
 
   function load() {
     setLoading(true);
@@ -589,12 +591,20 @@ function UsersTab() {
             type="button"
             onClick={exportCsv}
             disabled={filtered.length === 0}
-            className="inline-flex items-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-bold text-white shadow-soft transition hover:bg-brand-600 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-xl border border-brand/15 px-2.5 py-2 text-xs font-bold text-ink/70 hover:bg-brand/5 disabled:opacity-50"
           >
             <Download className="h-3.5 w-3.5" /> Export CSV
           </button>
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="inline-flex items-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-bold text-white shadow-soft transition hover:bg-brand-600"
+          >
+            <UserPlus className="h-3.5 w-3.5" /> Add user
+          </button>
         </div>
       </div>
+      <AddUserModal open={addOpen} onClose={() => setAddOpen(false)} onAdded={load} />
       {filtered.length === 0 ? (
         <p className="rounded-xl border border-dashed border-brand/20 bg-brand/[0.03] p-6 text-center text-sm text-slatey">
           {q ? `No users match "${search}".` : "No users yet."}
