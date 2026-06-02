@@ -92,6 +92,22 @@ export const SCHEMA_STATEMENTS: string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_blocked_slots_date ON blocked_slots (slot_date)`,
   `CREATE INDEX IF NOT EXISTS idx_blocked_slots_lookup ON blocked_slots (slot_date, court_number, slot_time)`,
+  // Bulk-hours credit balance per user (e.g. 12-hour package = 24 half-hour
+  // slot credits). balance_min is the remaining prepaid time in minutes.
+  `CREATE TABLE IF NOT EXISTS user_credits (
+    user_id TEXT PRIMARY KEY,
+    balance_min INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL
+  )`,
+  // Audit trail of credit purchases / consumption.
+  `CREATE TABLE IF NOT EXISTS credit_ledger (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    delta_min INTEGER NOT NULL,
+    reason TEXT,
+    created_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_credit_ledger_user ON credit_ledger (user_id, created_at DESC)`,
 ];
 
 export const SCHEMA_ALTERS: string[] = [

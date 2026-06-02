@@ -40,6 +40,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid payment signature." }, { status: 401 });
     }
 
+    // Bulk-hours package purchase: grant prepaid credit instead of booking slots.
+    if (body.purchase === "bulk-12h") {
+      const { adjustCredit, BULK_PACKAGE } = require("@/lib/credits");
+      const balanceMin = await adjustCredit(session.id, BULK_PACKAGE.minutes, "Purchased 12h bulk pass");
+      return NextResponse.json({ ok: true, purchased: "bulk-12h", balanceMin });
+    }
+
     let user;
     try {
       const userRow = await turso.execute({

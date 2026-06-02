@@ -83,6 +83,7 @@ export function BookingGrid() {
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [emailed, setEmailed] = useState(true);
+  const [creditMin, setCreditMin] = useState(0);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -90,7 +91,40 @@ export function BookingGrid() {
       .then((d) => setAccount(d.user ?? null))
       .catch(() => setAccount(null))
       .finally(() => setAuthLoaded(true));
+    // Load prepaid balance (ignored if not logged in).
+    fetch("/api/player/credits")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setCreditMin(Number(d.balanceMin) || 0))
+      .catch(() => {});
   }, []);
+
+  const slotsNeededMin = selected.length * 30;
+  const hasEnoughCredit = creditMin >= slotsNeededMin && selected.length > 0;
+
+  async function bookWithCredit() {
+    if (!hasEnoughCredit) return;
+    setPaying(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/bookings/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slots: selected.map((s) => ({ date, court: s.court, time: s.time })) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not book with credit.");
+      setCreditMin(Number(data.balanceMin) || 0);
+      setEmailed(true);
+      setConfirmed(true);
+      setSelected([]);
+      fetch(`/api/slots?date=${date}`).then((r) => r.json()).then((d) => setSlots(d.slots ?? []));
+      setTimeout(() => router.push("/dashboard"), 1800);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not book with credit.");
+    } finally {
+      setPaying(false);
+    }
+  }
 
   function refreshSlots() {
     setLoading(true);
@@ -399,22 +433,43 @@ export function BookingGrid() {
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={payNow}
-          disabled={selected.length === 0 || paying}
-          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
-        >
-          {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {selected.length === 0
-            ? "Select a slot to continue"
-            : !account || account.role !== "user"
-              ? "Log in to Confirm & Pay"
-              : `Confirm & Pay ₹${totals.total}`}
-        </button>
+        {account?.role === "user" && creditMin > 0 && (
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-lime/40 bg-lime/10 px-3 py-2 text-xs font-semibold text-lime-dark">
+            <span>Prepaid balance</span>
+            <span>{Math.round((creditMin / 60) * 10) / 10} h · {Math.floor(creditMin / 30)} slots</span>
+          </div>
+        )}
+
+        {hasEnoughCredit ? (
+          <button
+            type="button"
+            onClick={bookWithCredit}
+            disabled={paying}
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-lime px-4 py-3.5 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark active:scale-[0.99] disabled:opacity-60"
+          >
+            {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Book {selected.length} slot{selected.length > 1 ? "s" : ""} with prepaid hours
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={payNow}
+            disabled={selected.length === 0 || paying}
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+          >
+            {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {selected.length === 0
+              ? "Select a slot to continue"
+              : !account || account.role !== "user"
+                ? "Log in to Confirm & Pay"
+                : `Confirm & Pay ₹${totals.total}`}
+          </button>
+        )}
 
         <p className="mt-3 text-[0.7rem] leading-5 text-slatey">
-          Secure payment by Razorpay. Slots are confirmed instantly once payment succeeds.
+          {hasEnoughCredit
+            ? "Booked instantly from your prepaid bulk-hours balance — no payment needed."
+            : "Secure payment by Razorpay. Slots are confirmed instantly once payment succeeds."}
         </p>
       </aside>
 
