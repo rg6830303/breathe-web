@@ -5,7 +5,10 @@ import type { Notice } from "@/lib/types";
 import { HomeMotion } from "@/components/home-motion";
 import { turso } from "@/lib/turso";
 
-export const dynamic = "force-dynamic";
+// ISR: serve a fast, cached static homepage (revalidated hourly) so Googlebot
+// always gets quick, reliable HTML — better for indexing than force-dynamic,
+// and resilient if the DB is briefly unreachable during a crawl.
+export const revalidate = 3600;
 
 async function getLiveNotices(): Promise<Notice[]> {
   try {

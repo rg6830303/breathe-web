@@ -63,6 +63,22 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_IN",
     siteName: site.name,
+    url: SITE_URL,
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Breathe Pickleball — North Kolkata, Kaikhali",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Breathe Pickleball | Kaikhali, Kolkata",
+    description:
+      "Book a pickleball court in seconds. Three pro courts, equipment included, open daily in North Kolkata.",
+    images: ["/og-image.jpg"],
   },
   icons: {
     icon: [
