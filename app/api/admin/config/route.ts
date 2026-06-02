@@ -50,18 +50,32 @@ export async function PATCH(req: Request) {
   }
 
   const now = Date.now();
+  const entries = Object.entries(parsed.data).filter(([k]) => KNOWN_KEYS.includes(k));
+
+  let tursoOk = false;
   try {
-    for (const [key, value] of Object.entries(parsed.data)) {
-      if (!KNOWN_KEYS.includes(key)) continue;
+    for (const [key, value] of entries) {
       await turso.execute({
         sql: `INSERT INTO venue_config (key, value, updated_at) VALUES (?, ?, ?)
               ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
         args: [key, String(value), now],
       });
     }
+    tursoOk = true;
   } catch (err) {
-    console.error("[admin config patch error]", err);
-    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+    console.error("[admin config patch turso error]", err);
   }
+  // Mirror venue config to Supabase so settings survive a Turso outage.
+  try {
+    const { supabase, hasSupabase } = require("@/lib/supabase");
+    if (hasSupabase && entries.length) {
+      const rows = entries.map(([key, value]) => ({ key, value: String(value), updated_at: now }));
+      const { error } = await supabase.from("venue_config").upsert(rows, { onConflict: "key" });
+      if (!error) tursoOk = true;
+    }
+  } catch (sbErr) {
+    console.error("[admin config patch supabase error]", sbErr);
+  }
+  if (!tursoOk) return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

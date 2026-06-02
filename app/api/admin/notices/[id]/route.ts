@@ -47,15 +47,32 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   args.push(Date.now());
   args.push(id);
 
+  let tursoOk = false;
   try {
     await turso.execute({
       sql: `UPDATE notices SET ${updates.join(", ")} WHERE id = ?`,
       args,
     });
+    tursoOk = true;
   } catch (err) {
-    console.error("[admin notice patch error]", err);
-    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+    console.error("[admin notice patch turso error]", err);
   }
+  // Mirror the same field changes to Supabase.
+  try {
+    const { supabase, hasSupabase } = require("@/lib/supabase");
+    if (hasSupabase) {
+      const patch: Record<string, unknown> = { updated_at: Date.now() };
+      if (parsed.data.title !== undefined) patch.title = parsed.data.title;
+      if (parsed.data.body !== undefined) patch.body = parsed.data.body;
+      if (parsed.data.category !== undefined) patch.category = parsed.data.category;
+      if (parsed.data.active !== undefined) patch.active = parsed.data.active ? 1 : 0;
+      const { error } = await supabase.from("notices").update(patch).eq("id", id);
+      if (!error) tursoOk = true; // at least one backend succeeded
+    }
+  } catch (sbErr) {
+    console.error("[admin notice patch supabase error]", sbErr);
+  }
+  if (!tursoOk) return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
 
@@ -64,11 +81,22 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await ctx.params;
+  let ok = false;
   try {
     await turso.execute({ sql: "DELETE FROM notices WHERE id = ?", args: [id] });
+    ok = true;
   } catch (err) {
-    console.error("[admin notice delete error]", err);
-    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+    console.error("[admin notice delete turso error]", err);
   }
+  try {
+    const { supabase, hasSupabase } = require("@/lib/supabase");
+    if (hasSupabase) {
+      const { error } = await supabase.from("notices").delete().eq("id", id);
+      if (!error) ok = true;
+    }
+  } catch (sbErr) {
+    console.error("[admin notice delete supabase error]", sbErr);
+  }
+  if (!ok) return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

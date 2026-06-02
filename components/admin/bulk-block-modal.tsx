@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Loader2, ShieldOff, X } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
 
 function todayIST() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -16,6 +17,7 @@ function todayIST() {
 
 export function BulkBlockModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
+  const toast = useToast();
   const [form, setForm] = useState({
     slot_date: todayIST(),
     start_time: "06:00",
@@ -59,9 +61,12 @@ export function BulkBlockModal({ open, onClose }: { open: boolean; onClose: () =
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not block.");
       setDone({ inserted: data.inserted ?? 0 });
+      toast.show(`Closed ${data.inserted ?? 0} slot${(data.inserted ?? 0) === 1 ? "" : "s"} — hidden from players`, "success");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not block.");
+      const msg = err instanceof Error ? err.message : "Could not block.";
+      setError(msg);
+      toast.show(msg, "error");
     } finally {
       setSaving(false);
     }

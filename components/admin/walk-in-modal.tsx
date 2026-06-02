@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Loader2, UserPlus, X } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
 
 const TIMES: string[] = (() => {
   const out: string[] = [];
@@ -26,6 +27,7 @@ function todayIST() {
 
 export function WalkInModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
+  const toast = useToast();
   const [form, setForm] = useState({
     slot_date: todayIST(),
     slot_time: "18:00",
@@ -61,10 +63,13 @@ export function WalkInModal({ open, onClose }: { open: boolean; onClose: () => v
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not create booking.");
+      toast.show(`Walk-in booked: ${form.guest_name || "guest"} on Court ${form.court_number}`, "success");
       router.refresh();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create booking.");
+      const msg = err instanceof Error ? err.message : "Could not create booking.";
+      setError(msg);
+      toast.show(msg, "error");
     } finally {
       setSaving(false);
     }
