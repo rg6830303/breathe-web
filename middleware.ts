@@ -35,24 +35,34 @@ export async function middleware(req: NextRequest) {
       !pathname.startsWith("/api/") &&
       !pathname.startsWith("/_next/") &&
       pathname !== "/favicon.ico" &&
+      pathname !== "/robots.txt" &&
       !pathname.startsWith("/icons/")
     ) {
       const dest = req.nextUrl.clone();
       dest.pathname = "/admin";
       return NextResponse.redirect(dest);
     }
-  } else if (isAdminPath && ADMIN_HOST) {
-    // Public host with a configured admin host → hide admin entirely.
-    return new NextResponse(null, { status: 404 });
-  }
-
-  // --- Admin auth gate (login page itself stays open) ---
-  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
-    const token = req.cookies.get("breathe_admin_session")?.value;
-    const payload = token ? await verifyToken(token) : null;
-    if (!payload || payload.role !== "admin") {
-      return NextResponse.redirect(new URL("/admin/login", req.url));
+    // The entire admin host must never be indexed: app/robots.ts serves a
+    // deny-all robots.txt for this host, and we tag every response noindex.
+    const res = NextResponse.next();
+    res.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    // Still apply the admin auth gate below by returning after gating.
+    if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
+      const token = req.cookies.get("breathe_admin_session")?.value;
+      const payload = token ? await verifyToken(token) : null;
+      if (!payload || payload.role !== "admin") {
+        return NextResponse.redirect(new URL("/admin/login", req.url));
+      }
     }
+    return res;
+  } else if (isAdminPath && ADMIN_HOST) {
+    // A dedicated admin host IS configured and this isn't it → admin is fully
+    // removed from the public domain: 404 AND noindex so it never leaks into
+    // search. (When ADMIN_HOST is unset we're single-domain, so admin works.)
+    return new NextResponse(null, {
+      status: 404,
+      headers: { "X-Robots-Tag": "noindex, nofollow" },
+    });
   }
 
   // --- Player dashboard gate ---

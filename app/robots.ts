@@ -1,13 +1,24 @@
 import type { MetadataRoute } from "next";
+import { headers } from "next/headers";
 import { SITE_URL } from "@/lib/site";
 
+const ADMIN_HOST = process.env.NEXT_PUBLIC_ADMIN_HOST?.trim().toLowerCase();
+
 /**
- * robots.txt — allow crawling of the public marketing/booking pages, but keep
- * the admin console, player dashboard, auth, and API routes out of the index.
- * Points crawlers at the sitemap. (Missing robots/sitemap was the main reason
- * Google showed "No information is available for this page".)
+ * robots.txt.
+ *  - On the public domain: allow the marketing/booking pages, disallow the
+ *    admin console, dashboard, auth, and API routes. Points crawlers at the
+ *    sitemap.
+ *  - On the dedicated admin host: deny EVERYTHING so the console never indexes.
  */
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const host = (await headers()).get("host")?.split(":")[0].toLowerCase() ?? "";
+  const onAdminHost = !!ADMIN_HOST && host === ADMIN_HOST;
+
+  if (onAdminHost) {
+    return { rules: [{ userAgent: "*", disallow: "/" }] };
+  }
+
   return {
     rules: [
       {
