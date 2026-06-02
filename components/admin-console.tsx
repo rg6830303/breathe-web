@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
+import { useToast } from "@/components/ui/toast";
 import { EmailPanel } from "@/components/admin/email-panel";
 import { WalkInModal } from "@/components/admin/walk-in-modal";
 import { BulkBlockModal } from "@/components/admin/bulk-block-modal";
@@ -238,6 +239,7 @@ function OverviewTab() {
 }
 
 function BookingsTab() {
+  const toast = useToast();
   const [date, setDate] = useState<string>("");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -257,12 +259,14 @@ function BookingsTab() {
   async function cancel(id: string) {
     if (!confirm("Cancel this booking? The slot will reopen.")) return;
     setBusy(id);
-    await fetch("/api/admin/slots/unblock", {
+    const res = await fetch("/api/admin/slots/unblock", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ booking_id: id }),
     });
     setBusy(null);
+    if (res.ok) toast.show("Booking cancelled — the slot is now open again", "success");
+    else toast.show("Could not cancel that booking.", "error");
     reload();
   }
 
@@ -368,6 +372,7 @@ function BookingsTab() {
 }
 
 function CourtTab() {
+  const toast = useToast();
   const [date, setDate] = useState(todayIST());
   const [data, setData] = useState<SlotResp | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -405,24 +410,28 @@ function CourtTab() {
   async function block(court: number, time: string) {
     const key = `${court}@${time}`;
     setBusy(key);
-    await fetch("/api/admin/slots/block", {
+    const res = await fetch("/api/admin/slots/block", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ court_number: court, slot_date: date, slot_time: time }),
     });
     setBusy(null);
+    if (res.ok) toast.show(`Court ${court} blocked at ${time} — now hidden from players`, "success");
+    else toast.show("Could not block that slot. Please try again.", "error");
     load();
   }
 
   async function unblock(court: number, time: string) {
     const key = `${court}@${time}`;
     setBusy(key);
-    await fetch("/api/admin/slots/unblock", {
+    const res = await fetch("/api/admin/slots/unblock", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ court_number: court, slot_date: date, slot_time: time }),
     });
     setBusy(null);
+    if (res.ok) toast.show(`Court ${court} reopened at ${time} — bookable again`, "success");
+    else toast.show("Could not reopen that slot. Please try again.", "error");
     load();
   }
 

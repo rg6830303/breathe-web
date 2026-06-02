@@ -2,6 +2,7 @@
 
 import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ToastProvider } from "@/components/ui/toast";
 
 /** Root client boundary that owns the exit-animation context for the
  *  per-route template wrapper (see app/template.tsx). `mode="wait"` ensures
@@ -10,7 +11,9 @@ import { ThemeProvider } from "@/components/theme-provider";
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
-      <AnimatePresence mode="wait">{children}</AnimatePresence>
+      <ToastProvider>
+        <AnimatePresence mode="wait">{children}</AnimatePresence>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

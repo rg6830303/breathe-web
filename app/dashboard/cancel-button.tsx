@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, X } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
 
 export function CancelBookingButton({
   bookingId,
@@ -14,6 +15,7 @@ export function CancelBookingButton({
   disabledReason?: string;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,9 +31,12 @@ export function CancelBookingButton({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not cancel.");
+      toast.show("Booking cancelled. Any refund will be processed per policy.", "success");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not cancel.");
+      const msg = err instanceof Error ? err.message : "Could not cancel.";
+      setError(msg);
+      toast.show(msg, "error");
     } finally {
       setBusy(false);
     }
