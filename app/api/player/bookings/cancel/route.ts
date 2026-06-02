@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 const CANCELLATION_CUTOFF_MS = 4 * 60 * 60 * 1000;
 
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
   let row;
   try {
     const result = await turso.execute({
-      sql: "SELECT id, user_id, slot_date, slot_time, status FROM bookings WHERE id = ? LIMIT 1",
+      sql: "SELECT id, user_id, slot_date, slot_time, status, court_number, amount_paid, guest_name, guest_email FROM bookings WHERE id = ? LIMIT 1",
       args: [id],
     });
     row = result.rows[0];
@@ -65,6 +66,24 @@ export async function POST(req: Request) {
     }
   } catch (sbErr) {
     console.error("[player cancel supabase sync error]", sbErr);
+  }
+
+  // Cancellation email to the player + admin heads-up (best-effort).
+  try {
+    const { notifyBookingCancelled } = require("@/lib/notifications");
+    const { waitUntil } = require("@vercel/functions");
+    const run = notifyBookingCancelled({
+      id,
+      userEmail: row.guest_email ? String(row.guest_email) : session.email,
+      userName: row.guest_name ? String(row.guest_name) : session.name,
+      slotDate,
+      slotTime,
+      courtNumber: row.court_number ? Number(row.court_number) : undefined,
+      amount: row.amount_paid ? Number(row.amount_paid) : undefined,
+    }).catch((e: unknown) => console.error("[cancel notify error]", e));
+    if (waitUntil) waitUntil(run);
+  } catch (e) {
+    console.warn("[cancel notify dispatch skipped]", e);
   }
 
   return NextResponse.json({ ok: true });

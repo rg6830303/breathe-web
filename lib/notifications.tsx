@@ -171,6 +171,65 @@ export async function notifyBookingConfirmed(b: {
   }
 }
 
+/** Booking-cancelled email to the player + a heads-up to the admin inbox. */
+export async function notifyBookingCancelled(b: {
+  id: string;
+  userEmail: string;
+  userName: string;
+  slotDate: string;
+  slotTime: string;
+  courtNumber?: number;
+  amount?: number;
+}): Promise<{ emailed: boolean }> {
+  try {
+    const dateStr = new Date(b.slotDate).toLocaleDateString("en-IN", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "Asia/Kolkata",
+    });
+    const shortRef = b.id.slice(0, 8).toUpperCase();
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in";
+    const court = b.courtNumber ? ` · Court ${b.courtNumber}` : "";
+
+    const html =
+      `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0d1426">` +
+      `<div style="text-align:center;margin-bottom:16px"><img src="${siteUrl}/icons/icon-192.png" alt="Breathe Pickleball" width="64" height="64" style="border-radius:16px"/></div>` +
+      `<h2 style="text-align:center;margin:0 0 8px">Booking cancelled</h2>` +
+      `<p style="color:#475569;line-height:1.6">Hi ${b.userName}, your booking for <strong>${dateStr}</strong> at <strong>${format12h(b.slotTime)}</strong>${court} has been cancelled. The slot is now open again.</p>` +
+      (b.amount ? `<p style="color:#475569">Any eligible refund will be processed per our cancellation policy.</p>` : "") +
+      `<p style="color:#94a3b8;font-size:13px">Reference: ${shortRef}</p>` +
+      `<p style="text-align:center;margin-top:20px"><a href="${siteUrl}/book" style="background:#2F5BFF;color:#fff;text-decoration:none;padding:12px 24px;border-radius:9999px;font-weight:700">Book another slot</a></p>` +
+      `<hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0"/>` +
+      `<p style="color:#94a3b8;font-size:12px">Breathe Pickleball · Panchwati Complex, Kaikhali, Kolkata</p>` +
+      `</div>`;
+    const text =
+      `Hi ${b.userName},\n\n` +
+      `Your booking for ${dateStr} at ${format12h(b.slotTime)}${court} has been cancelled. The slot is now open again.\n\n` +
+      (b.amount ? `Any eligible refund will be processed per our cancellation policy.\n\n` : "") +
+      `Reference: ${shortRef}\n\nBook another slot: ${siteUrl}/book`;
+
+    const result = await sendMail({
+      to: b.userEmail,
+      subject: `Cancelled: ${dateStr} at ${format12h(b.slotTime)} | Ref ${shortRef}`,
+      html,
+      text,
+    });
+    if (ADMIN_EMAIL) {
+      await sendMail({
+        to: ADMIN_EMAIL,
+        subject: `Booking cancelled: ${b.userName} — ${b.slotDate} ${b.slotTime}`,
+        text: `${b.userName} (${b.userEmail}) cancelled their booking on ${dateStr} at ${format12h(b.slotTime)}${court}. Ref ${shortRef}.`,
+      }).catch((e) => console.error("[cancel admin email error]", e));
+    }
+    return { emailed: result.ok };
+  } catch (err) {
+    console.error("[notifyBookingCancelled error]", err);
+    return { emailed: false };
+  }
+}
+
 function computeEndTime(hhmm: string, dur: number): string {
   const [h, m] = hhmm.split(":").map(Number);
   const t = h * 60 + m + dur;

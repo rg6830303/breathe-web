@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Clock, IndianRupee, ListChecks, Mail, Phone, User } from "lucide-react";
 import { getAdminSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
+import { EditCustomer } from "./edit-customer";
 
 export const dynamic = "force-dynamic";
 
@@ -27,17 +28,33 @@ type Customer = {
 type Stats = { sessions: number; hours: number; spent: number };
 
 async function loadCustomer(id: string): Promise<{ customer: Customer; bookings: Booking[]; stats: Stats } | null> {
-  // 1. Fetch the user first. A genuine "not found" is the ONLY reason to 404.
-  let u;
+  // 1. Fetch the user from Turso, then Supabase. A genuine "not found in EITHER
+  //    backend" is the ONLY reason to 404 — fixes the profile-404 for users
+  //    that only exist in the Supabase mirror.
+  let u: Record<string, unknown> | undefined;
   try {
     const userRes = await turso.execute({
       sql: "SELECT id, full_name, email, phone, created_at FROM users WHERE id = ? LIMIT 1",
       args: [id],
     });
-    u = userRes.rows[0];
+    u = userRes.rows[0] as unknown as Record<string, unknown> | undefined;
   } catch (err) {
-    console.error("[admin customer user lookup error]", err);
-    return null;
+    console.error("[admin customer turso lookup error]", err);
+  }
+  if (!u) {
+    try {
+      const { supabase, hasSupabase } = require("@/lib/supabase");
+      if (hasSupabase) {
+        const { data } = await supabase
+          .from("users")
+          .select("id, full_name, email, phone, created_at")
+          .eq("id", id)
+          .maybeSingle();
+        if (data) u = data as Record<string, unknown>;
+      }
+    } catch (sbErr) {
+      console.error("[admin customer supabase lookup error]", sbErr);
+    }
   }
   if (!u) return null;
 
@@ -138,10 +155,11 @@ export default async function AdminCustomerPage({ params }: { params: Promise<{ 
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div>
+          <div className="flex-1">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">Customer</p>
             <h1 className="font-display text-2xl font-extrabold text-ink sm:text-3xl">{customer.full_name}</h1>
           </div>
+          <EditCustomer id={customer.id} initial={{ full_name: customer.full_name, email: customer.email, phone: customer.phone }} />
         </div>
 
         <section className="grid gap-4 md:grid-cols-2">
