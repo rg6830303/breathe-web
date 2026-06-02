@@ -78,20 +78,54 @@ export async function POST(req: Request) {
       }
     }
 
-    if (!userId) return genericResponse;
+    const debugKey = new URL(req.url).searchParams.get("debug");
+    const debugOn = !!debugKey && debugKey === (process.env.TEST_EMAIL_KEY || "");
+
+    if (!userId) {
+      // No account for this email. In debug mode tell the owner so they can see
+      // the lookup failed (the usual cause of "no reset email" for a real user
+      // is a DB mismatch between where signup wrote and where this app reads).
+      if (debugOn) {
+        return NextResponse.json({ ok: true, debug: { userFound: false, sent: false } });
+      }
+      return genericResponse;
+    }
 
     const rawToken = crypto.randomBytes(32).toString("hex");
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
     const now = Date.now();
     const expiresAt = now + RESET_TTL_MS;
 
+    // Persist the reset token to BOTH backends; do NOT block the email on a
+    // single backend's insert failure (e.g. FK issue when the user only lives
+    // in Supabase). As long as one store has the token, reset-password works.
+    let tokenStored = false;
     try {
       await turso.execute({
         sql: "INSERT INTO password_reset_tokens (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)",
         args: [tokenHash, userId, expiresAt, now],
       });
+      tokenStored = true;
     } catch (insertErr) {
-      console.error("[forgot-password insert error]", insertErr);
+      console.error("[forgot-password turso token insert error]", insertErr);
+    }
+    try {
+      const { supabase, hasSupabase } = require("@/lib/supabase");
+      if (hasSupabase) {
+        const { error } = await supabase.from("password_reset_tokens").insert({
+          token_hash: tokenHash,
+          user_id: userId,
+          expires_at: expiresAt,
+          created_at: now,
+        });
+        if (!error) tokenStored = true;
+      }
+    } catch (sbErr) {
+      console.error("[forgot-password supabase token insert error]", sbErr);
+    }
+    if (!tokenStored) {
+      console.error("[forgot-password] could not store reset token in any backend");
+      if (debugOn) return NextResponse.json({ ok: true, debug: { userFound: true, tokenStored: false, sent: false } });
       return genericResponse;
     }
 
@@ -129,13 +163,16 @@ export async function POST(req: Request) {
     // Optional debug echo (only when the shared TEST_EMAIL_KEY is supplied) so
     // the owner can see the real send result while diagnosing — never exposed
     // to normal callers.
-    const debugKey = new URL(req.url).searchParams.get("debug");
-    if (debugKey && debugKey === (process.env.TEST_EMAIL_KEY || "")) {
+    if (debugOn) {
       return NextResponse.json({
         ok: true,
-        debug: result.ok
-          ? { sent: true, messageId: result.messageId, transport: result.transport }
-          : { sent: false, error: result.error, code: result.code },
+        debug: {
+          userFound: true,
+          tokenStored,
+          ...(result.ok
+            ? { sent: true, messageId: result.messageId, transport: result.transport }
+            : { sent: false, error: result.error, code: result.code }),
+        },
       });
     }
 

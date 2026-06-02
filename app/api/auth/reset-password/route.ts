@@ -30,16 +30,32 @@ export async function POST(req: Request) {
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const now = Date.now();
 
-    let tokenRow;
+    let tokenRow: Record<string, unknown> | undefined;
     try {
       const result = await turso.execute({
         sql: "SELECT user_id, expires_at, used_at FROM password_reset_tokens WHERE token_hash = ? LIMIT 1",
         args: [tokenHash],
       });
-      tokenRow = result.rows[0];
+      tokenRow = result.rows[0] as unknown as Record<string, unknown> | undefined;
     } catch (dbErr) {
-      console.error("[reset-password lookup error]", dbErr);
-      return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+      console.error("[reset-password turso lookup error]", dbErr);
+    }
+    // Fall back to Supabase if the token isn't in Turso (it may have been
+    // stored there during forgot-password when Turso was unavailable).
+    if (!tokenRow) {
+      try {
+        const { supabase, hasSupabase } = require("@/lib/supabase");
+        if (hasSupabase) {
+          const { data } = await supabase
+            .from("password_reset_tokens")
+            .select("user_id, expires_at, used_at")
+            .eq("token_hash", tokenHash)
+            .maybeSingle();
+          if (data) tokenRow = data as Record<string, unknown>;
+        }
+      } catch (sbErr) {
+        console.error("[reset-password supabase lookup error]", sbErr);
+      }
     }
 
     if (!tokenRow) {

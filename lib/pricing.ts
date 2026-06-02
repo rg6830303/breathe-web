@@ -23,7 +23,8 @@ export function getSlotPrice(timeStr: string): number {
 }
 
 export function calculateTotals(base: number, equipmentTotal = 0) {
+  // The club does not currently charge GST, so taxes are 0 and total == subtotal.
   const subtotal = base + equipmentTotal;
-  const taxes = Math.round(subtotal * 0.18);
-  return { subtotal, taxes, total: subtotal + taxes };
+  const taxes = 0;
+  return { subtotal, taxes, total: subtotal };
 }

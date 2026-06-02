@@ -40,8 +40,9 @@ export async function notifyBookingConfirmed(b: {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in";
 
     const total = b.amount;
-    const subtotal = b.subtotal ?? Math.round(total * 0.847);
-    const gst = b.gst ?? total - subtotal;
+    // No GST charged — subtotal equals total.
+    const subtotal = b.subtotal ?? total;
+    const gst = 0;
 
     // Render PDF invoice (best-effort — never block the email send if it fails).
     let pdfBuffer: Buffer | null = null;
@@ -125,7 +126,7 @@ export async function notifyBookingConfirmed(b: {
         `Date: ${dateStr}\n` +
         `Time: ${slotRange}\n` +
         `${courtLine}` +
-        `Amount: Rs. ${total.toLocaleString("en-IN")} (subtotal Rs. ${subtotal.toLocaleString("en-IN")} + GST Rs. ${gst.toLocaleString("en-IN")})\n` +
+        `Amount: Rs. ${total.toLocaleString("en-IN")}\n` +
         `Ref: ${shortRef}\n\n` +
         `Admin: ${siteUrl}/admin/customers`;
 

@@ -377,10 +377,6 @@ export function BookingGrid() {
             <span>Subtotal</span>
             <span className="font-semibold text-ink">₹{totals.subtotal}</span>
           </div>
-          <div className="flex justify-between text-slatey">
-            <span>GST & fees (18%)</span>
-            <span className="font-semibold text-ink">₹{totals.taxes}</span>
-          </div>
           <div className="mt-2 flex items-center justify-between rounded-2xl brand-gradient px-4 py-3 text-lg font-extrabold text-white">
             <span>Total</span>
             <span>₹{totals.total}</span>
@@ -432,7 +428,7 @@ export function BookingGrid() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-slatey">
-                {selected.length} slot{selected.length > 1 ? "s" : ""} · incl. GST
+                {selected.length} slot{selected.length > 1 ? "s" : ""} selected
               </div>
               <div className="font-display text-xl font-extrabold text-ink dark:text-white">₹{totals.total}</div>
             </div>

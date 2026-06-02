@@ -144,10 +144,6 @@ export function BookingInvoice(props: InvoiceProps) {
             <Text style={styles.totalLabel}>Subtotal</Text>
             <Text style={styles.totalValue}>{fmtMoney(subtotal)}</Text>
           </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>GST @18%</Text>
-            <Text style={styles.totalValue}>{fmtMoney(gst)}</Text>
-          </View>
           <View style={styles.grandRow}>
             <Text style={styles.grandLabel}>Total paid</Text>
             <Text style={styles.grandValue}>{fmtMoney(total)}</Text>
