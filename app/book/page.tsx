@@ -5,6 +5,7 @@ import { Nav } from "@/components/nav";
 import { Container, Eyebrow } from "@/components/ui";
 import { fallbackPricingRules } from "@/lib/pricing";
 import { WeatherWidget } from "@/components/weather-widget";
+import { BulkPassCard } from "@/components/bulk-pass-card";
 
 export const metadata: Metadata = {
   title: "Book a Pickleball Court in Kaikhali",
@@ -55,6 +56,10 @@ export default function BookPage() {
           {/* Live Weather Widget for Kaikhali, Kolkata */}
           <div className="mb-6">
             <WeatherWidget />
+          </div>
+          {/* Bulk-hours package offer */}
+          <div className="mb-6">
+            <BulkPassCard />
           </div>
           <BookingGrid />
         </Container>

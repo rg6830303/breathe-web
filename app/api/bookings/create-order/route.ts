@@ -19,6 +19,30 @@ export async function POST(req: Request) {
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
     const addons: AddonInput[] = Array.isArray(body.addons) ? body.addons : [];
 
+    const keyIdEarly = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    const keySecretEarly = process.env.RAZORPAY_KEY_SECRET;
+
+    // Bulk-hours package purchase: fixed-price order, no slots required.
+    if (body.purchase === "bulk-12h") {
+      if (!keyIdEarly || !keySecretEarly) {
+        return NextResponse.json({ error: "Razorpay is not configured." }, { status: 500 });
+      }
+      const { BULK_PACKAGE } = require("@/lib/credits");
+      try {
+        const rzp = new Razorpay({ key_id: keyIdEarly, key_secret: keySecretEarly });
+        const order = await rzp.orders.create({
+          amount: Math.round(BULK_PACKAGE.price * 100),
+          currency: "INR",
+          receipt: uuid(),
+          notes: { user_id: session.id, purchase: "bulk-12h" },
+        });
+        return NextResponse.json({ orderId: order.id, amount: order.amount, currency: "INR", keyId: keyIdEarly });
+      } catch (rzpErr) {
+        console.error("[create-order bulk razorpay error]", rzpErr);
+        return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+      }
+    }
+
     if (slots.length === 0) {
       return NextResponse.json({ error: "Select at least one slot." }, { status: 400 });
     }

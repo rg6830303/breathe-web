@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Pencil, Save, Trash2, X } from "lucide-react";
+import { Clock, Loader2, Pencil, Save, Trash2, X } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 
 export function EditCustomer({
@@ -43,6 +43,22 @@ export function EditCustomer({
     }
   }
 
+  async function grantPass() {
+    if (!confirm("Grant a 12-Hour Bulk Pass to this customer (offline sale)?")) return;
+    try {
+      const res = await fetch("/api/admin/credits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: id, grantPackage: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not grant.");
+      toast.show(`12-hour pass added. Balance: ${Math.round((data.balanceMin / 60) * 10) / 10}h`, "success");
+    } catch (e) {
+      toast.show(e instanceof Error ? e.message : "Could not grant.", "error");
+    }
+  }
+
   async function remove() {
     if (!confirm(`Delete ${initial.full_name}? This removes the user and all their bookings. This cannot be undone.`)) return;
     setDeleting(true);
@@ -67,6 +83,13 @@ export function EditCustomer({
           className="inline-flex items-center gap-1.5 rounded-xl border border-brand/20 bg-white px-3 py-2 text-xs font-bold text-brand hover:bg-brand/5"
         >
           <Pencil className="h-3.5 w-3.5" /> Edit profile
+        </button>
+        <button
+          type="button"
+          onClick={grantPass}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-lime/40 bg-lime/10 px-3 py-2 text-xs font-bold text-lime-dark hover:bg-lime/20"
+        >
+          <Clock className="h-3.5 w-3.5" /> Grant 12h pass
         </button>
         <button
           type="button"
