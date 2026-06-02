@@ -67,22 +67,41 @@ export async function GET(request: NextRequest) {
 
     const date = params.get("date") ?? todayIST();
 
-    let bookingsResult;
+    let bookingsResult: { rows: Array<Record<string, unknown>> } = { rows: [] };
+    let bookingsFromTurso = false;
     try {
-      bookingsResult = await turso.execute({
+      const r = await turso.execute({
         sql: `SELECT slot_time, duration_min, court_number, notes
               FROM bookings
               WHERE slot_date = ? AND status = 'confirmed'`,
         args: [date],
       });
+      bookingsResult = { rows: r.rows as unknown as Array<Record<string, unknown>> };
+      bookingsFromTurso = true;
     } catch (dbErr) {
-      console.error("[slots route bookings error]", dbErr);
-      bookingsResult = { rows: [] };
+      console.error("[slots route bookings turso error — trying supabase]", dbErr);
+    }
+    if (!bookingsFromTurso) {
+      try {
+        const { supabase, hasSupabase } = require("@/lib/supabase");
+        if (hasSupabase) {
+          const { data } = await supabase
+            .from("bookings")
+            .select("slot_time, duration_min, court_number, notes")
+            .eq("slot_date", date)
+            .eq("status", "confirmed");
+          if (Array.isArray(data)) bookingsResult = { rows: data as Array<Record<string, unknown>> };
+        }
+      } catch (sbErr) {
+        console.error("[slots route bookings supabase fallback failed]", sbErr);
+      }
     }
 
-    // Read first-class admin blocks for the date. Soft-fail (treat as empty)
-    // if blocked_slots table hasn't been created yet so the page still loads.
+    // Read first-class admin blocks for the date from Turso; if Turso is
+    // unavailable, fall back to the Supabase mirror so admin blocks still show
+    // on the public site. Soft-fail to empty so the page always loads.
     let blockRows: Array<Record<string, unknown>> = [];
+    let blocksFromTurso = false;
     try {
       const r = await turso.execute({
         sql: `SELECT slot_time, court_number, reason
@@ -90,8 +109,23 @@ export async function GET(request: NextRequest) {
         args: [date],
       });
       blockRows = r.rows as unknown as Array<Record<string, unknown>>;
+      blocksFromTurso = true;
     } catch (blockErr) {
-      console.warn("[slots blocked_slots not ready — hit /api/db-init]", blockErr);
+      console.warn("[slots blocked_slots turso read failed — trying supabase]", blockErr);
+    }
+    if (!blocksFromTurso) {
+      try {
+        const { supabase, hasSupabase } = require("@/lib/supabase");
+        if (hasSupabase) {
+          const { data } = await supabase
+            .from("blocked_slots")
+            .select("slot_time, court_number, reason")
+            .eq("slot_date", date);
+          if (Array.isArray(data)) blockRows = data as Array<Record<string, unknown>>;
+        }
+      } catch (sbErr) {
+        console.warn("[slots blocked_slots supabase fallback failed]", sbErr);
+      }
     }
 
     type CellState = "blocked" | "booked";

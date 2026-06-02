@@ -51,6 +51,7 @@ export async function POST(req: Request) {
 
   const id = uuid();
   const now = Date.now();
+  let tursoOk = false;
   try {
     await turso.execute({
       sql: "INSERT INTO notices (id, title, body, category, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -64,8 +65,30 @@ export async function POST(req: Request) {
         now,
       ],
     });
+    tursoOk = true;
   } catch (err) {
-    console.error("[admin notice create error]", err);
+    console.error("[admin notice create turso error]", err);
+  }
+  // Mirror to Supabase so the notice survives + shows even if Turso is down.
+  let supabaseOk = false;
+  try {
+    const { supabase, hasSupabase } = require("@/lib/supabase");
+    if (hasSupabase) {
+      const { error } = await supabase.from("notices").insert({
+        id,
+        title: parsed.data.title,
+        body: parsed.data.body ?? null,
+        category: parsed.data.category,
+        active: parsed.data.active ? 1 : 0,
+        created_at: now,
+        updated_at: now,
+      });
+      supabaseOk = !error;
+    }
+  } catch (sbErr) {
+    console.error("[admin notice create supabase error]", sbErr);
+  }
+  if (!tursoOk && !supabaseOk) {
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   }
   return NextResponse.json({ ok: true, id });
