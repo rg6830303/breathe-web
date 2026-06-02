@@ -7,9 +7,15 @@ import { fallbackPricingRules } from "@/lib/pricing";
 import { WeatherWidget } from "@/components/weather-widget";
 
 export const metadata: Metadata = {
-  title: "Book a Court",
+  title: "Book a Pickleball Court in Kaikhali",
   description:
-    "Check live court availability and book your pickleball slot at Breathe Pickleball, Kaikhali in seconds.",
+    "Check live court availability and book your pickleball slot at Breathe Pickleball, Kaikhali in seconds. Three pro courts, equipment included, open daily 6 AM – 11 PM.",
+  alternates: { canonical: "/book" },
+  openGraph: {
+    title: "Book a Court | Breathe Pickleball, Kaikhali",
+    description: "Live availability across three pro courts. Book your pickleball slot in seconds.",
+    url: "/book",
+  },
 };
 
 export default function BookPage() {

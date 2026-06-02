@@ -5,6 +5,19 @@ import { CTABand } from "@/components/ui";
 import { GalleryGrid, type InstaPost } from "@/components/gallery-grid";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Gallery",
+  description:
+    "See Breathe Pickleball in action — floodlit courts, rallies, and tournaments at our Kaikhali venue in North Kolkata. A glimpse of the energy on our three pro courts.",
+  alternates: { canonical: "/gallery" },
+  openGraph: {
+    title: "Gallery | Breathe Pickleball, Kaikhali",
+    description: "Floodlit courts, rallies, and tournaments at Breathe Pickleball, North Kolkata.",
+    url: "/gallery",
+  },
+};
 
 export const revalidate = 60; // short cache so new uploads show up fast
 

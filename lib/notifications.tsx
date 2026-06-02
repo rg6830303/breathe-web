@@ -37,7 +37,7 @@ export async function notifyBookingConfirmed(b: {
     const endTime = computeEndTime(b.slotTime, b.durationMin);
     const slotRange = `${format12h(b.slotTime)} – ${format12h(endTime)}`;
     const shortRef = b.id.slice(0, 8).toUpperCase();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://breathe-web-six.vercel.app";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in";
 
     const total = b.amount;
     const subtotal = b.subtotal ?? Math.round(total * 0.847);

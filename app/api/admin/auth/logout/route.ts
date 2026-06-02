@@ -14,6 +14,6 @@ export async function GET() {
   const cookieStore = await cookies();
   cookieStore.set(ADMIN_COOKIE, "", { maxAge: 0, path: "/" });
   return NextResponse.redirect(
-    new URL("/admin/login", process.env.NEXT_PUBLIC_SITE_URL ?? "https://breathe-web-six.vercel.app")
+    new URL("/admin/login", process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.breathepickleball.in")
   );
 }

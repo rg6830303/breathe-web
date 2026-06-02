@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const to = String(body?.to ?? process.env.ADMIN_EMAIL ?? admin.email);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://breathe-web-six.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in";
   const when = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
 
   // Branded, transactional-looking content (logo + real copy) so the test
