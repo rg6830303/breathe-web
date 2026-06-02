@@ -108,6 +108,33 @@ export const SCHEMA_STATEMENTS: string[] = [
     created_at INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS idx_credit_ledger_user ON credit_ledger (user_id, created_at DESC)`,
+  // Daily business expenses (food, maintenance, staff, utilities, etc.) — the
+  // owner's day-to-day cost ledger that replaces the Excel sheet.
+  `CREATE TABLE IF NOT EXISTS expenses (
+    id TEXT PRIMARY KEY,
+    expense_date TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'other',
+    description TEXT,
+    amount INTEGER NOT NULL DEFAULT 0,
+    payment_method TEXT,
+    created_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses (expense_date DESC)`,
+  // Tournaments / events the club hosts (shown on the public tournaments page).
+  `CREATE TABLE IF NOT EXISTS tournaments (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    event_date TEXT,
+    format TEXT,
+    prize TEXT,
+    fee INTEGER DEFAULT 0,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'upcoming' CHECK (status IN ('upcoming','open','completed','cancelled')),
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_tournaments_active ON tournaments (active, event_date DESC)`,
 ];
 
 export const SCHEMA_ALTERS: string[] = [

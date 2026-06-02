@@ -25,9 +25,13 @@ import {
   UserPlus,
   Users,
   X,
+  Wallet,
+  Trophy,
+  Trash2,
+  Plus,
 } from "lucide-react";
 
-type Tab = "overview" | "bookings" | "courts" | "users" | "email";
+type Tab = "overview" | "bookings" | "courts" | "users" | "expenses" | "tournaments" | "email";
 type Stats = {
   total_users: number;
   total_bookings: number;
@@ -83,6 +87,8 @@ const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: s
   { key: "bookings", label: "All bookings", icon: Calendar },
   { key: "courts", label: "Court management", icon: Grid3x3 },
   { key: "users", label: "Users", icon: Users },
+  { key: "expenses", label: "Expenses", icon: Wallet },
+  { key: "tournaments", label: "Tournaments", icon: Trophy },
   { key: "email", label: "Email", icon: Mail },
 ];
 
@@ -178,6 +184,8 @@ export function AdminConsole() {
           {tab === "bookings" && <BookingsTab />}
           {tab === "courts" && <CourtTab />}
           {tab === "users" && <UsersTab />}
+          {tab === "expenses" && <ExpensesTab />}
+          {tab === "tournaments" && <TournamentsTab />}
           {tab === "email" && <EmailPanel />}
         </motion.div>
       </AnimatePresence>
@@ -680,6 +688,277 @@ function UserBookingsList({ rows }: { rows: Booking[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+// ---------------- Expenses ----------------
+
+type Expense = {
+  id: string;
+  expense_date: string;
+  category: string;
+  description: string;
+  amount: number;
+  payment_method: string;
+};
+
+const EXPENSE_CATS = ["food", "maintenance", "staff", "utilities", "equipment", "marketing", "rent", "other"];
+
+function ExpensesTab() {
+  const toast = useToast();
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [total, setTotal] = useState(0);
+  const [byCat, setByCat] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const today = todayIST();
+  const [range, setRange] = useState({ from: `${today.slice(0, 7)}-01`, to: today });
+  const [form, setForm] = useState({ expense_date: today, category: "food", description: "", amount: "", payment_method: "Cash" });
+
+  function load() {
+    setLoading(true);
+    fetch(`/api/admin/expenses?from=${range.from}&to=${range.to}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setExpenses(d.expenses ?? []);
+        setTotal(d.total ?? 0);
+        setByCat(d.byCategory ?? {});
+      })
+      .finally(() => setLoading(false));
+  }
+  useEffect(load, [range.from, range.to]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.amount) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, amount: Math.round(Number(form.amount)) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not save.");
+      toast.show("Expense added", "success");
+      setForm({ ...form, description: "", amount: "" });
+      load();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : "Could not save.", "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(id: string) {
+    if (!confirm("Delete this expense?")) return;
+    const res = await fetch(`/api/admin/expenses?id=${id}`, { method: "DELETE" });
+    if (res.ok) { toast.show("Expense deleted", "success"); load(); }
+    else toast.show("Could not delete.", "error");
+  }
+
+  function exportCsv() {
+    const rows = [["Date", "Category", "Description", "Amount", "Method"], ...expenses.map((e) => [e.expense_date, e.category, e.description, String(e.amount), e.payment_method])];
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `breathe-expenses-${range.from}-to-${range.to}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="grid gap-4">
+      {/* Summary + add form */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+        <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
+          <h3 className="font-display text-base font-extrabold text-ink">Add daily expense</h3>
+          <form onSubmit={add} className="mt-3 grid gap-2.5">
+            <div className="grid grid-cols-2 gap-2">
+              <input type="date" value={form.expense_date} onChange={(e) => setForm({ ...form, expense_date: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm capitalize outline-none focus:border-brand">
+                {EXPENSE_CATS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <input placeholder="Description (e.g. Lunch for staff)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+            <div className="grid grid-cols-2 gap-2">
+              <input type="number" min="0" placeholder="Amount ₹" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+              <input placeholder="Paid via (Cash/UPI…)" value={form.payment_method} onChange={(e) => setForm({ ...form, payment_method: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+            </div>
+            <button type="submit" disabled={busy} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white shadow-glow hover:bg-brand-600 disabled:opacity-60">
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Add expense
+            </button>
+          </form>
+        </div>
+        <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-display text-base font-extrabold text-ink">This period</h3>
+            <div className="flex items-center gap-2">
+              <input type="date" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value })} className="rounded-lg border border-brand/15 px-2 py-1 text-xs outline-none focus:border-brand" />
+              <span className="text-xs text-slatey">to</span>
+              <input type="date" value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} className="rounded-lg border border-brand/15 px-2 py-1 text-xs outline-none focus:border-brand" />
+            </div>
+          </div>
+          <div className="mt-3 font-display text-3xl font-extrabold text-brand">{money(total)}</div>
+          <div className="text-xs text-slatey">Total spend across {expenses.length} entries</div>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => (
+              <div key={c} className="rounded-xl border border-brand/10 bg-brand/[0.03] p-2.5">
+                <div className="text-[10px] font-bold uppercase tracking-wide text-slatey">{c}</div>
+                <div className="font-display text-sm font-extrabold text-ink">{money(v)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* List */}
+      <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-display text-base font-extrabold text-ink">Expense log</h3>
+          <button type="button" onClick={exportCsv} disabled={expenses.length === 0} className="inline-flex items-center gap-1 rounded-xl border border-brand/15 px-2.5 py-1.5 text-xs font-bold text-ink/70 hover:bg-brand/5 disabled:opacity-50">
+            <Download className="h-3.5 w-3.5" /> Export CSV
+          </button>
+        </div>
+        {loading ? <LoadingCard /> : expenses.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-brand/20 bg-brand/[0.03] p-6 text-center text-sm text-slatey">No expenses in this period.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] border-collapse text-sm">
+              <thead className="bg-brand/5 text-left text-xs uppercase tracking-wide text-slatey">
+                <tr><th className="p-3">Date</th><th className="p-3">Category</th><th className="p-3">Description</th><th className="p-3">Method</th><th className="p-3">Amount</th><th className="p-3"></th></tr>
+              </thead>
+              <tbody>
+                {expenses.map((e) => (
+                  <tr key={e.id} className="border-t border-brand/10">
+                    <td className="p-3 text-ink">{e.expense_date}</td>
+                    <td className="p-3"><span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold uppercase text-brand">{e.category}</span></td>
+                    <td className="p-3 text-slatey">{e.description || "—"}</td>
+                    <td className="p-3 text-slatey">{e.payment_method || "—"}</td>
+                    <td className="p-3 font-semibold text-ink">{money(e.amount)}</td>
+                    <td className="p-3 text-right">
+                      <button onClick={() => remove(e.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------- Tournaments ----------------
+
+type Tournament = {
+  id: string;
+  name: string;
+  event_date: string;
+  format: string;
+  prize: string;
+  fee: number;
+  description: string;
+  status: string;
+  active: boolean;
+};
+
+function TournamentsTab() {
+  const toast = useToast();
+  const [items, setItems] = useState<Tournament[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({ name: "", event_date: "", format: "Open Doubles", prize: "", fee: "", description: "", status: "upcoming" });
+
+  function load() {
+    setLoading(true);
+    fetch("/api/admin/tournaments").then((r) => r.json()).then((d) => setItems(d.tournaments ?? [])).finally(() => setLoading(false));
+  }
+  useEffect(load, []);
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/tournaments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, fee: Math.round(Number(form.fee) || 0), active: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not save.");
+      toast.show("Tournament added", "success");
+      setForm({ name: "", event_date: "", format: "Open Doubles", prize: "", fee: "", description: "", status: "upcoming" });
+      load();
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : "Could not save.", "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(id: string) {
+    if (!confirm("Delete this tournament?")) return;
+    const res = await fetch(`/api/admin/tournaments?id=${id}`, { method: "DELETE" });
+    if (res.ok) { toast.show("Tournament deleted", "success"); load(); }
+    else toast.show("Could not delete.", "error");
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+      <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft h-fit">
+        <h3 className="font-display text-base font-extrabold text-ink">Host a tournament</h3>
+        <form onSubmit={add} className="mt-3 grid gap-2.5">
+          <input placeholder="Tournament name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+          <div className="grid grid-cols-2 gap-2">
+            <input type="date" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm capitalize outline-none focus:border-brand">
+              {["upcoming", "open", "completed", "cancelled"].map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <input placeholder="Format (e.g. Open Doubles)" value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+          <div className="grid grid-cols-2 gap-2">
+            <input placeholder="Prize (e.g. ₹10,000)" value={form.prize} onChange={(e) => setForm({ ...form, prize: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+            <input type="number" min="0" placeholder="Entry fee ₹" value={form.fee} onChange={(e) => setForm({ ...form, fee: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+          </div>
+          <textarea placeholder="Details" rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+          <button type="submit" disabled={busy} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white shadow-glow hover:bg-brand-600 disabled:opacity-60">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Add tournament
+          </button>
+        </form>
+      </div>
+      <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
+        <h3 className="mb-3 font-display text-base font-extrabold text-ink">Scheduled tournaments</h3>
+        {loading ? <LoadingCard /> : items.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-brand/20 bg-brand/[0.03] p-6 text-center text-sm text-slatey">No tournaments yet.</p>
+        ) : (
+          <ul className="grid gap-2.5">
+            {items.map((t) => (
+              <li key={t.id} className="flex items-start justify-between gap-3 rounded-2xl border border-brand/10 bg-brand/[0.02] p-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-ink">{t.name}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${t.status === "open" ? "bg-lime/20 text-lime-dark" : t.status === "cancelled" ? "bg-red-100 text-red-700" : "bg-brand/10 text-brand"}`}>{t.status}</span>
+                  </div>
+                  <div className="mt-0.5 text-xs text-slatey">
+                    {t.event_date || "TBD"} · {t.format || "—"}{t.prize ? ` · 🏆 ${t.prize}` : ""}{t.fee ? ` · ₹${t.fee} entry` : ""}
+                  </div>
+                  {t.description && <p className="mt-1 text-xs text-slatey">{t.description}</p>}
+                </div>
+                <button onClick={() => remove(t.id)} className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-red-200 px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50">
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
   );
 }
 

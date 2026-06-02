@@ -7,12 +7,14 @@ import {
   BarChart, Bar, LineChart, Line, CartesianGrid,
 } from "recharts";
 import {
-  TrendingUp, TrendingDown, Users, Calendar, IndianRupee,
+  TrendingUp, TrendingDown, Users, Calendar, IndianRupee, Wallet,
   Percent, ArrowUpRight, FileSpreadsheet, Loader2, RefreshCw,
 } from "lucide-react";
 
 type AnalyticsData = {
   revenue: number;
+  expenses?: number;
+  netProfit?: number;
   bookings: number;
   customers: number;
   avgValue: number;
@@ -108,6 +110,8 @@ export function AnalyticsDashboard() {
       { label: "Revenue", value: formatMoney(current.revenue), change: change(current.revenue, pm.revenue), isPositive: current.revenue >= pm.revenue, sparklineData: current.series.length ? spark(current.series, "revenue") : ph, icon: IndianRupee },
       { label: "Bookings", value: current.bookings.toString(), change: change(current.bookings, pm.bookings), isPositive: current.bookings >= pm.bookings, sparklineData: current.series.length ? spark(current.series, "bookings") : ph, icon: Calendar },
       { label: "New customers", value: current.customers.toString(), change: change(current.customers, pm.customers), isPositive: current.customers >= pm.customers, sparklineData: ph, icon: Users },
+      { label: "Expenses", value: formatMoney(current.expenses ?? 0), change: null, isPositive: false, sparklineData: ph, icon: Wallet },
+      { label: "Net profit", value: formatMoney(current.netProfit ?? current.revenue), change: null, isPositive: (current.netProfit ?? 0) >= 0, sparklineData: ph, icon: TrendingUp },
       { label: "Avg booking value", value: formatMoney(current.avgValue), change: change(current.avgValue, pm.avgValue), isPositive: current.avgValue >= pm.avgValue, sparklineData: ph, icon: ArrowUpRight },
       { label: "Occupancy rate", value: `${current.occupancy}%`, change: change(current.occupancy, pm.occupancy), isPositive: current.occupancy >= pm.occupancy, sparklineData: ph, icon: Percent },
     ];
@@ -170,7 +174,7 @@ export function AnalyticsDashboard() {
         </div>
       ) : (
         <div className="grid gap-5">
-          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
             {kpiCards.map((kpi, idx) => {
               const Icon = kpi.icon;
               return (

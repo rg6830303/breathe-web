@@ -119,7 +119,20 @@ async function aggregate(from: string, to: string) {
   const bookings = Number(k.bookings);
   const customers = Number(newCustResult.rows[0]?.customers ?? 0);
   const avgValue = bookings > 0 ? Math.round(revenue / bookings) : 0;
-  
+
+  // Real business expenses in the period → net profit = revenue − expenses.
+  let expenses = 0;
+  try {
+    const ex = await turso.execute({
+      sql: "SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE expense_date >= ? AND expense_date <= ?",
+      args: [from, to],
+    });
+    expenses = Number(ex.rows[0]?.total ?? 0);
+  } catch (e) {
+    console.error("[analytics expenses error]", e);
+  }
+  const netProfit = revenue - expenses;
+
   const days = daysBetween(from, to);
   const totalCourts = 3;
   const slotsPerDay = 17; // 06:00 to 23:00 hourly slots
@@ -127,6 +140,8 @@ async function aggregate(from: string, to: string) {
 
   return {
     revenue,
+    expenses,
+    netProfit,
     bookings,
     customers,
     avgValue,
