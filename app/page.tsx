@@ -4,6 +4,7 @@ import { CTABand } from "@/components/ui";
 import type { Notice } from "@/lib/types";
 import { HomeMotion } from "@/components/home-motion";
 import { turso } from "@/lib/turso";
+import { ensureSchema } from "@/lib/db/ensure";
 
 // ISR: serve a fast, cached static homepage (revalidated hourly) so Googlebot
 // always gets quick, reliable HTML — better for indexing than force-dynamic,
@@ -12,6 +13,9 @@ export const revalidate = 3600;
 
 async function getLiveNotices(): Promise<Notice[]> {
   try {
+    // Self-heal the schema so a fresh/legacy DB has the notices table before we
+    // query it (otherwise the homepage logs "no such table: notices").
+    await ensureSchema();
     const result = await turso.execute({
       sql: `SELECT id, title, body, category, active, created_at, updated_at
             FROM notices
