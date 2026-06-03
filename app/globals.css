@@ -9,7 +9,7 @@
      font fails to load. --font-sans aliases --font-body for back-compat with
      existing utility classes that reference it. */
   --font-display: var(--font-display), "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-body), "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-body), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-serif), "Instrument Serif", ui-serif, Georgia, serif;
   --font-sans: var(--font-body);
 }
@@ -45,9 +45,36 @@ body {
   min-height: 100svh;
   min-height: 100dvh;
   font-family: var(--font-body);
+  /* Slightly tighter tracking + contextual alternates give the UI a refined,
+     intentional feel instead of the default loose metrics. */
+  letter-spacing: -0.011em;
+  font-feature-settings: "cv11", "ss01", "calt", "liga";
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
+
+/* ---- Typographic rhythm ----
+   Headings: tighter tracking that scales with size + balanced wrapping so
+   multi-line titles break evenly (no lonely last word) on every breakpoint.
+   Paragraphs: "pretty" wrapping avoids orphans on desktop AND mobile. This is
+   the single biggest fix for ragged text alignment across screen sizes. */
+h1, h2, h3, h4, h5, h6,
+.font-display {
+  font-feature-settings: "ss01", "calt", "liga";
+  text-wrap: balance;
+}
+h1 { letter-spacing: -0.03em; }
+h2 { letter-spacing: -0.025em; }
+h3 { letter-spacing: -0.02em; }
+p, li {
+  text-wrap: pretty;
+}
+
+/* Opt-in helpers for finer control where a class is cleaner than a tag rule. */
+.text-balance { text-wrap: balance; }
+.text-pretty { text-wrap: pretty; }
 
 ::selection {
   background: rgba(47, 91, 255, 0.18);
@@ -357,8 +384,60 @@ body {
   animation: shimmer-sweep 6s linear infinite;
 }
 
+/* Continuous 3D paddle flip — premium hero / loading accent. Pair with a
+   wrapper that has perspective (e.g. .scene) for true depth. */
+@keyframes paddle-flip {
+  0% { transform: perspective(700px) rotateY(0deg) rotateX(6deg); }
+  50% { transform: perspective(700px) rotateY(180deg) rotateX(-6deg); }
+  100% { transform: perspective(700px) rotateY(360deg) rotateX(6deg); }
+}
+.animate-paddle-flip {
+  transform-style: preserve-3d;
+  animation: paddle-flip 9s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/* Pulsing energy ring — draws the eye to CTAs / live status dots. */
+@keyframes glow-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(47, 91, 255, 0.45); }
+  70% { box-shadow: 0 0 0 16px rgba(47, 91, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(47, 91, 255, 0); }
+}
+.animate-glow-pulse { animation: glow-pulse 2.4s ease-out infinite; }
+
+/* Slowly panning brand gradient — for hero words + section accents. */
+@keyframes gradient-pan {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.text-gradient-brand {
+  background-image: linear-gradient(100deg, #2348e0, #2f5bff 35%, #0ea5e9 65%, #2f5bff);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-pan 8s ease-in-out infinite;
+}
+
+/* Subtle 3D lift on interactive tiles via pointer — lighter than .card-3d,
+   safe for dense dashboard grids. Add the class; hover does the rest. */
+.lift-3d {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
+  will-change: transform;
+}
+.lift-3d:hover {
+  transform: translateY(-4px) scale(1.012);
+  box-shadow: 0 22px 48px -24px rgba(13, 20, 38, 0.35);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-serve-arc, .animate-ball-bounce, .animate-paddle-swing, .animate-shimmer {
+  .animate-serve-arc, .animate-ball-bounce, .animate-paddle-swing, .animate-shimmer,
+  .animate-paddle-flip, .animate-glow-pulse, .text-gradient-brand {
     animation: none !important;
   }
+  .text-gradient-brand {
+    /* Keep it readable without motion. */
+    color: #2f5bff;
+    -webkit-text-fill-color: #2f5bff;
+  }
+  .lift-3d:hover { transform: translateY(-2px); }
 }

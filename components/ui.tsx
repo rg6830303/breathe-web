@@ -29,25 +29,30 @@ export function SectionHeading({
   description,
   light = false,
   center = false,
+  gradient = false,
 }: {
   eyebrow?: string;
   title: React.ReactNode;
   description?: React.ReactNode;
   light?: boolean;
   center?: boolean;
+  /** Render the title with the animated brand-gradient type treatment. */
+  gradient?: boolean;
 }) {
   return (
     <div className={`${center ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}`}>
       {eyebrow && <Eyebrow light={light}>{eyebrow}</Eyebrow>}
       <h2
-        className={`mt-3 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl ${
-          light ? "text-white" : "text-ink"
+        className={`mt-3 text-balance font-display text-3xl font-extrabold leading-[1.1] tracking-tight sm:text-[2.6rem] ${
+          gradient ? "text-gradient-brand" : light ? "text-white" : "text-ink"
         }`}
       >
         {title}
       </h2>
       {description && (
-        <p className={`mt-4 text-base leading-7 ${light ? "text-white/80" : "text-slatey"}`}>{description}</p>
+        <p className={`mt-4 text-pretty text-base leading-7 ${light ? "text-white/80" : "text-slatey"}`}>
+          {description}
+        </p>
       )}
     </div>
   );

@@ -196,12 +196,12 @@ export function Nav() {
               className="fixed inset-y-0 right-0 w-72 bg-white dark:bg-ink shadow-2xl z-50 flex flex-col justify-between p-6 pb-[max(env(safe-area-inset-bottom),1.5rem)] overflow-y-auto"
             >
               <div>
-                <div className="flex items-center justify-between border-b border-brand/10 pb-4 mb-4">
+                <div className="flex items-center justify-between border-b border-brand/10 pb-4 mb-4 dark:border-white/10">
                   <Logo />
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand/15 text-ink"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand/15 text-ink dark:border-white/15 dark:text-white"
                     aria-label="Close menu"
                   >
                     <X className="h-5 w-5" />
@@ -221,7 +221,9 @@ export function Nav() {
                         <Link
                           href={link.href}
                           className={`flex items-center justify-between rounded-2xl px-4 py-3 text-base font-semibold transition ${
-                            active ? "bg-brand/10 text-brand" : "text-ink hover:bg-brand/5"
+                            active
+                              ? "bg-brand/10 text-brand dark:bg-brand/25 dark:text-brand-200"
+                              : "text-ink hover:bg-brand/5 dark:text-white dark:hover:bg-white/10"
                           }`}
                         >
                           {link.label}
@@ -233,7 +235,7 @@ export function Nav() {
                 </div>
               </div>
 
-              <div className="mt-6 border-t border-brand/10 pt-4">
+              <div className="mt-6 border-t border-brand/10 pt-4 dark:border-white/10">
                 <Link
                   href="/book"
                   className="flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3.5 text-base font-bold text-white shadow-glow mb-4 animate-pulse-slow"
@@ -246,7 +248,7 @@ export function Nav() {
                     <>
                       <Link
                         href={account.role === "admin" ? "/admin" : "/dashboard"}
-                        className="flex items-center justify-between rounded-2xl bg-brand/5 px-4 py-3 text-sm font-semibold text-ink"
+                        className="flex items-center justify-between rounded-2xl bg-brand/5 px-4 py-3 text-sm font-semibold text-ink dark:bg-white/5 dark:text-white"
                       >
                         <span className="flex items-center gap-2">
                           {account.role === "admin" ? <Shield className="h-4 w-4 text-brand" /> : <LayoutDashboard className="h-4 w-4 text-brand" />}
@@ -257,17 +259,17 @@ export function Nav() {
                       <button
                         type="button"
                         onClick={handleLogout}
-                        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand"
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand dark:border-white/20 dark:text-brand-200"
                       >
                         <LogOut className="h-4 w-4" /> Log out ({account.name})
                       </button>
                     </>
                   ) : (
                     <div className="grid grid-cols-2 gap-2 mb-2">
-                      <Link href="/login" className="flex items-center justify-center rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand">
+                      <Link href="/login" className="flex items-center justify-center rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand dark:border-white/20 dark:text-brand-200">
                         Log in
                       </Link>
-                      <Link href="/signup" className="flex items-center justify-center rounded-2xl bg-ink px-4 py-3 text-sm font-bold text-white">
+                      <Link href="/signup" className="flex items-center justify-center rounded-2xl bg-ink px-4 py-3 text-sm font-bold text-white dark:bg-white dark:text-ink">
                         Sign up
                       </Link>
                     </div>
@@ -276,7 +278,7 @@ export function Nav() {
 
                 <a
                   href={site.phoneHref}
-                  className="flex items-center justify-center gap-2 rounded-2xl border border-brand/20 px-5 py-3 text-sm font-bold text-brand"
+                  className="flex items-center justify-center gap-2 rounded-2xl border border-brand/20 px-5 py-3 text-sm font-bold text-brand dark:border-white/20 dark:text-brand-200"
                 >
                   <Phone className="h-4 w-4" /> {site.phoneDisplay}
                 </a>
