@@ -234,6 +234,7 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
         <Container className="!px-0">
           <SectionHeading
             center
+            gradient
             eyebrow="Why Breathe"
             title="Everything a great game needs, in one place"
             description="From the surface under your feet to the snacks after match point, every detail is built for players."

@@ -14,20 +14,22 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const state = mailerConfigState();
   let verify: { ok: boolean; error?: string; code?: string } = { ok: false, error: "skipped" };
-  if (state.gmailUserPresent && state.gmailAppPasswordPresent) {
+  if (state.resendConfigured || (state.gmailUserPresent && state.gmailAppPasswordPresent)) {
     verify = await verifyMailer();
   }
-  return NextResponse.json({
-    config: state,
-    smtpVerify: verify,
-    expectedAppPasswordLength: 16,
-    hint:
-      !state.gmailUserPresent || !state.gmailAppPasswordPresent
-        ? "Set GMAIL_USER and GMAIL_APP_PASSWORD in Vercel (Production env), then redeploy."
-        : state.gmailAppPasswordCleanedLength !== 16
-          ? "App Password should be 16 alphanumeric chars after whitespace is stripped. Check Vercel value."
-          : verify.ok
-            ? "Mailer healthy."
-            : `SMTP verify failed (${verify.code ?? "no-code"}): ${verify.error}`,
-  });
+
+  let hint: string;
+  if (state.resendConfigured) {
+    hint = state.resendFrom?.includes("resend.dev")
+      ? "Resend is active but using the shared onboarding@resend.dev sender — this only delivers to your own Resend account email. Set RESEND_FROM to an address on a domain you've verified in Resend to deliver to everyone."
+      : "Resend is active with your verified domain sender. Emails will reach inboxes.";
+  } else if (!state.gmailUserPresent || !state.gmailAppPasswordPresent) {
+    hint = "No email transport configured. Set RESEND_API_KEY (recommended) or GMAIL_USER + GMAIL_APP_PASSWORD in Vercel, then redeploy.";
+  } else if (state.gmailAppPasswordCleanedLength !== 16) {
+    hint = "Gmail App Password should be 16 letters after whitespace is stripped. Check the Vercel value.";
+  } else {
+    hint = verify.ok ? "Gmail SMTP healthy." : `SMTP verify failed (${verify.code ?? "no-code"}): ${verify.error}`;
+  }
+
+  return NextResponse.json({ config: state, smtpVerify: verify, expectedAppPasswordLength: 16, hint });
 }

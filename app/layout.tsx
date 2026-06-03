@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Inter, Instrument_Serif } from "next/font/google";
+import { Bricolage_Grotesque, Plus_Jakarta_Sans, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/app/providers";
 import { themeNoFlashScript } from "@/components/theme-provider";
@@ -14,9 +14,12 @@ const display = Bricolage_Grotesque({
   display: "swap",
 });
 
-const body = Inter({
+// Plus Jakarta Sans — a geometric humanist sans with more personality and a
+// more premium, contemporary feel than Inter, while staying highly legible at
+// small sizes on mobile. Drives all body + UI text.
+const body = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700", "800"],
   variable: "--font-body",
   display: "swap",
 });

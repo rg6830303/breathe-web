@@ -107,10 +107,60 @@ export function fromAddress(displayName = "Breathe Pickleball"): string {
 }
 
 export type SendResult =
-  | { ok: true; messageId: string; accepted: string[]; rejected: string[]; transport: TransportKind }
+  | { ok: true; messageId: string; accepted: string[]; rejected: string[]; transport: TransportKind | "resend" }
   | { ok: false; error: string; code?: string };
 
 const RETRYABLE = new Set(["ETIMEDOUT", "ECONNECTION", "ESOCKET", "ECONNRESET", "EDNS", "EAI_AGAIN"]);
+
+/**
+ * Resend transport (preferred when RESEND_API_KEY is set). Sends over HTTPS —
+ * far more reliable than SMTP on serverless egress — and, once you verify your
+ * domain in Resend, signs mail with DKIM/SPF for breathepickleball.in so it
+ * lands in the inbox instead of spam. Falls back to Gmail SMTP if it fails or
+ * isn't configured. Uses fetch (no SDK dependency).
+ */
+function resendFrom(): string {
+  // Must be an address on a domain you've verified in Resend. Until you verify
+  // your own domain you can use Resend's shared "onboarding@resend.dev" sender
+  // (delivers to your own account email only — good for the first smoke test).
+  return (process.env.RESEND_FROM || "Breathe Pickleball <onboarding@resend.dev>").trim();
+}
+
+async function sendViaResend(opts: MailOptions, apiKey: string): Promise<SendResult> {
+  const to = Array.isArray(opts.to) ? opts.to : [opts.to];
+  const replyTo =
+    opts.replyTo || process.env.REPLY_TO_EMAIL || process.env.GMAIL_FROM?.trim() || undefined;
+  const attachments = opts.attachments?.map((a) => ({
+    filename: a.filename,
+    content: Buffer.isBuffer(a.content)
+      ? a.content.toString("base64")
+      : Buffer.from(String(a.content)).toString("base64"),
+  }));
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: resendFrom(),
+        to,
+        subject: opts.subject,
+        html: opts.html,
+        text: opts.text,
+        ...(replyTo ? { reply_to: replyTo } : {}),
+        ...(attachments?.length ? { attachments } : {}),
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const data = (await res.json().catch(() => ({}))) as { id?: string; message?: string; name?: string };
+    if (!res.ok || !data.id) {
+      return { ok: false, error: data.message || data.name || `Resend HTTP ${res.status}`, code: "RESEND" };
+    }
+    return { ok: true, messageId: data.id, accepted: to, rejected: [], transport: "resend" };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err), code: "RESEND" };
+  }
+}
 
 async function trySend(transport: Transporter, opts: MailOptions) {
   const { user } = resolveCreds();
@@ -149,6 +199,16 @@ async function trySend(transport: Transporter, opts: MailOptions) {
  * on serverless egress) falls back once to 587 (STARTTLS).
  */
 export async function sendMail(opts: MailOptions): Promise<SendResult> {
+  // Preferred path: Resend over HTTPS (reliable on serverless + inbox-grade
+  // deliverability once the domain is verified). If it fails, fall through to
+  // Gmail SMTP so a transient Resend issue never drops a transactional email.
+  const resendKey = process.env.RESEND_API_KEY?.trim();
+  if (resendKey) {
+    const r = await sendViaResend(opts, resendKey);
+    if (r.ok) return r;
+    console.error("[mailer] Resend failed, falling back to Gmail SMTP:", r.error);
+  }
+
   try {
     const info = await trySend(getPrimary(), opts);
     return {
@@ -195,6 +255,9 @@ export async function sendMail(opts: MailOptions): Promise<SendResult> {
 export type VerifyResult = { ok: boolean; error?: string; code?: string; transport?: TransportKind };
 
 export async function verifyMailer(): Promise<VerifyResult> {
+  // When Resend is the active transport, a healthy API key is all that's needed
+  // (Resend has no SMTP-style verify; delivery is confirmed by the smoke test).
+  if (process.env.RESEND_API_KEY?.trim()) return { ok: true };
   const issue = credIssue();
   if (issue) return { ok: false, error: issue };
   try {
@@ -244,6 +307,10 @@ export function mailerConfigState() {
     gmailAppPasswordLooksValid: pass.length === 16,
     gmailAppPasswordHadSpaces: /\s/.test(rawPass.trim()),
     credentialIssue: credIssue(),
+    // Resend is the preferred transport when configured.
+    resendConfigured: !!process.env.RESEND_API_KEY?.trim(),
+    resendFrom: process.env.RESEND_API_KEY?.trim() ? resendFrom() : null,
+    activeTransport: process.env.RESEND_API_KEY?.trim() ? "resend (Gmail SMTP fallback)" : "gmail-smtp",
     resolvedUserVar:
       (process.env.GMAIL_USER && "GMAIL_USER") ||
       (process.env.SMTP_USER && "SMTP_USER") ||
