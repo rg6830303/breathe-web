@@ -39,7 +39,16 @@ export async function POST(req: Request) {
         return NextResponse.json({ orderId: order.id, amount: order.amount, currency: "INR", keyId: keyIdEarly });
       } catch (rzpErr) {
         console.error("[create-order bulk razorpay error]", rzpErr);
-        return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+        // Surface a clear cause. A 401 from Razorpay almost always means the
+        // RAZORPAY_KEY_SECRET / NEXT_PUBLIC_RAZORPAY_KEY_ID pair on the server
+        // is wrong, missing, or mismatched (test key id with live secret etc.).
+        const statusCode = (rzpErr as { statusCode?: number })?.statusCode;
+        const desc = (rzpErr as { error?: { description?: string } })?.error?.description;
+        const msg =
+          statusCode === 401
+            ? "Payment gateway rejected the keys. Check RAZORPAY_KEY_SECRET and NEXT_PUBLIC_RAZORPAY_KEY_ID in your environment variables."
+            : desc || "Could not start the payment. Please try again.";
+        return NextResponse.json({ error: msg }, { status: 502 });
       }
     }
 

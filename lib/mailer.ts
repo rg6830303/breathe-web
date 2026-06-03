@@ -12,7 +12,9 @@ function resolveCreds(): { user: string; pass: string } {
     process.env.SMTP_USER ||
     process.env.EMAIL_USER ||
     ""
-  ).trim();
+  )
+    .trim()
+    .replace(/^['"]|['"]$/g, ""); // strip stray surrounding quotes
   const passRaw =
     process.env.GMAIL_APP_PASSWORD ||
     process.env.GMAIL_APP_PASS ||
@@ -22,7 +24,31 @@ function resolveCreds(): { user: string; pass: string } {
     process.env.SMTP_PASS ||
     process.env.EMAIL_PASS ||
     "";
-  return { user, pass: passRaw.replace(/\s+/g, "") };
+  // App Passwords are 16 lowercase letters, shown grouped as "abcd efgh ijkl
+  // mnop". Strip ALL whitespace and any quotes a copy-paste may have added.
+  const pass = passRaw.replace(/^['"]|['"]$/g, "").replace(/\s+/g, "");
+  return { user, pass };
+}
+
+/**
+ * Human-readable reason the current Gmail credentials look wrong, or null if
+ * they look usable. A real Gmail App Password is exactly 16 letters — the most
+ * common cause of "no email sends" is pasting the normal account password (too
+ * long / contains digits & symbols) or a truncated code.
+ */
+function credIssue(): string | null {
+  const { user, pass } = resolveCreds();
+  if (!user) return "GMAIL_USER is not set.";
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(user)) return `GMAIL_USER ("${user}") is not a valid email address.`;
+  if (!pass) return "GMAIL_APP_PASSWORD is not set.";
+  if (pass.length !== 16) {
+    return (
+      `GMAIL_APP_PASSWORD looks wrong: after removing spaces it is ${pass.length} characters, ` +
+      `but a Google App Password is exactly 16 letters. Generate one at ` +
+      `https://myaccount.google.com/apppasswords (2-Step Verification must be ON) and paste only the 16 letters.`
+    );
+  }
+  return null;
 }
 
 type TransportKind = "465-ssl" | "587-starttls";
@@ -44,13 +70,8 @@ function buildTransport(kind: TransportKind): Transporter {
 
 let primary: Transporter | null = null;
 function getPrimary(): Transporter {
-  const { user, pass } = resolveCreds();
-  if (!user || !pass) {
-    throw new Error(
-      "Gmail credentials missing. Set GMAIL_USER and GMAIL_APP_PASSWORD in Vercel (Production). " +
-        "The App Password is a 16-char code from https://myaccount.google.com/apppasswords (requires 2FA).",
-    );
-  }
+  const issue = credIssue();
+  if (issue) throw new Error(issue);
   primary ??= buildTransport("465-ssl");
   return primary;
 }
@@ -141,6 +162,14 @@ export async function sendMail(opts: MailOptions): Promise<SendResult> {
     const code = (err as { code?: string })?.code;
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[mailer 465 send error]", { code, msg });
+    // Gmail rejected the login. This is a credential problem, NOT a network one,
+    // so retrying the other port won't help — return a clear, fixable reason.
+    if (code === "EAUTH") {
+      const hint =
+        credIssue() ||
+        "Gmail rejected the App Password. Confirm 2-Step Verification is ON and the GMAIL_APP_PASSWORD is a fresh 16-letter App Password (not your normal Gmail password).";
+      return { ok: false, error: hint, code };
+    }
     if (code && RETRYABLE.has(code)) {
       try {
         const info = await trySend(buildTransport("587-starttls"), opts);
@@ -166,8 +195,8 @@ export async function sendMail(opts: MailOptions): Promise<SendResult> {
 export type VerifyResult = { ok: boolean; error?: string; code?: string; transport?: TransportKind };
 
 export async function verifyMailer(): Promise<VerifyResult> {
-  const { user, pass } = resolveCreds();
-  if (!user || !pass) return { ok: false, error: "GMAIL_USER / GMAIL_APP_PASSWORD missing in env." };
+  const issue = credIssue();
+  if (issue) return { ok: false, error: issue };
   try {
     await buildTransport("465-ssl").verify();
     return { ok: true, transport: "465-ssl" };
@@ -183,17 +212,38 @@ export async function verifyMailer(): Promise<VerifyResult> {
   }
 }
 
+function maskEmail(addr: string): string | null {
+  if (!addr || !addr.includes("@")) return null;
+  const [local, domain] = addr.split("@");
+  const shown = local.length <= 2 ? local : `${local.slice(0, 2)}****${local.slice(-2)}`;
+  return `${shown}@${domain}`;
+}
+
 /** Public-safe diagnostic: presence + length only, never secret values. */
 export function mailerConfigState() {
   const { user, pass } = resolveCreds();
   const rawUser = process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER || "";
+  const rawPass =
+    process.env.GMAIL_APP_PASSWORD ||
+    process.env.GMAIL_APP_PASS ||
+    process.env.GMAIL_PASSWORD ||
+    process.env.GMAIL_PASS ||
+    process.env.SMTP_PASSWORD ||
+    process.env.SMTP_PASS ||
+    process.env.EMAIL_PASS ||
+    "";
   return {
     gmailUserPresent: !!user,
+    // Masked (e.g. "rg****03@gmail.com") so the public health endpoint confirms
+    // the right account without exposing the full address to harvesters.
+    gmailUserMasked: maskEmail(user),
     gmailUserTrimmedLength: user.length,
     gmailUserHasSpaces: rawUser ? rawUser !== rawUser.trim() : false,
     gmailAppPasswordPresent: !!pass,
     gmailAppPasswordCleanedLength: pass.length,
-    gmailAppPasswordHadSpaces: false,
+    gmailAppPasswordLooksValid: pass.length === 16,
+    gmailAppPasswordHadSpaces: /\s/.test(rawPass.trim()),
+    credentialIssue: credIssue(),
     resolvedUserVar:
       (process.env.GMAIL_USER && "GMAIL_USER") ||
       (process.env.SMTP_USER && "SMTP_USER") ||

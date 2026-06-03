@@ -36,7 +36,7 @@ export default function TournamentsPage() {
   return (
     <>
       <Nav />
-      <main className="overflow-x-hidden">
+      <main className="app-surface overflow-x-hidden">
         {/* Cinematic dark hero section */}
         <div className="relative">
           <PageHero

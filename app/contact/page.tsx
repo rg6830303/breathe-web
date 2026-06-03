@@ -70,7 +70,7 @@ export default function ContactPage() {
   return (
     <>
       <Nav />
-      <main className="overflow-x-hidden">
+      <main className="app-surface overflow-x-hidden">
         {/* Light Hero */}
         <PageHero
           dark={false}

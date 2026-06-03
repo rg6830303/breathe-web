@@ -94,10 +94,21 @@ body {
 .dark .app-surface .bg-brand-50\/30,
 .dark .app-surface .bg-brand-50\/40,
 .dark .app-surface .bg-brand-50\/20,
+.dark .app-surface .bg-brand-50\/10,
+.dark .app-surface .bg-brand-50,
+.dark .app-surface .bg-gray-50,
+.dark .app-surface .bg-gray-100,
 .dark .app-surface .bg-brand\/\[0\.03\],
 .dark .app-surface .bg-brand\/\[0\.04\],
 .dark .app-surface .bg-brand\/5 {
   background-color: rgba(255, 255, 255, 0.04) !important;
+}
+/* Secondary text shades used across marketing pages. */
+.dark .app-surface .text-gray-600,
+.dark .app-surface .text-gray-500,
+.dark .app-surface .text-ink\/70,
+.dark .app-surface .text-ink\/80 {
+  color: rgba(255, 255, 255, 0.65) !important;
 }
 .dark .app-surface .text-ink {
   color: rgba(255, 255, 255, 0.92) !important;

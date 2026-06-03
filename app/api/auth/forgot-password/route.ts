@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { ensureSchema } from "@/lib/db/ensure";
 import crypto from "node:crypto";
-import React from "react";
-import { render } from "@react-email/render";
 import { turso } from "@/lib/turso";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { forgotPasswordSchema, formatZodError } from "@/lib/validation";
 import { sendMail } from "@/lib/mailer";
-import PasswordReset from "@/emails/PasswordReset";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -132,13 +129,19 @@ export async function POST(req: Request) {
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in").replace(/\/$/, "");
     const resetUrl = `${siteUrl}/reset-password?token=${rawToken}`;
 
-    const html = await render(
-      React.createElement(PasswordReset, {
-        customerName: userName,
-        resetUrl,
-        expiresInMinutes: RESET_TTL_MIN,
-      }),
-    );
+    // Plain inline HTML (NOT @react-email/render, which can throw/hang on the
+    // serverless runtime — the reason these mails never sent while the simple
+    // test email did). Mirrors the working test-email approach.
+    const html =
+      `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0d1426">` +
+      `<div style="text-align:center;margin-bottom:16px"><img src="${siteUrl}/icons/icon-192.png" alt="Breathe Pickleball" width="56" height="56" style="border-radius:14px"/></div>` +
+      `<h2 style="text-align:center;margin:0 0 8px">Reset your password</h2>` +
+      `<p style="color:#475569;line-height:1.6">Hi ${userName}, we received a request to reset your Breathe Pickleball password. Click the button below to choose a new one. This link expires in ${RESET_TTL_MIN} minutes.</p>` +
+      `<p style="text-align:center;margin:24px 0"><a href="${resetUrl}" style="background:#2F5BFF;color:#fff;text-decoration:none;padding:13px 28px;border-radius:9999px;font-weight:700;display:inline-block">Reset password</a></p>` +
+      `<p style="color:#94a3b8;font-size:12px;word-break:break-all">Or paste this link: ${resetUrl}</p>` +
+      `<hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0"/>` +
+      `<p style="color:#94a3b8;font-size:12px;line-height:1.6">If you didn't request this, you can ignore this email — your password won't change.<br/>Breathe Pickleball · Panchwati Complex, Kaikhali, Kolkata</p>` +
+      `</div>`;
     const text =
       `Hi ${userName},\n\n` +
       `We received a request to reset your Breathe Pickleball password.\n\n` +

@@ -108,7 +108,7 @@ export default function CalendarPage() {
   return (
     <>
       <Nav />
-      <main className="min-h-screen bg-brand-50/20 pb-16">
+      <main className="app-surface min-h-screen bg-brand-50/20 pb-16">
         {/* Hero */}
         <section className="brand-gradient brand-mesh relative overflow-hidden text-white">
           <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
