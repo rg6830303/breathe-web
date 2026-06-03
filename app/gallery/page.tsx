@@ -75,7 +75,7 @@ export default async function GalleryPage() {
   return (
     <>
       <Nav />
-      <main className="overflow-x-hidden min-h-screen bg-brand-50/10">
+      <main className="app-surface overflow-x-hidden min-h-screen bg-brand-50/10">
         <PageHero
           dark
           label="Gallery"

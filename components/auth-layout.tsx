@@ -19,7 +19,7 @@ const PERKS = [
  */
 export function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid min-h-[calc(100vh-140px)] lg:grid-cols-2">
+    <div className="app-surface grid min-h-[calc(100vh-140px)] lg:grid-cols-2">
       {/* Brand panel */}
       <div className="relative hidden overflow-hidden bg-gradient-to-br from-gray-950 via-brand-900 to-brand-700 lg:block">
         <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-[0.13]" />

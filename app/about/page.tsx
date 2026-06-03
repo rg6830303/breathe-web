@@ -31,7 +31,7 @@ export default function AboutPage() {
   return (
     <>
       <Nav />
-      <main className="overflow-x-hidden">
+      <main className="app-surface overflow-x-hidden">
         {/* Page Hero */}
         <PageHero
           dark={true}

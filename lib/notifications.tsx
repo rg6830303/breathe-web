@@ -1,7 +1,5 @@
 import React from "react";
-import { render } from "@react-email/render";
 import { renderToBuffer } from "@react-pdf/renderer";
-import BookingConfirmation from "@/emails/BookingConfirmation";
 import { BookingInvoice } from "@/lib/pdf/BookingInvoice";
 import { sendMail } from "@/lib/mailer";
 
@@ -78,18 +76,30 @@ export async function notifyBookingConfirmed(b: {
       : undefined;
 
     // 1. Player confirmation email with PDF attached.
-    const playerHtml = await render(
-      <BookingConfirmation
-        customerName={b.userName}
-        bookingId={shortRef}
-        slotDate={dateStr}
-        slotTime={slotRange}
-        duration={`${b.durationMin} minutes`}
-        amount={total}
-        venueAddress={VENUE_ADDRESS}
-        bookingUrl={`${siteUrl}/dashboard?booking=${b.id}`}
-      />,
-    );
+    // Plain inline HTML (NOT @react-email/render, which can throw/hang on the
+    // serverless runtime — the reason confirmation mails never sent while the
+    // simple test email did). Mirrors the working test-email approach.
+    const courtRow = b.courtNumber
+      ? `<tr><td style="padding:6px 0;color:#64748b">Court</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">Court ${b.courtNumber}</td></tr>`
+      : "";
+    const playerHtml =
+      `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0d1426">` +
+      `<div style="text-align:center;margin-bottom:16px"><img src="${siteUrl}/icons/icon-192.png" alt="Breathe Pickleball" width="56" height="56" style="border-radius:14px"/></div>` +
+      `<h2 style="text-align:center;margin:0 0 4px">Booking confirmed 🎾</h2>` +
+      `<p style="text-align:center;color:#64748b;margin:0 0 20px">Reference ${shortRef}</p>` +
+      `<p style="color:#475569;line-height:1.6">Hi ${b.userName}, your court is booked. Here are your details:</p>` +
+      `<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">` +
+      `<tr><td style="padding:6px 0;color:#64748b">Date</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${dateStr}</td></tr>` +
+      `<tr><td style="padding:6px 0;color:#64748b">Time</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${slotRange}</td></tr>` +
+      courtRow +
+      `<tr><td style="padding:6px 0;color:#64748b">Amount paid</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0d1426">₹${total.toLocaleString("en-IN")}</td></tr>` +
+      `</table>` +
+      `<p style="text-align:center;margin:24px 0"><a href="${siteUrl}/dashboard?booking=${b.id}" style="background:#2F5BFF;color:#fff;text-decoration:none;padding:13px 28px;border-radius:9999px;font-weight:700;display:inline-block">View my booking</a></p>` +
+      `<p style="color:#475569;font-size:13px;line-height:1.6"><strong>Venue:</strong> ${VENUE_ADDRESS}</p>` +
+      `<p style="color:#94a3b8;font-size:12px;line-height:1.6">Free cancellation up to 4 hours before your slot. Your invoice is attached as a PDF.</p>` +
+      `<hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0"/>` +
+      `<p style="color:#94a3b8;font-size:12px">Breathe Pickleball · Panchwati Complex, Kaikhali, Kolkata</p>` +
+      `</div>`;
 
     const playerText =
       `Hi ${b.userName},\n\n` +

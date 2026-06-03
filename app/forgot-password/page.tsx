@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
   return (
     <>
       <Nav />
-      <main className="min-h-[calc(100vh-200px)] bg-brand-50/40 px-4 py-12 sm:py-16">
+      <main className="app-surface min-h-[calc(100vh-200px)] bg-brand-50/40 px-4 py-12 sm:py-16">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
