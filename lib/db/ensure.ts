@@ -6,7 +6,14 @@ import { turso } from "@/lib/turso";
  * critical routes), so a fresh or partially-migrated Turso database never
  * silently drops user signups, bookings, or password-reset lookups.
  */
-export const SCHEMA_STATEMENTS: string[] = [
+/**
+ * Table definitions (CREATE TABLE IF NOT EXISTS). These run FIRST. Indexes are
+ * kept separate (SCHEMA_INDEXES) and run LAST, after column migrations, because
+ * an index on a column that a legacy table is still missing would otherwise
+ * abort the whole bootstrap (the original "no such column: court_number" bug,
+ * which in turn left `notices` and every later table uncreated).
+ */
+export const SCHEMA_TABLES: string[] = [
   `CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
@@ -41,10 +48,6 @@ export const SCHEMA_STATEMENTS: string[] = [
     cancelled_at INTEGER,
     created_at INTEGER NOT NULL
   )`,
-  `CREATE INDEX IF NOT EXISTS idx_bookings_date_time ON bookings (slot_date, slot_time)`,
-  `CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings (user_id)`,
-  `CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (status)`,
-  `CREATE INDEX IF NOT EXISTS idx_bookings_court_date ON bookings (court_number, slot_date, slot_time)`,
   `CREATE TABLE IF NOT EXISTS gallery_images (
     id TEXT PRIMARY KEY,
     blob_url TEXT NOT NULL,
@@ -70,8 +73,6 @@ export const SCHEMA_STATEMENTS: string[] = [
     used_at INTEGER,
     created_at INTEGER NOT NULL
   )`,
-  `CREATE INDEX IF NOT EXISTS idx_password_reset_user ON password_reset_tokens (user_id)`,
-  `CREATE INDEX IF NOT EXISTS idx_password_reset_expires ON password_reset_tokens (expires_at)`,
   `CREATE TABLE IF NOT EXISTS notices (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -81,7 +82,6 @@ export const SCHEMA_STATEMENTS: string[] = [
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   )`,
-  `CREATE INDEX IF NOT EXISTS idx_notices_active_created ON notices (active, created_at DESC)`,
   `CREATE TABLE IF NOT EXISTS blocked_slots (
     id TEXT PRIMARY KEY,
     slot_date TEXT NOT NULL,
@@ -90,8 +90,6 @@ export const SCHEMA_STATEMENTS: string[] = [
     reason TEXT,
     created_at INTEGER NOT NULL
   )`,
-  `CREATE INDEX IF NOT EXISTS idx_blocked_slots_date ON blocked_slots (slot_date)`,
-  `CREATE INDEX IF NOT EXISTS idx_blocked_slots_lookup ON blocked_slots (slot_date, court_number, slot_time)`,
   // Bulk-hours credit balance per user (e.g. 12-hour package = 24 half-hour
   // slot credits). balance_min is the remaining prepaid time in minutes.
   `CREATE TABLE IF NOT EXISTS user_credits (
@@ -107,7 +105,6 @@ export const SCHEMA_STATEMENTS: string[] = [
     reason TEXT,
     created_at INTEGER NOT NULL
   )`,
-  `CREATE INDEX IF NOT EXISTS idx_credit_ledger_user ON credit_ledger (user_id, created_at DESC)`,
   // Daily business expenses (food, maintenance, staff, utilities, etc.) — the
   // owner's day-to-day cost ledger that replaces the Excel sheet.
   `CREATE TABLE IF NOT EXISTS expenses (
@@ -119,7 +116,6 @@ export const SCHEMA_STATEMENTS: string[] = [
     payment_method TEXT,
     created_at INTEGER NOT NULL
   )`,
-  `CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses (expense_date DESC)`,
   // Tournaments / events the club hosts (shown on the public tournaments page).
   `CREATE TABLE IF NOT EXISTS tournaments (
     id TEXT PRIMARY KEY,
@@ -134,28 +130,66 @@ export const SCHEMA_STATEMENTS: string[] = [
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   )`,
+];
+
+/** Indexes — created LAST, after SCHEMA_ALTERS guarantee their columns exist. */
+export const SCHEMA_INDEXES: string[] = [
+  `CREATE INDEX IF NOT EXISTS idx_bookings_date_time ON bookings (slot_date, slot_time)`,
+  `CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings (user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (status)`,
+  `CREATE INDEX IF NOT EXISTS idx_bookings_court_date ON bookings (court_number, slot_date, slot_time)`,
+  `CREATE INDEX IF NOT EXISTS idx_password_reset_user ON password_reset_tokens (user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_password_reset_expires ON password_reset_tokens (expires_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_notices_active_created ON notices (active, created_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_blocked_slots_date ON blocked_slots (slot_date)`,
+  `CREATE INDEX IF NOT EXISTS idx_blocked_slots_lookup ON blocked_slots (slot_date, court_number, slot_time)`,
+  `CREATE INDEX IF NOT EXISTS idx_credit_ledger_user ON credit_ledger (user_id, created_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses (expense_date DESC)`,
   `CREATE INDEX IF NOT EXISTS idx_tournaments_active ON tournaments (active, event_date DESC)`,
 ];
 
+/** Back-compat: combined list (tables + indexes) for any external reference. */
+export const SCHEMA_STATEMENTS: string[] = [...SCHEMA_TABLES, ...SCHEMA_INDEXES];
+
+/**
+ * Column migrations for legacy `bookings` tables created before these columns
+ * existed. Run AFTER tables and BEFORE indexes. "duplicate column" errors mean
+ * the column is already present and are ignored.
+ */
 export const SCHEMA_ALTERS: string[] = [
   `ALTER TABLE bookings ADD COLUMN court_number INTEGER NOT NULL DEFAULT 1`,
+  `ALTER TABLE bookings ADD COLUMN duration_min INTEGER NOT NULL DEFAULT 60`,
   `ALTER TABLE bookings ADD COLUMN subtotal INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE bookings ADD COLUMN gst INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE bookings ADD COLUMN total INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE bookings ADD COLUMN amount_paid INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE bookings ADD COLUMN status TEXT NOT NULL DEFAULT 'confirmed'`,
+  `ALTER TABLE bookings ADD COLUMN source TEXT NOT NULL DEFAULT 'online'`,
+  `ALTER TABLE bookings ADD COLUMN notes TEXT`,
+  `ALTER TABLE bookings ADD COLUMN cancelled_at INTEGER`,
 ];
 
-export async function applySchema(): Promise<void> {
-  for (const sql of SCHEMA_STATEMENTS) {
+/** Run one statement, swallowing only the benign "already exists / duplicate"
+ *  cases so a single legacy quirk can never abort the rest of the bootstrap. */
+async function runResilient(sql: string): Promise<void> {
+  try {
     await turso.execute(sql);
+  } catch (e: unknown) {
+    const msg = String((e as Error)?.message ?? "").toLowerCase();
+    // Benign + expected on already-migrated databases.
+    if (msg.includes("duplicate column") || msg.includes("already exists")) return;
+    // Anything else: log and continue so later statements still run.
+    console.error("[applySchema statement skipped]", { sql: sql.slice(0, 60), msg });
   }
-  for (const sql of SCHEMA_ALTERS) {
-    try {
-      await turso.execute(sql);
-    } catch (e: unknown) {
-      const msg = String((e as Error)?.message ?? "").toLowerCase();
-      if (!msg.includes("duplicate column")) throw e;
-    }
-  }
+}
+
+export async function applySchema(): Promise<void> {
+  // 1. Tables first so every column target exists.
+  for (const sql of SCHEMA_TABLES) await runResilient(sql);
+  // 2. Backfill columns onto legacy tables before any dependent index.
+  for (const sql of SCHEMA_ALTERS) await runResilient(sql);
+  // 3. Indexes last — their columns are now guaranteed to exist.
+  for (const sql of SCHEMA_INDEXES) await runResilient(sql);
 }
 
 // Cache so the ~18 idempotent statements run at most once per warm instance.
