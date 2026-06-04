@@ -74,20 +74,23 @@ export function EditCustomer({
     }
   }
 
+  const inputCls =
+    "w-full rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
+
   if (!open) {
     return (
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-brand/20 bg-white px-3 py-2 text-xs font-bold text-brand hover:bg-brand/5"
+          className="btn-outline px-3 py-2 text-xs"
         >
           <Pencil className="h-3.5 w-3.5" /> Edit profile
         </button>
         <button
           type="button"
           onClick={grantPass}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-lime/40 bg-lime/10 px-3 py-2 text-xs font-bold text-lime-dark hover:bg-lime/20"
+          className="btn-accent px-3 py-2 text-xs"
         >
           <Clock className="h-3.5 w-3.5" /> Grant 12h pass
         </button>
@@ -95,7 +98,7 @@ export function EditCustomer({
           type="button"
           onClick={remove}
           disabled={deleting}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 rounded-full border-2 border-red-200 bg-white px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-red-600 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950/20"
         >
           {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Delete
         </button>
@@ -104,47 +107,48 @@ export function EditCustomer({
   }
 
   return (
-    <div className="rounded-2xl border border-brand/20 bg-white p-4 shadow-soft">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className="text-xs font-bold text-slatey">
+    <div className="card-sport w-full p-5">
+      <span className="eyebrow">Edit profile</span>
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <label className="text-xs font-extrabold uppercase tracking-wide text-ink/50 dark:text-white/50">
           Name
           <input
             value={form.full_name}
             onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-            className="mt-1 w-full rounded-xl border border-brand/15 px-3 py-2 text-sm font-normal text-ink outline-none focus:border-brand"
+            className={`mt-1 ${inputCls}`}
           />
         </label>
-        <label className="text-xs font-bold text-slatey">
+        <label className="text-xs font-extrabold uppercase tracking-wide text-ink/50 dark:text-white/50">
           Email
           <input
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            className="mt-1 w-full rounded-xl border border-brand/15 px-3 py-2 text-sm font-normal text-ink outline-none focus:border-brand"
+            className={`mt-1 ${inputCls}`}
           />
         </label>
-        <label className="text-xs font-bold text-slatey">
+        <label className="text-xs font-extrabold uppercase tracking-wide text-ink/50 dark:text-white/50">
           Phone
           <input
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="mt-1 w-full rounded-xl border border-brand/15 px-3 py-2 text-sm font-normal text-ink outline-none focus:border-brand"
+            className={`mt-1 ${inputCls}`}
           />
         </label>
       </div>
-      <div className="mt-3 flex gap-2">
+      <div className="mt-4 flex gap-2">
         <button
           type="button"
           onClick={save}
           disabled={saving}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white shadow-glow hover:bg-brand-600 disabled:opacity-60"
+          className="btn-primary px-4 py-2 text-xs disabled:opacity-60"
         >
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-brand/15 px-4 py-2 text-xs font-bold text-ink/70 hover:bg-brand/5"
+          className="btn-outline px-4 py-2 text-xs"
         >
           <X className="h-3.5 w-3.5" /> Cancel
         </button>
