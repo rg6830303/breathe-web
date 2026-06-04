@@ -59,7 +59,7 @@ function Field(props: {
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slatey">{props.label}</span>
+      <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slatey dark:text-white/55">{props.label}</span>
       <input
         type={props.type ?? "text"}
         value={props.value}
@@ -67,7 +67,7 @@ function Field(props: {
         autoComplete={props.autoComplete}
         required={props.required}
         placeholder={props.placeholder}
-        className="w-full rounded-xl border border-brand/15 bg-white px-4 py-3 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+        className="w-full rounded-xl border-2 border-ink/10 bg-white px-4 py-3 text-sm font-medium text-ink outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/15 dark:border-white/15 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40"
       />
     </label>
   );
@@ -105,13 +105,11 @@ export function SignupForm() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="mx-auto w-full max-w-md rounded-3xl border border-brand/10 bg-white p-7 shadow-card"
+      className="card-sport mx-auto w-full max-w-md p-7 shadow-card sm:p-8"
     >
-      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-brand">
-        <ShieldCheck className="h-4 w-4" /> Create account
-      </div>
-      <h1 className="mt-2 font-display text-2xl font-extrabold text-ink sm:text-3xl">Join Breathe Pickleball</h1>
-      <p className="mt-2 text-sm text-slatey">Book courts, track your sessions, and join tournaments.</p>
+      <span className="eyebrow"><ShieldCheck className="h-3.5 w-3.5" /> Create account</span>
+      <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-ink dark:text-white sm:text-[2.1rem]">Join Breathe Pickleball</h1>
+      <p className="mt-2 text-sm text-slatey dark:text-white/60">Book courts, track your sessions, and join tournaments.</p>
 
       <div className="mt-6">
         <GoogleButton next={next} label="Sign up with Google" />
@@ -131,7 +129,7 @@ export function SignupForm() {
         <button
           type="submit"
           disabled={loading}
-          className="group mt-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 disabled:opacity-60"
+          className="btn-primary group mt-1 w-full"
         >
           {loading ? (
             <>
@@ -146,7 +144,7 @@ export function SignupForm() {
         </button>
       </form>
 
-      <div className="mt-5 text-center text-xs text-slatey">
+      <div className="mt-5 text-center text-xs text-slatey dark:text-white/55">
         Already have an account?{" "}
         <Link href="/login" className="font-bold text-brand hover:underline">
           Log in
@@ -192,13 +190,11 @@ export function LoginForm() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="mx-auto w-full max-w-md rounded-3xl border border-brand/10 bg-white p-7 shadow-card"
+      className="card-sport mx-auto w-full max-w-md p-7 shadow-card sm:p-8"
     >
-      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-brand">
-        <LogIn className="h-4 w-4" /> Welcome back
-      </div>
-      <h1 className="mt-2 font-display text-2xl font-extrabold text-ink sm:text-3xl">Log in to Breathe</h1>
-      <p className="mt-2 text-sm text-slatey">Pick up where you left off — book a court or check your sessions.</p>
+      <span className="eyebrow"><LogIn className="h-3.5 w-3.5" /> Welcome back</span>
+      <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-ink dark:text-white sm:text-[2.1rem]">Log in to Breathe</h1>
+      <p className="mt-2 text-sm text-slatey dark:text-white/60">Pick up where you left off — book a court or check your sessions.</p>
 
       <div className="mt-6">
         <GoogleButton next={next} label="Continue with Google" />
@@ -221,7 +217,7 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="group mt-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 disabled:opacity-60"
+          className="btn-primary group mt-1 w-full"
         >
           {loading ? (
             <>
@@ -236,7 +232,7 @@ export function LoginForm() {
         </button>
       </form>
 
-      <div className="mt-5 flex flex-col items-center gap-1 text-center text-xs text-slatey">
+      <div className="mt-5 flex flex-col items-center gap-1 text-center text-xs text-slatey dark:text-white/55">
         <span>
           New to Breathe?{" "}
           <Link href="/signup" className="font-bold text-brand hover:underline">

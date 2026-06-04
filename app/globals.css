@@ -441,3 +441,87 @@ p, li {
   }
   .lift-3d:hover { transform: translateY(-2px); }
 }
+
+/* ============================================================
+   BOLD & SPORTY DESIGN SYSTEM  (redesign foundation)
+   Crisp, athletic, high-contrast. Solid colour blocks and defined
+   edges instead of the older glow/glass/gradient-heavy look. Built as
+   a @layer components layer so Tailwind utilities still override it.
+   ============================================================ */
+@layer components {
+  /* Uppercase section label with a lime tick — used above every heading. */
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-[0.7rem] font-extrabold uppercase tracking-[0.22em] text-brand;
+  }
+  .eyebrow::before {
+    content: "";
+    @apply h-2.5 w-2.5 shrink-0 rounded-sm bg-lime;
+    box-shadow: 0 0 0 3px rgba(198, 244, 50, 0.25);
+  }
+  .dark .eyebrow { @apply text-brand-300; }
+
+  /* Big athletic headings: heavy weight, tight tracking. */
+  .heading-xl {
+    @apply font-display font-extrabold tracking-[-0.03em] leading-[0.95];
+    font-size: clamp(2.5rem, 7vw, 5.5rem);
+  }
+  .heading-lg {
+    @apply font-display font-extrabold tracking-[-0.025em] leading-[1.02];
+    font-size: clamp(2rem, 4.5vw, 3.25rem);
+  }
+
+  /* Lime highlight behind a word — a structural accent, not a glow. */
+  .mark-lime {
+    @apply relative inline-block;
+  }
+  .mark-lime::after {
+    content: "";
+    @apply absolute inset-x-[-0.1em] bottom-[0.08em] -z-10 h-[0.38em] bg-lime;
+    transform: skewX(-8deg);
+  }
+
+  /* Chunky button system. */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-extrabold uppercase tracking-wide transition-all duration-200 active:scale-[0.97] disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-white hover:bg-brand-600;
+    box-shadow: 0 10px 0 -4px rgba(35, 72, 224, 0.5);
+  }
+  .btn-primary:hover { box-shadow: 0 6px 0 -3px rgba(35, 72, 224, 0.6); transform: translateY(2px); }
+  .btn-accent {
+    @apply btn bg-lime text-ink hover:bg-lime-dark;
+    box-shadow: 0 10px 0 -4px rgba(163, 191, 26, 0.6);
+  }
+  .btn-accent:hover { box-shadow: 0 6px 0 -3px rgba(163, 191, 26, 0.7); transform: translateY(2px); }
+  .btn-dark { @apply btn bg-ink text-white hover:bg-[#1a2540]; }
+  .btn-outline {
+    @apply btn border-2 border-ink/15 bg-transparent text-ink hover:border-brand hover:text-brand dark:border-white/20 dark:text-white dark:hover:border-brand-300 dark:hover:text-brand-300;
+  }
+
+  /* Crisp card with a defined edge (replaces frosted-glass cards). */
+  .card-sport {
+    @apply rounded-3xl border-2 border-ink/10 bg-white transition-all duration-300 dark:border-white/10 dark:bg-[#111c38];
+  }
+  .card-sport:hover {
+    @apply border-brand/30 dark:border-brand-300/30;
+    transform: translateY(-4px);
+    box-shadow: 0 24px 50px -28px rgba(13, 20, 38, 0.45);
+  }
+
+  /* Pill tag. */
+  .tag-sport {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-brand/15 bg-brand/5 px-3 py-1 text-xs font-bold text-brand dark:border-white/15 dark:bg-white/5 dark:text-brand-200;
+  }
+}
+
+/* Diagonal "court tape" accent stripe — a sporty section divider. */
+.tape-stripe {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #c6f432 0,
+    #c6f432 14px,
+    #0d1426 14px,
+    #0d1426 28px
+  );
+}

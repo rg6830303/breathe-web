@@ -128,32 +128,23 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
           <motion.div variants={containerVariants} initial="hidden" animate="visible">
             <motion.span
               variants={spanVariants}
-              className="glass-pill inline-flex items-center gap-2 px-4 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-white sm:text-xs"
+              className="inline-flex items-center gap-2 rounded-full border border-lime/40 bg-lime/10 px-4 py-1.5 text-[0.65rem] font-extrabold uppercase tracking-[0.2em] text-lime sm:text-xs"
             >
-              <MapPin className="h-3.5 w-3.5 text-lime" /> Kaikhali · North Kolkata
+              <MapPin className="h-3.5 w-3.5" /> Kaikhali · North Kolkata
             </motion.span>
 
-            {/* Split stagger heading — editorial serif + bold display mix */}
-            <motion.h1
-              variants={containerVariants}
-              className="mt-5 leading-[1.02] tracking-tight"
-            >
+            {/* Athletic stacked wordmark — big, tight, lime-on-white blocks. */}
+            <motion.h1 variants={containerVariants} className="mt-5">
               <motion.span
                 variants={spanVariants}
-                className="block font-serif-hero text-[2.5rem] italic leading-none text-white/90 sm:text-5xl lg:text-[3.5rem]"
+                className="block text-xs font-extrabold uppercase tracking-[0.32em] text-white/55 sm:text-sm"
               >
                 Welcome to
               </motion.span>
-              <motion.span
-                variants={spanVariants}
-                className="block bg-gradient-to-r from-lime via-white to-lime bg-clip-text font-display text-[3.25rem] font-extrabold leading-none text-transparent animate-shimmer sm:text-6xl lg:text-7xl"
-              >
+              <motion.span variants={spanVariants} className="heading-xl mt-2 block text-lime">
                 Breathe
               </motion.span>
-              <motion.span
-                variants={spanVariants}
-                className="block font-serif-hero text-[2.5rem] italic leading-tight text-white sm:text-5xl lg:text-[3.5rem]"
-              >
+              <motion.span variants={spanVariants} className="heading-xl block text-white">
                 Pickleball
               </motion.span>
             </motion.h1>
@@ -164,18 +155,15 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
 
             {/* Primary & Secondary CTA Buttons — full width on mobile */}
             <motion.div variants={spanVariants} className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
-                <Link
-                  href="/book"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-lime px-7 py-4 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark sm:py-3.5"
-                >
+              <motion.div whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
+                <Link href="/book" className="btn-accent w-full sm:w-auto">
                   Book Slot Now <ArrowRight className="h-4 w-4" />
                 </Link>
               </motion.div>
-              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
+              <motion.div whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
                 <Link
                   href="/gallery"
-                  className="liquid-glass inline-flex w-full items-center justify-center gap-2 rounded-full px-7 py-4 text-sm font-bold text-white transition hover:opacity-90 sm:py-3.5"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-white/30 px-7 py-3.5 text-sm font-extrabold uppercase tracking-wide text-white transition hover:border-white hover:bg-white/10 sm:w-auto"
                 >
                   View the Courts
                 </Link>
