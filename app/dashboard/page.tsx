@@ -14,6 +14,8 @@ import { StatTiles } from "./stat-tile";
 import { ProfileForm } from "./profile-form";
 import { CancelBookingButton } from "./cancel-button";
 import { NextSessionCard } from "./next-session-card";
+import { ScrollReveal } from "@/components/motion/scroll-reveal";
+import { StatCounter } from "@/components/motion/stat-counter";
 
 export const dynamic = "force-dynamic";
 
@@ -113,9 +115,9 @@ function courtColor(c: number) {
 }
 
 function statusBadge(s: string) {
-  if (s === "confirmed") return "bg-lime/20 text-lime-dark border border-lime/40";
-  if (s === "cancelled") return "bg-red-100 text-red-700 border border-red-200";
-  return "bg-gray-100 text-gray-700 border border-gray-200";
+  if (s === "confirmed") return "border-2 border-lime/40 bg-lime/10 text-lime-dark";
+  if (s === "cancelled") return "border-2 border-red-200 bg-red-50 text-red-700 dark:border-red-900/40 dark:bg-red-900/10 dark:text-red-400";
+  return "border-2 border-ink/10 bg-ink/5 text-ink/60 dark:border-white/10 dark:bg-white/5 dark:text-white/50";
 }
 
 function bandFor(time: string): "morning" | "afternoon" | "evening" | "late" {
@@ -222,185 +224,243 @@ export default async function DashboardPage() {
   return (
     <>
       <Nav />
-      <main className="app-surface min-h-screen bg-brand-50/20 dark:bg-ink">
+      <main className="app-surface min-h-screen bg-white dark:bg-ink">
+        {/* Bold portal hero with PortalHero */}
         <PortalHero
           eyebrow="Player dashboard"
           title={
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 font-display text-xl font-extrabold uppercase ring-1 ring-white/20 backdrop-blur">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-lime font-display text-xl font-extrabold uppercase text-ink">
                 {initials}
               </div>
               <div>
-                <h1 className="font-serif-hero text-3xl italic sm:text-4xl">Hi, {fullName.split(" ")[0]}</h1>
-                <p className="text-sm text-white/75">{email} · Member since {memberSince(memberSinceMs)}</p>
+                <h1 className="heading-lg text-white">
+                  Hi, <span className="mark-lime">{fullName.split(" ")[0]}</span>
+                </h1>
+                <p className="mt-1 text-sm text-white/65">{email} · Member since {memberSince(memberSinceMs)}</p>
               </div>
             </div>
           }
           right={
-            <div className="flex flex-col items-start gap-2 md:items-end">
-              <span className="glass-pill inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white">
+            <div className="flex flex-col items-start gap-3 md:items-end">
+              <span className="tag-sport border-white/20 bg-white/10 text-white">
                 <FavIcon className="h-3.5 w-3.5" /> {favBand.label}
               </span>
-              <Link
-                href="/book"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-lime px-5 py-3 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark active:scale-[0.98]"
-              >
+              <Link href="/book" className="btn-accent">
                 Book another slot <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           }
-        />
+        >
+          {/* Inline quick-stat bar inside hero */}
+          <div className="flex flex-wrap gap-4">
+            {[
+              { label: "Sessions", value: totalSessions },
+              { label: "Hours played", value: totalHours },
+              { label: "This month", value: thisMonth },
+              { label: "Day streak", value: streak },
+            ].map((s) => (
+              <div key={s.label} className="rounded-2xl border border-white/15 bg-white/10 px-4 py-2.5 text-center">
+                <div className="font-display text-2xl font-extrabold text-white">
+                  <StatCounter end={typeof s.value === "number" ? s.value : 0} />
+                </div>
+                <div className="text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-white/50">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </PortalHero>
 
         <Container className="py-8">
-          <div className="mb-6">
-            <GameStats
-              bookings={confirmedAll.map((b) => ({ court_number: b.court_number, slot_time: b.slot_time, status: b.status }))}
-              stats={{ totalSessions, totalSpent, currentStreak: streak, longestStreak: streak }}
-            />
-          </div>
-
-          {nextUpcoming && (
+          {/* Game stats / achievements */}
+          <ScrollReveal>
             <div className="mb-6">
-              <NextSessionCard
-                bookingId={nextUpcoming.id}
-                slotDate={nextUpcoming.slot_date}
-                slotTime={nextUpcoming.slot_time}
-                endTime={endTime(nextUpcoming.slot_time, nextUpcoming.duration_min)}
-                courtNumber={nextUpcoming.court_number}
-                total={nextUpcoming.total_amount}
+              <GameStats
+                bookings={confirmedAll.map((b) => ({ court_number: b.court_number, slot_time: b.slot_time, status: b.status }))}
+                stats={{ totalSessions, totalSpent, currentStreak: streak, longestStreak: streak }}
               />
             </div>
+          </ScrollReveal>
+
+          {/* Next session card */}
+          {nextUpcoming && (
+            <ScrollReveal delay={0.05}>
+              <div className="mb-6">
+                <NextSessionCard
+                  bookingId={nextUpcoming.id}
+                  slotDate={nextUpcoming.slot_date}
+                  slotTime={nextUpcoming.slot_time}
+                  endTime={endTime(nextUpcoming.slot_time, nextUpcoming.duration_min)}
+                  courtNumber={nextUpcoming.court_number}
+                  total={nextUpcoming.total_amount}
+                />
+              </div>
+            </ScrollReveal>
           )}
 
-          <div className="mb-6">
-            <WeatherWidget />
-          </div>
-
-          <StatTiles
-            tiles={[
-              { label: "Sessions", value: totalSessions, tint: "bg-brand/10 text-brand" },
-              { label: "Hours played", value: totalHours, tint: "bg-emerald-100 text-emerald-700" },
-              { label: "This month", value: thisMonth, tint: "bg-amber-100 text-amber-700" },
-              { label: "Current streak", value: streak, suffix: "d", tint: "bg-rose-100 text-rose-700" },
-            ]}
-            icons={[
-              <ListChecks key="a" className="h-4 w-4" />,
-              <Clock key="b" className="h-4 w-4" />,
-              <CalendarDays key="c" className="h-4 w-4" />,
-              <Flame key="d" className="h-4 w-4" />,
-            ]}
-          />
-
-          <section className="mt-6 rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-display text-lg font-extrabold text-ink">Activity over the last 26 weeks</h2>
-              <span className="text-xs text-slatey">
-                Total spent so far: <strong className="text-ink">₹{totalSpent.toLocaleString("en-IN")}</strong>
-              </span>
+          {/* Weather */}
+          <ScrollReveal delay={0.07}>
+            <div className="mb-6">
+              <WeatherWidget />
             </div>
-            <div className="mt-4">
-              <ActivityHeatmap countsByDate={countsByDate} />
-            </div>
-          </section>
+          </ScrollReveal>
+
+          {/* Stat tiles */}
+          <ScrollReveal delay={0.09}>
+            <StatTiles
+              tiles={[
+                { label: "Sessions", value: totalSessions, tint: "bg-brand/10 text-brand dark:bg-brand/20 dark:text-brand-300" },
+                { label: "Hours played", value: totalHours, tint: "bg-lime/20 text-lime-dark" },
+                { label: "This month", value: thisMonth, tint: "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400" },
+                { label: "Current streak", value: streak, suffix: "d", tint: "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400" },
+              ]}
+              icons={[
+                <ListChecks key="a" className="h-4 w-4" />,
+                <Clock key="b" className="h-4 w-4" />,
+                <CalendarDays key="c" className="h-4 w-4" />,
+                <Flame key="d" className="h-4 w-4" />,
+              ]}
+            />
+          </ScrollReveal>
+
+          {/* Activity heatmap */}
+          <ScrollReveal delay={0.1}>
+            <section className="mt-6 overflow-hidden rounded-3xl border-2 border-ink/10 bg-white dark:border-white/10 dark:bg-[#111c38]">
+              <div aria-hidden className="tape-stripe h-1 w-full" />
+              <div className="p-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="font-display text-lg font-extrabold text-ink dark:text-white">
+                    Activity — last 26 weeks
+                  </h2>
+                  <span className="text-xs font-semibold text-slatey dark:text-white/40">
+                    Total spent:{" "}
+                    <strong className="font-extrabold text-ink dark:text-white">
+                      ₹{totalSpent.toLocaleString("en-IN")}
+                    </strong>
+                  </span>
+                </div>
+                <div className="mt-4">
+                  <ActivityHeatmap countsByDate={countsByDate} />
+                </div>
+              </div>
+            </section>
+          </ScrollReveal>
 
           <div className="mt-8 grid gap-6 lg:grid-cols-3">
+            {/* Bookings column */}
             <section className="lg:col-span-2">
-              <h2 className="mb-4 flex items-center gap-2 font-display text-xl font-extrabold text-ink">
-                <CalendarDays className="h-5 w-5 text-brand" /> Upcoming sessions
-              </h2>
-              {upcoming.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-brand/20 bg-brand/[0.03] p-10 text-center">
-                  <p className="text-sm text-slatey">No upcoming sessions — book your next slot.</p>
-                  <Link
-                    href="/book"
-                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600"
-                  >
-                    Book a court <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </div>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2">
-                  {upcoming.map((b) => {
-                    const slotMs = new Date(`${b.slot_date}T${b.slot_time}:00+05:30`).getTime();
-                    const canCancel = slotMs - Date.now() >= 4 * 60 * 60 * 1000;
-                    return (
-                      <div key={b.id} className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <span className={`flex h-12 w-12 items-center justify-center rounded-2xl font-display text-base font-extrabold ${courtColor(b.court_number)}`}>
-                              C{b.court_number}
-                            </span>
-                            <div>
-                              <div className="font-display text-base font-extrabold text-ink">{formatDate(b.slot_date)}</div>
-                              <div className="text-sm text-slatey">
-                                {format12h(b.slot_time)} – {format12h(endTime(b.slot_time, b.duration_min))}
+              <ScrollReveal>
+                <h2 className="mb-4 flex items-center gap-2 font-display text-xl font-extrabold text-ink dark:text-white">
+                  <CalendarDays className="h-5 w-5 text-brand dark:text-brand-300" /> Upcoming sessions
+                </h2>
+                {upcoming.length === 0 ? (
+                  <div className="rounded-3xl border-2 border-dashed border-ink/10 bg-ink/[0.02] p-10 text-center dark:border-white/10 dark:bg-white/[0.02]">
+                    <p className="text-sm text-slatey dark:text-white/40">No upcoming sessions — book your next slot.</p>
+                    <Link
+                      href="/book"
+                      className="btn-primary mt-4"
+                    >
+                      Book a court <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2">
+                    {upcoming.map((b) => {
+                      const slotMs = new Date(`${b.slot_date}T${b.slot_time}:00+05:30`).getTime();
+                      const canCancel = slotMs - Date.now() >= 4 * 60 * 60 * 1000;
+                      return (
+                        <div
+                          key={b.id}
+                          className="card-sport overflow-hidden bg-white dark:bg-[#111c38]"
+                        >
+                          <div aria-hidden className="tape-stripe h-0.5 w-full" />
+                          <div className="p-5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <span
+                                  className={`flex h-12 w-12 items-center justify-center rounded-2xl font-display text-base font-extrabold ${courtColor(b.court_number)}`}
+                                >
+                                  C{b.court_number}
+                                </span>
+                                <div>
+                                  <div className="font-display text-base font-extrabold text-ink dark:text-white">
+                                    {formatDate(b.slot_date)}
+                                  </div>
+                                  <div className="text-sm text-slatey dark:text-white/50">
+                                    {format12h(b.slot_time)} – {format12h(endTime(b.slot_time, b.duration_min))}
+                                  </div>
+                                </div>
                               </div>
+                              <span className={`rounded-full px-2.5 py-0.5 text-[0.6rem] font-extrabold uppercase tracking-[0.15em] ${statusBadge(b.status)}`}>
+                                {b.status}
+                              </span>
+                            </div>
+                            <div className="mt-4 flex items-center justify-between border-t-2 border-ink/8 pt-3 text-sm dark:border-white/8">
+                              <span className="font-display text-lg font-extrabold text-brand dark:text-brand-300">
+                                ₹{b.total_amount.toLocaleString("en-IN")}
+                              </span>
+                              <CancelBookingButton
+                                bookingId={b.id}
+                                disabled={!canCancel}
+                                disabledReason={!canCancel ? "Closes 4h before" : undefined}
+                              />
                             </div>
                           </div>
-                          <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${statusBadge(b.status)}`}>
-                            {b.status}
-                          </span>
                         </div>
-                        <div className="mt-4 flex items-center justify-between border-t border-brand/10 pt-3 text-sm">
-                          <span className="font-display text-base font-extrabold text-brand">
-                            ₹{b.total_amount.toLocaleString("en-IN")}
-                          </span>
-                          <CancelBookingButton
-                            bookingId={b.id}
-                            disabled={!canCancel}
-                            disabledReason={!canCancel ? "Closes 4h before" : undefined}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollReveal>
 
-              <h2 className="mb-4 mt-8 flex items-center gap-2 font-display text-xl font-extrabold text-ink">
-                <ListChecks className="h-5 w-5 text-brand" /> Booking history
-              </h2>
-              {history.length === 0 ? (
-                <p className="rounded-3xl border border-dashed border-brand/20 bg-brand/[0.03] p-10 text-center text-sm text-slatey">
-                  No previous bookings yet.
-                </p>
-              ) : (
-                <div className="overflow-x-auto rounded-2xl border border-brand/10 bg-white shadow-soft">
-                  <table className="w-full min-w-[560px] border-collapse text-sm">
-                    <thead className="bg-brand/5 text-left text-xs uppercase tracking-wide text-slatey">
-                      <tr>
-                        <th className="p-3">Date</th>
-                        <th className="p-3">Time</th>
-                        <th className="p-3">Court</th>
-                        <th className="p-3">Amount</th>
-                        <th className="p-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {history.slice(0, 30).map((b) => (
-                        <tr key={b.id} className="border-t border-brand/10">
-                          <td className="p-3 text-ink">{formatDate(b.slot_date)}</td>
-                          <td className="p-3 text-slatey">{format12h(b.slot_time)}</td>
-                          <td className="p-3 text-slatey">Court {b.court_number}</td>
-                          <td className="p-3 font-semibold text-ink">
-                            <IndianRupee className="mr-0.5 inline h-3 w-3" />
-                            {b.total_amount.toLocaleString("en-IN")}
-                          </td>
-                          <td className="p-3">
-                            <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${statusBadge(b.status)}`}>
-                              {b.status}
-                            </span>
-                          </td>
+              <ScrollReveal delay={0.05}>
+                <h2 className="mb-4 mt-8 flex items-center gap-2 font-display text-xl font-extrabold text-ink dark:text-white">
+                  <ListChecks className="h-5 w-5 text-brand dark:text-brand-300" /> Booking history
+                </h2>
+                {history.length === 0 ? (
+                  <p className="rounded-3xl border-2 border-dashed border-ink/10 bg-ink/[0.02] p-10 text-center text-sm text-slatey dark:border-white/10 dark:bg-white/[0.02] dark:text-white/40">
+                    No previous bookings yet.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto rounded-3xl border-2 border-ink/10 bg-white dark:border-white/10 dark:bg-[#111c38]">
+                    <table className="w-full min-w-[560px] border-collapse text-sm">
+                      <thead className="border-b-2 border-ink/10 dark:border-white/10">
+                        <tr>
+                          <th className="p-3.5 text-left text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-slatey dark:text-white/40">Date</th>
+                          <th className="p-3.5 text-left text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-slatey dark:text-white/40">Time</th>
+                          <th className="p-3.5 text-left text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-slatey dark:text-white/40">Court</th>
+                          <th className="p-3.5 text-left text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-slatey dark:text-white/40">Amount</th>
+                          <th className="p-3.5 text-left text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-slatey dark:text-white/40">Status</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      </thead>
+                      <tbody>
+                        {history.slice(0, 30).map((b) => (
+                          <tr key={b.id} className="border-t border-ink/5 transition hover:bg-ink/[0.015] dark:border-white/5 dark:hover:bg-white/[0.02]">
+                            <td className="p-3.5 font-semibold text-ink dark:text-white">{formatDate(b.slot_date)}</td>
+                            <td className="p-3.5 text-slatey dark:text-white/50">{format12h(b.slot_time)}</td>
+                            <td className="p-3.5 text-slatey dark:text-white/50">Court {b.court_number}</td>
+                            <td className="p-3.5 font-extrabold text-ink dark:text-white">
+                              <IndianRupee className="mr-0.5 inline h-3 w-3" />
+                              {b.total_amount.toLocaleString("en-IN")}
+                            </td>
+                            <td className="p-3.5">
+                              <span className={`inline-block rounded-full px-2.5 py-0.5 text-[0.6rem] font-extrabold uppercase tracking-[0.15em] ${statusBadge(b.status)}`}>
+                                {b.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </ScrollReveal>
             </section>
 
+            {/* Profile sidebar */}
             <aside>
-              <ProfileForm initialName={fullName} initialPhone={phone} email={email} />
+              <ScrollReveal direction="right">
+                <ProfileForm initialName={fullName} initialPhone={phone} email={email} />
+              </ScrollReveal>
             </aside>
           </div>
         </Container>

@@ -226,9 +226,9 @@ export default function AdminGalleryPage() {
 
   if (loadingAdmin || !admin) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#0B0F19] text-white">
+      <div className="flex h-screen items-center justify-center bg-ink">
         <div className="text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#D4FC34]" />
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-lime" />
           <p className="mt-4 text-sm text-white/60">Verifying session credentials...</p>
         </div>
       </div>
@@ -236,246 +236,269 @@ export default function AdminGalleryPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0B0F19] text-white py-8 px-4 sm:px-6">
+    <main className="min-h-screen-safe bg-ink px-4 py-8 text-white sm:px-6">
+      {/* Tape stripe top */}
+      <div aria-hidden className="tape-stripe fixed left-0 top-0 h-1 w-full opacity-80" />
+
       <div className="mx-auto max-w-5xl">
-        <div className="flex items-center justify-between mb-8">
+        {/* Header */}
+        <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push("/admin")}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10 hover:bg-white/10"
+              className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-white/15 text-white/70 transition hover:border-lime hover:text-lime"
+              aria-label="Back to admin"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
             <div>
-              <h1 className="font-display text-2xl font-extrabold tracking-wide text-white sm:text-3xl">Gallery Manager</h1>
-              <p className="text-xs text-white/50">Drag to reorder · Click pencil to edit caption · Toggle eye to hide/show on public site.</p>
+              <span className="eyebrow text-lime">Media</span>
+              <h1 className="mt-1 font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+                Gallery Manager
+              </h1>
+              <p className="text-xs text-white/40">
+                Drag to reorder · Click pencil to edit caption · Toggle eye to hide/show on public site.
+              </p>
             </div>
           </div>
           <button
             onClick={loadImages}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10 hover:bg-white/10"
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-white/15 text-white/70 transition hover:border-lime hover:text-lime"
+            aria-label="Refresh gallery"
           >
             <RefreshCw className={`h-4 w-4 ${loadingImages ? "animate-spin" : ""}`} />
           </button>
         </div>
 
+        {/* Alerts */}
         {error && (
-          <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border-2 border-red-500/20 bg-red-500/10 p-4 text-sm font-semibold text-red-400">
             <AlertTriangle className="h-5 w-5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
         {success && (
-          <div className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-400">
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border-2 border-lime/30 bg-lime/10 p-4 text-sm font-semibold text-lime-dark">
             <Check className="h-5 w-5 shrink-0" />
             <span>{success}</span>
           </div>
         )}
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 mb-8">
-          <h3 className="font-display text-base font-extrabold tracking-wide mb-3">Upload new photos</h3>
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition ${
-              isDragActive ? "border-[#D4FC34] bg-[#D4FC34]/5" : "border-white/15 bg-white/[0.01] hover:border-white/30"
-            }`}
-          >
-            <input {...getInputProps()} />
-            <UploadCloud className="mx-auto h-12 w-12 text-[#D4FC34] mb-3" />
-            <p className="font-bold text-sm">Drag and drop images here, or click to browse</p>
-            <p className="text-[10px] text-white/40 mt-1 uppercase font-semibold">JPG, PNG, WEBP · Max 5MB per file</p>
+        {/* Upload zone */}
+        <section className="mb-8 overflow-hidden rounded-3xl border-2 border-white/10 bg-white/[0.03]">
+          <div className="border-b-2 border-white/10 px-5 py-4">
+            <span className="eyebrow text-lime">Upload</span>
+            <h3 className="mt-1 font-display text-base font-extrabold tracking-tight text-white">Upload new photos</h3>
           </div>
+          <div className="p-5">
+            <div
+              {...getRootProps()}
+              className={`cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition ${
+                isDragActive ? "border-lime bg-lime/5" : "border-white/15 bg-white/[0.01] hover:border-white/30"
+              }`}
+            >
+              <input {...getInputProps()} />
+              <UploadCloud className="mx-auto mb-3 h-12 w-12 text-lime" />
+              <p className="font-bold text-sm text-white">Drag and drop images here, or click to browse</p>
+              <p className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/40">
+                JPG, PNG, WEBP · Max 5MB per file
+              </p>
+            </div>
 
-          {previews.length > 0 && (
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
-                <span className="text-xs text-white/60 font-bold uppercase tracking-wider">
-                  {previews.length} file(s) in queue
-                </span>
-                <button
-                  onClick={() => setPreviews([])}
-                  className="text-xs text-red-400 font-bold hover:underline"
-                  disabled={uploading}
-                >
-                  Clear queue
-                </button>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {previews.map((p, idx) => (
-                  <div key={idx} className="relative flex gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                    <button
-                      onClick={() => removePreview(idx)}
-                      disabled={uploading}
-                      className="absolute top-2 right-2 h-6 w-6 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                    <div className="relative aspect-square w-20 shrink-0 rounded-lg overflow-hidden border border-white/10">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.previewUrl} alt="Preview" className="h-full w-full object-cover" />
-                    </div>
-                    <div className="flex-1 min-w-0 pr-6">
-                      <p className="text-[10px] font-bold text-white/40 uppercase truncate">{p.file.name}</p>
-                      <p className="text-[10px] text-[#D4FC34] font-bold mt-0.5">{p.sizeStr}</p>
-                      <input
-                        type="text"
-                        placeholder="Caption (optional)"
-                        value={p.caption}
-                        onChange={(e) => updatePreviewCaption(idx, e.target.value)}
+            {previews.length > 0 && (
+              <div className="mt-6">
+                <div className="mb-3 flex items-center justify-between border-b-2 border-white/10 pb-2">
+                  <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-white/50">
+                    {previews.length} file(s) in queue
+                  </span>
+                  <button
+                    onClick={() => setPreviews([])}
+                    className="text-xs font-bold text-red-400 hover:underline"
+                    disabled={uploading}
+                  >
+                    Clear queue
+                  </button>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {previews.map((p, idx) => (
+                    <div key={idx} className="relative flex gap-3 rounded-2xl border-2 border-white/10 bg-white/[0.03] p-3">
+                      <button
+                        onClick={() => removePreview(idx)}
                         disabled={uploading}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white placeholder-white/30 mt-2 outline-none focus:border-[#D4FC34]"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button
-                onClick={handleUpload}
-                disabled={uploading}
-                className="w-full mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-[#D4FC34] hover:bg-[#c2e82b] text-gray-900 px-4 py-3 font-bold text-sm shadow-soft transition disabled:opacity-60"
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Uploading to Vercel Blob...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4" /> Start uploading
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-          <h3 className="font-display text-base font-extrabold tracking-wide mb-4">Gallery library</h3>
-
-          {loadingImages ? (
-            <div className="py-12 text-center text-white/55">
-              <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#D4FC34] mb-2" />
-              <span>Querying database records...</span>
-            </div>
-          ) : images.length === 0 ? (
-            <div className="py-12 text-center text-white/40 border border-dashed border-white/10 rounded-xl bg-white/[0.01]">
-              <ImageIcon className="mx-auto h-10 w-10 text-white/20 mb-2" />
-              <span>No photos in the gallery yet.</span>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-              {images.map((img) => (
-                <div
-                  key={img.id}
-                  draggable
-                  onDragStart={() => onDragStart(img.id)}
-                  onDragOver={(e) => onDragOver(e, img.id)}
-                  onDragEnd={onDragEnd}
-                  className={`group relative rounded-xl border border-white/10 bg-[#0B0F19] overflow-hidden shadow-soft cursor-move ${
-                    img.active === 0 ? "opacity-50" : ""
-                  }`}
-                >
-                  <div className="relative aspect-[4/3] w-full bg-black/45 border-b border-white/10">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img.blobUrl} alt={img.caption || ""} className="h-full w-full object-cover" />
-                    <div className="absolute top-2 left-2 rounded-md bg-black/60 px-1.5 py-1 text-white/60">
-                      <GripVertical className="h-3.5 w-3.5" />
-                    </div>
-                    <div className="absolute top-2 right-2 flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => toggleActive(img)}
-                        title={img.active === 1 ? "Hide from public site" : "Show on public site"}
-                        className="h-8 w-8 flex items-center justify-center rounded-xl bg-black/60 border border-white/10 hover:bg-white/15 text-white"
+                        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 hover:bg-black/80"
+                        aria-label="Remove preview"
                       >
-                        {img.active === 1 ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                        <X className="h-3 w-3" />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingId(img.id);
-                          setEditCaption(img.caption ?? "");
-                        }}
-                        title="Edit caption"
-                        className="h-8 w-8 flex items-center justify-center rounded-xl bg-black/60 border border-white/10 hover:bg-white/15 text-white"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeletingId(img.id)}
-                        title="Delete"
-                        className="h-8 w-8 flex items-center justify-center rounded-xl bg-black/60 border border-white/10 hover:bg-red-600/90 text-white"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="p-3">
-                    {editingId === img.id ? (
-                      <div className="flex gap-2">
+                      <div className="relative aspect-square w-20 shrink-0 overflow-hidden rounded-xl border-2 border-white/10">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={p.previewUrl} alt="Preview" className="h-full w-full object-cover" />
+                      </div>
+                      <div className="min-w-0 flex-1 pr-6">
+                        <p className="truncate text-[10px] font-bold uppercase text-white/40">{p.file.name}</p>
+                        <p className="mt-0.5 text-[10px] font-extrabold text-lime">{p.sizeStr}</p>
                         <input
                           type="text"
-                          value={editCaption}
-                          onChange={(e) => setEditCaption(e.target.value)}
-                          autoFocus
-                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-[#D4FC34]"
+                          placeholder="Caption (optional)"
+                          value={p.caption}
+                          onChange={(e) => updatePreviewCaption(idx, e.target.value)}
+                          disabled={uploading}
+                          className="mt-2 w-full rounded-xl border-2 border-white/10 bg-white/5 px-2 py-1 text-xs text-white placeholder-white/30 outline-none focus:border-lime"
                         />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={handleUpload}
+                  disabled={uploading}
+                  className="btn-accent mt-5 w-full justify-center disabled:opacity-60"
+                >
+                  {uploading ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Uploading to Vercel Blob...</>
+                  ) : (
+                    <><Check className="h-4 w-4" /> Start uploading</>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Gallery library */}
+        <section className="overflow-hidden rounded-3xl border-2 border-white/10 bg-white/[0.02]">
+          <div className="border-b-2 border-white/10 px-5 py-4">
+            <span className="eyebrow text-lime">Library</span>
+            <h3 className="mt-1 font-display text-base font-extrabold tracking-tight text-white">Gallery library</h3>
+          </div>
+          <div className="p-5">
+            {loadingImages ? (
+              <div className="py-12 text-center text-white/50">
+                <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-lime" />
+                <span className="text-sm">Querying database records...</span>
+              </div>
+            ) : images.length === 0 ? (
+              <div className="rounded-2xl border-2 border-dashed border-white/10 py-12 text-center">
+                <ImageIcon className="mx-auto mb-3 h-10 w-10 text-white/20" />
+                <span className="text-sm text-white/40">No photos in the gallery yet.</span>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                {images.map((img) => (
+                  <div
+                    key={img.id}
+                    draggable
+                    onDragStart={() => onDragStart(img.id)}
+                    onDragOver={(e) => onDragOver(e, img.id)}
+                    onDragEnd={onDragEnd}
+                    className={`group relative cursor-move overflow-hidden rounded-2xl border-2 border-white/10 bg-ink ${
+                      img.active === 0 ? "opacity-50" : ""
+                    }`}
+                  >
+                    <div className="relative aspect-[4/3] w-full border-b-2 border-white/10 bg-black/45">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img.blobUrl} alt={img.caption || ""} className="h-full w-full object-cover" />
+                      <div className="absolute left-2 top-2 rounded-lg bg-black/60 p-1 text-white/50">
+                        <GripVertical className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="absolute right-2 top-2 flex gap-1">
                         <button
                           type="button"
-                          onClick={() => saveCaption(img.id)}
-                          disabled={savingCaption}
-                          className="h-8 w-8 flex items-center justify-center rounded-lg bg-[#D4FC34] text-gray-900 disabled:opacity-60"
+                          onClick={() => toggleActive(img)}
+                          title={img.active === 1 ? "Hide from public site" : "Show on public site"}
+                          className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-white/10 bg-black/60 text-white transition hover:border-lime hover:text-lime"
                         >
-                          {savingCaption ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                          {img.active === 1 ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                         </button>
                         <button
                           type="button"
                           onClick={() => {
-                            setEditingId(null);
-                            setEditCaption("");
+                            setEditingId(img.id);
+                            setEditCaption(img.caption ?? "");
                           }}
-                          className="h-8 w-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white"
+                          title="Edit caption"
+                          className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-white/10 bg-black/60 text-white transition hover:border-lime hover:text-lime"
                         >
-                          <X className="h-3.5 w-3.5" />
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeletingId(img.id)}
+                          title="Delete"
+                          className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-white/10 bg-black/60 text-white transition hover:border-red-500 hover:text-red-400"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                    ) : (
-                      <p className="text-xs text-white/80 line-clamp-2 leading-relaxed">
-                        {img.caption || <span className="text-white/30 italic">No caption</span>}
+                    </div>
+
+                    <div className="p-3">
+                      {editingId === img.id ? (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={editCaption}
+                            onChange={(e) => setEditCaption(e.target.value)}
+                            autoFocus
+                            className="flex-1 rounded-xl border-2 border-white/10 bg-white/5 px-2 py-1 text-xs text-white outline-none focus:border-lime"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => saveCaption(img.id)}
+                            disabled={savingCaption}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-lime text-ink disabled:opacity-60"
+                          >
+                            {savingCaption ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setEditingId(null); setEditCaption(""); }}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-white/10 bg-white/5 text-white"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="line-clamp-2 text-xs leading-relaxed text-white/70">
+                          {img.caption || <span className="italic text-white/30">No caption</span>}
+                        </p>
+                      )}
+                      <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-wide text-white/30">
+                        Added {new Date(img.createdAt).toLocaleDateString("en-IN")}
                       </p>
-                    )}
-                    <p className="text-[9px] text-white/30 mt-2">
-                      Added {new Date(img.createdAt).toLocaleDateString("en-IN")}
-                    </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </section>
       </div>
 
+      {/* Delete confirm modal */}
       <AnimatePresence>
         {deletingId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/80 p-4">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0B0F19] p-6 text-center text-white"
+              transition={{ type: "spring", stiffness: 320, damping: 28 }}
+              className="w-full max-w-sm overflow-hidden rounded-3xl border-2 border-white/10 bg-[#0d1426] p-6 text-center text-white"
             >
-              <Trash2 className="mx-auto h-12 w-12 text-red-400 mb-4 animate-bounce" />
-              <h4 className="font-display text-lg font-extrabold mb-2">Delete photo?</h4>
-              <p className="text-xs text-white/60 mb-6">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-red-500/30 bg-red-500/10">
+                <Trash2 className="h-7 w-7 text-red-400" />
+              </div>
+              <h4 className="font-display text-lg font-extrabold tracking-tight">Delete photo?</h4>
+              <p className="mt-1.5 text-xs text-white/50">
                 This permanently removes the image from Vercel Blob storage.
               </p>
-              <div className="flex gap-2">
+              <div className="mt-6 flex gap-2">
                 <button
                   type="button"
                   onClick={() => setDeletingId(null)}
                   disabled={deleting}
-                  className="flex-1 rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-xs font-bold hover:bg-white/10 disabled:opacity-60"
+                  className="btn-outline flex-1 justify-center py-2.5 text-xs"
                 >
                   Cancel
                 </button>
@@ -483,9 +506,9 @@ export default function AdminGalleryPage() {
                   type="button"
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 px-4 py-2.5 text-xs font-bold text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-red-600 px-4 py-2.5 text-xs font-extrabold uppercase tracking-wide text-white transition hover:bg-red-700 disabled:opacity-60"
                 >
-                  {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Confirm"}
+                  {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirm delete"}
                 </button>
               </div>
             </motion.div>

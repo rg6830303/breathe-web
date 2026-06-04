@@ -236,31 +236,35 @@ export function BookingGrid() {
 
   return (
     <div className="grid gap-6 pb-24 lg:grid-cols-[1fr_360px] lg:pb-0">
-      <section className="overflow-hidden rounded-3xl border border-brand/10 bg-white shadow-soft">
+      {/* ---- Grid panel ---- */}
+      <section className="overflow-hidden rounded-3xl border-2 border-ink/10 bg-white dark:border-white/10 dark:bg-[#111c38]">
+
+        {/* Login nudge banner */}
         {authLoaded && !account && (
-          <div className="flex items-center justify-between gap-3 border-b border-brand/10 bg-brand/5 px-4 py-3 text-xs sm:text-sm">
-            <span className="font-semibold text-ink">Log in to confirm a booking. You can still browse availability.</span>
+          <div className="flex items-center justify-between gap-3 border-b-2 border-brand/10 bg-brand/5 px-4 py-3 text-xs dark:border-white/10 dark:bg-white/5 sm:text-sm">
+            <span className="font-bold text-ink dark:text-white">Log in to confirm a booking. You can still browse availability.</span>
             <Link
               href="/login?next=/book"
-              className="inline-flex items-center gap-1 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-white"
+              className="btn-primary py-1.5 text-xs"
             >
               <LogIn className="h-3.5 w-3.5" /> Log in
             </Link>
           </div>
         )}
 
-        <div className="flex flex-col gap-4 border-b border-brand/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        {/* Header row */}
+        <div className="flex flex-col gap-4 border-b-2 border-ink/10 p-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="hidden items-center gap-3 sm:flex">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-white">
               <CalendarDays className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="font-display text-xl font-extrabold text-ink">Book a court</h2>
-              <p className="text-sm text-slatey">30-minute slots · 3 courts</p>
+              <h2 className="font-display text-xl font-extrabold tracking-tight text-ink dark:text-white">Book a court</h2>
+              <p className="text-xs font-semibold text-slatey dark:text-white/50">30-minute slots · 3 courts</p>
             </div>
           </div>
           <div className="flex items-center justify-between gap-3 sm:justify-end">
-            <span className="flex items-center gap-2 text-sm font-bold text-ink sm:hidden">
+            <span className="flex items-center gap-2 text-sm font-bold text-ink dark:text-white sm:hidden">
               <CalendarDays className="h-4 w-4 text-brand" /> Date:
             </span>
             <input
@@ -268,22 +272,32 @@ export function BookingGrid() {
               min={minDate}
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="rounded-xl border border-brand/15 bg-white px-3 py-2.5 text-sm font-semibold text-ink outline-none focus:border-brand"
+              className="rounded-xl border-2 border-ink/10 bg-white px-3 py-2.5 text-sm font-bold text-ink outline-none transition focus:border-brand dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-brand-300"
             />
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 px-5 py-3 text-xs text-slatey sm:flex-row sm:items-center sm:justify-between">
-          <span className="font-semibold text-ink">{dateLabel(date)}</span>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-lime/30 ring-1 ring-lime" /> Open</span>
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-brand" /> Selected</span>
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-[#E24B4A]" /> Booked</span>
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-[#888780]" /> Blocked</span>
+        {/* Date + legend row */}
+        <div className="flex flex-col gap-3 border-b border-ink/5 bg-ink/[0.02] px-5 py-3 text-xs dark:border-white/5 dark:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-between">
+          <span className="font-extrabold text-ink dark:text-white">{dateLabel(date)}</span>
+          <div className="flex flex-wrap items-center gap-3 text-slatey dark:text-white/50">
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded border-2 border-lime/60 bg-lime/20" /> Open
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded bg-brand" /> Selected
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded bg-[#E24B4A]" /> Booked
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded bg-ink/30 dark:bg-white/20" /> Blocked
+            </span>
           </div>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto border-y border-brand/10 bg-brand/[0.03] px-5 py-3">
+        {/* Band picker */}
+        <div className="flex gap-2 overflow-x-auto border-b border-ink/5 bg-ink/[0.02] px-5 py-3 dark:border-white/5 dark:bg-white/[0.02]">
           {BANDS.map((b) => {
             const isActive = band === b.key;
             return (
@@ -291,8 +305,10 @@ export function BookingGrid() {
                 key={b.key}
                 type="button"
                 onClick={() => setBand(b.key)}
-                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold transition ${
-                  isActive ? "bg-brand text-white shadow-soft" : "border border-brand/15 bg-white text-ink/70 hover:text-brand"
+                className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-extrabold uppercase tracking-wide transition ${
+                  isActive
+                    ? "bg-brand text-white"
+                    : "border-2 border-ink/10 bg-white text-ink/60 hover:border-brand/40 hover:text-brand dark:border-white/10 dark:bg-white/5 dark:text-white/50 dark:hover:border-brand-300/40 dark:hover:text-brand-300"
                 }`}
                 aria-pressed={isActive}
               >
@@ -302,9 +318,9 @@ export function BookingGrid() {
           })}
         </div>
 
-        {/* Mobile view */}
+        {/* Mobile: court tabs */}
         <div className="lg:hidden">
-          <div className="flex gap-1 border-b border-brand/10 bg-white px-3 py-2">
+          <div className="flex gap-1 border-b-2 border-ink/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#111c38]">
             {COURTS.map((c) => {
               const isActive = mobileCourt === c;
               return (
@@ -312,8 +328,10 @@ export function BookingGrid() {
                   key={c}
                   type="button"
                   onClick={() => setMobileCourt(c)}
-                  className={`flex-1 rounded-full px-3 py-2 text-xs font-bold transition ${
-                    isActive ? "bg-brand text-white shadow-soft" : "text-ink/70 hover:bg-brand/5"
+                  className={`flex-1 rounded-full px-3 py-2 text-xs font-extrabold uppercase tracking-wide transition ${
+                    isActive
+                      ? "bg-brand text-white"
+                      : "text-ink/60 hover:bg-brand/5 dark:text-white/50 dark:hover:bg-white/5"
                   }`}
                 >
                   Court {c}
@@ -324,11 +342,11 @@ export function BookingGrid() {
           {loading ? (
             <div className="space-y-2 p-3">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-12 animate-pulse rounded-lg bg-gray-100" />
+                <div key={i} className="h-14 animate-pulse rounded-xl bg-ink/5 dark:bg-white/5" />
               ))}
             </div>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-ink/5 dark:divide-white/5">
               {times.map((t) => {
                 const cell = findSlot(mobileCourt, t);
                 if (!cell) return null;
@@ -340,31 +358,40 @@ export function BookingGrid() {
 
         {/* Desktop grid */}
         <div className="hidden lg:block">
-          <div className="grid border-y border-brand/10 bg-brand/5 text-center text-xs font-bold uppercase tracking-wide text-ink" style={{ gridTemplateColumns: `72px repeat(${COURTS.length}, minmax(0, 1fr))` }}>
-            <div className="p-3 text-slatey">Time</div>
+          <div
+            className="grid border-y border-ink/5 bg-ink/[0.02] text-center text-[0.65rem] font-extrabold uppercase tracking-[0.15em] text-slatey dark:border-white/5 dark:bg-white/[0.02]"
+            style={{ gridTemplateColumns: `72px repeat(${COURTS.length}, minmax(0, 1fr))` }}
+          >
+            <div className="p-3">Time</div>
             {COURTS.map((c) => (
-              <div key={c} className="border-l border-brand/10 p-3 text-brand">Court {c}</div>
+              <div key={c} className="border-l border-ink/5 p-3 text-brand dark:border-white/5 dark:text-brand-300">
+                Court {c}
+              </div>
             ))}
           </div>
           <div className="relative max-h-[640px] overflow-y-auto">
             {loading ? (
               <div className="space-y-2 p-3">
                 {Array.from({ length: 10 }).map((_, i) => (
-                  <div key={i} className="h-12 animate-pulse rounded-lg bg-gray-100" />
+                  <div key={i} className="h-14 animate-pulse rounded-xl bg-ink/5 dark:bg-white/5" />
                 ))}
               </div>
             ) : (
               times.map((t) => (
-                <div key={t} className="grid border-b border-brand/5" style={{ gridTemplateColumns: `72px repeat(${COURTS.length}, minmax(0, 1fr))` }}>
-                  <div className="sticky left-0 z-10 flex items-center justify-center bg-brand/[0.03] p-2 text-center text-xs font-bold text-slatey">
+                <div
+                  key={t}
+                  className="grid border-b border-ink/5 dark:border-white/5"
+                  style={{ gridTemplateColumns: `72px repeat(${COURTS.length}, minmax(0, 1fr))` }}
+                >
+                  <div className="sticky left-0 z-10 flex items-center justify-center bg-white p-2 text-center text-[0.65rem] font-extrabold uppercase tracking-wide text-slatey dark:bg-[#111c38] dark:text-white/40">
                     {timeLabel(t)}
                   </div>
                   {COURTS.map((c) => {
                     const cell = findSlot(c, t);
-                    if (!cell) return <div key={c} className="border-l border-brand/5" />;
+                    if (!cell) return <div key={c} className="border-l border-ink/5 dark:border-white/5" />;
                     const sel = isSelected(cell);
                     return (
-                      <div key={`${c}-${t}`} className="m-1">
+                      <div key={`${c}-${t}`} className="m-1.5">
                         <SlotButton slot={cell} selected={sel} onClick={() => toggle(cell)} />
                       </div>
                     );
@@ -376,76 +403,94 @@ export function BookingGrid() {
         </div>
       </section>
 
-      {/* Summary */}
-      <aside className="h-fit rounded-3xl border border-brand/10 bg-white p-5 shadow-card lg:sticky lg:top-28">
-        <h2 className="flex items-center gap-2 font-display text-lg font-extrabold text-ink">
+      {/* ---- Summary aside ---- */}
+      <aside className="h-fit rounded-3xl border-2 border-ink/10 bg-white p-5 dark:border-white/10 dark:bg-[#111c38] lg:sticky lg:top-28">
+        {/* Tape stripe top */}
+        <div aria-hidden className="tape-stripe -mx-5 -mt-5 mb-5 h-1" />
+
+        <h2 className="flex items-center gap-2 font-display text-lg font-extrabold tracking-tight text-ink dark:text-white">
           <ReceiptText className="h-5 w-5 text-brand" /> Reservation summary
         </h2>
 
         <div className="mt-4 space-y-2">
           {selected.length === 0 && (
-            <p className="rounded-2xl border border-dashed border-brand/20 bg-brand/[0.03] p-4 text-sm text-slatey">
+            <p className="rounded-2xl border-2 border-dashed border-ink/10 bg-ink/[0.02] p-4 text-sm text-slatey dark:border-white/10 dark:bg-white/[0.02] dark:text-white/40">
               Tap open slots in the grid to build your booking.
             </p>
           )}
           {selected.map((s) => (
-            <div key={`${s.court}-${s.time}`} className="rounded-2xl border border-brand/10 bg-brand/[0.03] p-3">
-              <div className="flex justify-between text-sm font-bold text-ink">
+            <motion.div
+              key={`${s.court}-${s.time}`}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="rounded-2xl border-2 border-brand/15 bg-brand/5 p-3 dark:border-brand-300/15 dark:bg-brand/10"
+            >
+              <div className="flex justify-between text-sm font-extrabold text-ink dark:text-white">
                 <span>Court {s.court}</span>
-                <span>₹{s.price}</span>
+                <span className="text-brand dark:text-brand-300">₹{s.price}</span>
               </div>
-              <p className="text-xs text-slatey">{timeLabel(s.time)} · 30 min</p>
-            </div>
+              <p className="text-xs text-slatey dark:text-white/50">{timeLabel(s.time)} · 30 min</p>
+            </motion.div>
           ))}
         </div>
 
-        <div className="mt-4 flex items-start gap-2 rounded-xl border border-lime/40 bg-lime/10 px-3 py-2.5 text-xs text-ink">
+        {/* Complimentary gear notice */}
+        <div className="mt-4 flex items-start gap-2 rounded-xl border-2 border-lime/30 bg-lime/10 px-3 py-2.5 text-xs text-ink dark:text-white">
           <Gift className="mt-0.5 h-4 w-4 shrink-0 text-lime-dark" />
           <span>
-            <strong>Paddles &amp; balls are complimentary</strong> — they&apos;re included free with every court booking.
+            <strong className="font-extrabold">Paddles &amp; balls are complimentary</strong> — included free with every court booking.
           </span>
         </div>
 
-        <div className="mt-4 space-y-2 border-t border-brand/10 pt-4 text-sm">
-          <div className="flex justify-between text-slatey">
+        {/* Totals */}
+        <div className="mt-4 space-y-2 border-t-2 border-ink/10 pt-4 text-sm dark:border-white/10">
+          <div className="flex justify-between text-slatey dark:text-white/50">
             <span>Subtotal</span>
-            <span className="font-semibold text-ink">₹{totals.subtotal}</span>
+            <span className="font-bold text-ink dark:text-white">₹{totals.subtotal}</span>
           </div>
-          <div className="mt-2 flex items-center justify-between rounded-2xl brand-gradient px-4 py-3 text-lg font-extrabold text-white">
+          <div className="mt-2 flex items-center justify-between rounded-2xl bg-ink px-4 py-3 text-lg font-extrabold text-white dark:bg-white dark:text-ink">
             <span>Total</span>
             <span>₹{totals.total}</span>
           </div>
         </div>
 
         {error && (
-          <div className="mt-3 rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>
+          <div className="mt-3 rounded-xl border-2 border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400">
+            {error}
+          </div>
         )}
         {confirmed && (
-          <div className="mt-3 flex items-start gap-2 rounded-xl border border-lime/40 bg-lime/10 px-3 py-2 text-xs text-lime-dark">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mt-3 flex items-start gap-2 rounded-xl border-2 border-lime/40 bg-lime/10 px-3 py-2.5 text-xs font-semibold text-lime-dark"
+          >
             <Check className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              Booking confirmed! 🎉{" "}
+              Booking confirmed!{" "}
               {emailed
                 ? "A confirmation email is on its way."
                 : "Your booking is safe and shows on your dashboard — the confirmation email couldn't be sent just now."}{" "}
               Redirecting…
             </span>
-          </div>
+          </motion.div>
         )}
 
+        {/* Prepaid balance badge */}
         {account?.role === "user" && creditMin > 0 && (
-          <div className="mt-4 flex items-center justify-between rounded-xl border border-lime/40 bg-lime/10 px-3 py-2 text-xs font-semibold text-lime-dark">
+          <div className="mt-4 flex items-center justify-between rounded-xl border-2 border-lime/40 bg-lime/10 px-3 py-2 text-xs font-extrabold text-lime-dark">
             <span>Prepaid balance</span>
             <span>{Math.round((creditMin / 60) * 10) / 10} h · {Math.floor(creditMin / 30)} slots</span>
           </div>
         )}
 
+        {/* CTA button */}
         {hasEnoughCredit ? (
           <button
             type="button"
             onClick={bookWithCredit}
             disabled={paying}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-lime px-4 py-3.5 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark active:scale-[0.99] disabled:opacity-60"
+            className="btn-accent mt-4 w-full justify-center"
           >
             {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Book {selected.length} slot{selected.length > 1 ? "s" : ""} with prepaid hours
@@ -455,7 +500,7 @@ export function BookingGrid() {
             type="button"
             onClick={payNow}
             disabled={selected.length === 0 || paying}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+            className="btn-primary mt-4 w-full justify-center disabled:cursor-not-allowed disabled:bg-ink/30 disabled:shadow-none dark:disabled:bg-white/20"
           >
             {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {selected.length === 0
@@ -466,32 +511,32 @@ export function BookingGrid() {
           </button>
         )}
 
-        <p className="mt-3 text-[0.7rem] leading-5 text-slatey">
+        <p className="mt-3 text-[0.68rem] leading-5 text-slatey dark:text-white/40">
           {hasEnoughCredit
             ? "Booked instantly from your prepaid bulk-hours balance — no payment needed."
             : "Secure payment by Razorpay. Slots are confirmed instantly once payment succeeds."}
         </p>
       </aside>
 
-      {/* Sticky mobile pay bar — only when slots are selected, hidden on desktop */}
+      {/* Sticky mobile pay bar */}
       {selected.length > 0 && (
         <motion.div
           initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="fixed inset-x-0 bottom-0 z-40 border-t border-brand/10 bg-white/95 px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3 shadow-[0_-8px_24px_-12px_rgba(13,20,38,0.25)] backdrop-blur-xl lg:hidden dark:border-white/10 dark:bg-ink/95"
+          className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-ink/10 bg-white px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3 shadow-[0_-12px_32px_-8px_rgba(13,20,38,0.3)] lg:hidden dark:border-white/10 dark:bg-ink"
         >
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-slatey">
+              <div className="text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-slatey dark:text-white/50">
                 {selected.length} slot{selected.length > 1 ? "s" : ""} selected
               </div>
-              <div className="font-display text-xl font-extrabold text-ink dark:text-white">₹{totals.total}</div>
+              <div className="font-display text-2xl font-extrabold text-ink dark:text-white">₹{totals.total}</div>
             </div>
             <button
               type="button"
               onClick={payNow}
               disabled={paying}
-              className="inline-flex flex-1 max-w-[60%] items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3.5 text-sm font-bold text-white shadow-glow transition active:scale-[0.98] disabled:opacity-60"
+              className="btn-primary max-w-[60%] flex-1 justify-center disabled:opacity-60"
             >
               {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {!account || account.role !== "user" ? "Log in to Pay" : "Confirm & Pay"}
@@ -505,25 +550,38 @@ export function BookingGrid() {
 
 function SlotButton({ slot, selected, onClick }: { slot: Slot; selected: boolean; onClick: () => void }) {
   const state = selected ? "selected" : slot.status;
-  let cls = "border-lime/40 bg-lime/15 text-lime-dark hover:border-lime hover:bg-lime/25";
-  if (state === "selected") cls = "border-brand bg-brand text-white shadow-glow";
-  if (state === "booked") cls = "cursor-not-allowed border-red-200 bg-[#FEEAEA] text-[#E24B4A]";
-  if (state === "blocked") cls = "cursor-not-allowed border-gray-300 bg-gray-100 text-gray-500";
+
+  // Bold, unmistakable slot states
+  let cls =
+    "border-2 border-lime/50 bg-lime/15 text-lime-dark hover:border-lime hover:bg-lime/25 hover:-translate-y-0.5";
+  if (state === "selected")
+    cls = "border-2 border-brand bg-brand text-white shadow-[0_4px_0_-1px_rgba(35,72,224,0.5)]";
+  if (state === "booked")
+    cls = "cursor-not-allowed border-2 border-red-200/60 bg-red-50/80 text-[#E24B4A] dark:border-red-900/40 dark:bg-red-900/10 dark:text-red-400";
+  if (state === "blocked")
+    cls = "cursor-not-allowed border-2 border-ink/10 bg-ink/5 text-ink/30 dark:border-white/10 dark:bg-white/5 dark:text-white/20";
+
   return (
     <motion.button
       type="button"
       onClick={onClick}
       disabled={slot.status !== "open"}
-      animate={state === "open" ? { opacity: [0.85, 1, 0.85] } : { opacity: 1 }}
-      transition={state === "open" ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : undefined}
-      className={`flex min-h-[52px] w-full flex-col items-start rounded-xl border p-2.5 text-left text-xs font-bold transition ${cls}`}
+      whileHover={slot.status === "open" && !selected ? { y: -2, scale: 1.01 } : undefined}
+      whileTap={slot.status === "open" ? { scale: 0.97 } : undefined}
+      className={`flex min-h-[52px] w-full flex-col items-start rounded-xl p-2.5 text-left text-xs font-extrabold transition-all duration-150 ${cls}`}
     >
       <span className="flex w-full items-center justify-between">
-        <span className="capitalize">{state}</span>
-        {state === "booked" ? <Lock className="h-3.5 w-3.5" /> : state === "selected" ? <Check className="h-3.5 w-3.5" /> : null}
+        <span className="uppercase tracking-wide">
+          {state === "open" ? "Open" : state === "selected" ? "Picked" : state === "booked" ? "Booked" : "Blocked"}
+        </span>
+        {state === "booked" ? (
+          <Lock className="h-3.5 w-3.5" />
+        ) : state === "selected" ? (
+          <Check className="h-3.5 w-3.5" />
+        ) : null}
       </span>
       {slot.status !== "blocked" && (
-        <span className={`mt-1 text-[11px] font-semibold ${state === "selected" ? "text-white/90" : ""}`}>
+        <span className={`mt-1 text-[11px] font-bold ${state === "selected" ? "text-white/80" : ""}`}>
           ₹{slot.price}
         </span>
       )}
@@ -534,20 +592,26 @@ function SlotButton({ slot, selected, onClick }: { slot: Slot; selected: boolean
 function MobileRow({ slot, selected, onToggle }: { slot: Slot; selected: boolean; onToggle: () => void }) {
   const state = selected ? "selected" : slot.status;
   const disabled = slot.status !== "open";
-  let pill = "border border-lime bg-lime/15 text-lime-dark";
-  if (state === "selected") pill = "bg-brand text-white";
-  if (state === "booked") pill = "bg-[#FEEAEA] text-[#E24B4A]";
-  if (state === "blocked") pill = "bg-gray-100 text-gray-500";
+
+  let pill = "border-2 border-lime/50 bg-lime/15 text-lime-dark";
+  if (state === "selected") pill = "border-2 border-brand bg-brand text-white";
+  if (state === "booked") pill = "border-2 border-red-200 bg-red-50 text-[#E24B4A] dark:border-red-900/40 dark:bg-red-900/10 dark:text-red-400";
+  if (state === "blocked") pill = "border-2 border-ink/10 bg-ink/5 text-ink/30 dark:border-white/10 dark:bg-white/5 dark:text-white/25";
+
   return (
     <li
-      className={`flex min-h-[60px] items-center justify-between border-b border-gray-100 px-4 py-3.5 active:bg-brand/5 ${disabled ? "cursor-default" : "cursor-pointer"}`}
+      className={`flex min-h-[64px] items-center justify-between border-b border-ink/5 px-4 py-3.5 transition dark:border-white/5 ${
+        disabled ? "cursor-default" : "cursor-pointer hover:bg-brand/5 active:bg-brand/10 dark:hover:bg-white/5"
+      }`}
       onClick={() => !disabled && onToggle()}
     >
       <div>
-        <div className="text-sm font-bold text-ink">{timeLabel(slot.time)}</div>
-        <div className="text-xs text-slatey">Court {slot.court} · ₹{slot.price}</div>
+        <div className="font-display text-sm font-extrabold text-ink dark:text-white">{timeLabel(slot.time)}</div>
+        <div className="text-xs text-slatey dark:text-white/40">Court {slot.court} · ₹{slot.price}</div>
       </div>
-      <span className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${pill}`}>{state}</span>
+      <span className={`rounded-full px-3 py-1 text-[0.65rem] font-extrabold uppercase tracking-wide ${pill}`}>
+        {state === "open" ? "Open" : state === "selected" ? "Picked" : state === "booked" ? "Booked" : "Blocked"}
+      </span>
     </li>
   );
 }

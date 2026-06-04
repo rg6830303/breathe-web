@@ -45,7 +45,8 @@ export function GalleryGrid({ posts }: { posts: InstaPost[] | null }) {
 
   return (
     <>
-      <section className="px-4 py-16 sm:px-6 lg:px-8 bg-white">
+      {/* ── GALLERY GRID — light section ── */}
+      <section className="bg-white px-4 py-16 dark:bg-[#111c38] sm:px-6 lg:px-8">
         <Container className="!px-0">
           {merged.length > 0 ? <InstaCards posts={merged} /> : <FallbackCards />}
         </Container>
@@ -72,13 +73,19 @@ function InstaCards({ posts }: { posts: InstaPost[] }) {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3">
+      {/* Masonry-style grid */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
         {posts.map((p, i) => (
-          <ScrollReveal key={p.id} delay={i * 0.04} direction="up" className="relative aspect-square overflow-hidden rounded-2xl border border-brand/5 shadow-soft">
+          <ScrollReveal
+            key={p.id}
+            delay={i * 0.04}
+            direction="up"
+            className="relative aspect-square overflow-hidden rounded-2xl border-2 border-ink/8 dark:border-white/10"
+          >
             <motion.button
               type="button"
               onClick={() => setActiveIdx(i)}
-              whileHover={{ scale: 1.03 }}
+              whileHover={{ scale: 1.02 }}
               transition={{ type: "spring", stiffness: 200, damping: 20 }}
               className="group relative block h-full w-full"
             >
@@ -87,39 +94,50 @@ function InstaCards({ posts }: { posts: InstaPost[] }) {
                 alt={p.caption?.slice(0, 80) ?? "Breathe Pickleball"}
                 fill
                 sizes="(max-width: 768px) 50vw, 33vw"
-                className="object-cover"
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
                 unoptimized
               />
-              {p.caption && (
-                <div className="absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-black/80 to-transparent p-3 text-left text-xs text-white opacity-0 transition group-hover:translate-y-0 group-hover:opacity-100">
-                  <span className="line-clamp-2">{p.caption}</span>
-                </div>
-              )}
+              {/* Hover overlay */}
+              <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-ink/80 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 p-3">
+                {p.caption && (
+                  <span className="text-left text-xs font-semibold text-white line-clamp-2">
+                    {p.caption}
+                  </span>
+                )}
+              </div>
+              {/* Lime corner tick on hover */}
+              <div
+                aria-hidden
+                className="absolute left-0 top-0 h-1 w-8 bg-lime opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+              />
             </motion.button>
           </ScrollReveal>
         ))}
       </div>
 
+      {/* Lightbox */}
       <AnimatePresence>
         {activeIdx !== null && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 md:p-10"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-ink/95 p-4 md:p-10"
             onClick={close}
           >
+            {/* Close */}
             <button
               type="button"
-              className="absolute right-4 top-4 z-50 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+              className="absolute right-4 top-4 z-50 rounded-full border-2 border-white/20 bg-white/5 p-2 text-white transition hover:border-lime hover:text-lime"
               onClick={close}
               aria-label="Close"
             >
               <X className="h-5 w-5" />
             </button>
+            {/* Prev */}
             <button
               type="button"
-              className="absolute left-4 z-50 rounded-full bg-white/5 p-3 text-white hover:bg-white/10 md:left-8"
+              className="absolute left-4 z-50 rounded-full border-2 border-white/20 bg-white/5 p-3 text-white transition hover:border-lime hover:text-lime md:left-8"
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveIdx((i) => (i! === 0 ? posts.length - 1 : i! - 1));
@@ -128,9 +146,10 @@ function InstaCards({ posts }: { posts: InstaPost[] }) {
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
+            {/* Next */}
             <button
               type="button"
-              className="absolute right-4 z-50 rounded-full bg-white/5 p-3 text-white hover:bg-white/10 md:right-8"
+              className="absolute right-4 z-50 rounded-full border-2 border-white/20 bg-white/5 p-3 text-white transition hover:border-lime hover:text-lime md:right-8"
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveIdx((i) => (i! === posts.length - 1 ? 0 : i! + 1));
@@ -139,14 +158,17 @@ function InstaCards({ posts }: { posts: InstaPost[] }) {
             >
               <ChevronRight className="h-5 w-5" />
             </button>
+
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.92, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="relative w-full max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-gray-900 shadow-glow"
+              exit={{ scale: 0.92, opacity: 0 }}
+              transition={{ duration: 0.28 }}
+              className="relative w-full max-w-3xl overflow-hidden rounded-3xl border-2 border-white/15 bg-[#111c38]"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Tape accent */}
+              <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-80" />
               <div className="relative aspect-square">
                 <Image
                   src={posts[activeIdx].media_url}
@@ -160,14 +182,16 @@ function InstaCards({ posts }: { posts: InstaPost[] }) {
               {(posts[activeIdx].caption ||
                 !posts[activeIdx].permalink.includes("blob.vercel-storage.com")) && (
                 <div className="p-5 text-sm text-white/90">
-                  {posts[activeIdx].caption && <p className="line-clamp-4">{posts[activeIdx].caption}</p>}
+                  {posts[activeIdx].caption && (
+                    <p className="line-clamp-4">{posts[activeIdx].caption}</p>
+                  )}
                   {!posts[activeIdx].permalink.includes("blob.vercel-storage.com") &&
                     posts[activeIdx].permalink !== posts[activeIdx].media_url && (
                       <a
                         href={posts[activeIdx].permalink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-lime px-4 py-2 text-xs font-bold text-gray-900 hover:bg-lime-dark"
+                        className="btn-accent mt-3 inline-flex text-xs"
                       >
                         <Instagram className="h-3.5 w-3.5" /> View on Instagram ↗
                       </a>
@@ -183,19 +207,20 @@ function InstaCards({ posts }: { posts: InstaPost[] }) {
 }
 
 function FallbackCards() {
-  // No uploaded photos yet — show one honest, on-brand panel that points
-  // visitors to Instagram (and tells the owner to upload from /admin/gallery)
-  // instead of a wall of empty placeholder boxes.
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-brand/10 bg-gradient-to-br from-brand-800 via-brand-700 to-brand-900 shadow-glow">
-      <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-20" />
+    <div className="relative overflow-hidden rounded-3xl border-2 border-ink/10 bg-ink dark:border-white/10">
+      <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
+      <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-[0.07]" />
       <div className="relative flex flex-col items-center gap-5 px-6 py-16 text-center sm:py-20">
-        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 backdrop-blur">
-          <Instagram className="h-8 w-8 text-white" />
+        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-lime/15">
+          <Instagram className="h-8 w-8 text-lime" />
         </span>
         <div>
-          <h3 className="font-display text-2xl font-extrabold text-white sm:text-3xl">Match-day photos are on the way</h3>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-white/80">
+          <span className="eyebrow text-lime justify-center">Gallery</span>
+          <h3 className="heading-lg mt-3 text-white" style={{ fontSize: "clamp(1.5rem,3vw,2rem)" }}>
+            Match-day photos are on the way
+          </h3>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-white/65">
             We&apos;re putting together a gallery of rallies, tournaments, and community sessions at the club.
             In the meantime, catch all the latest on our Instagram.
           </p>
@@ -204,7 +229,7 @@ function FallbackCards() {
           href={site.instagram}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-full bg-lime px-6 py-3 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark"
+          className="btn-accent"
         >
           <Instagram className="h-4 w-4" /> @breathepickleball
         </a>

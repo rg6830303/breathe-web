@@ -54,77 +54,106 @@ export function ResetPasswordForm() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="mx-auto w-full max-w-md rounded-3xl border border-brand/10 bg-white p-7 shadow-card"
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="relative z-10 w-full max-w-md"
     >
-      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-brand">
-        <KeyRound className="h-4 w-4" /> Choose a new password
-      </div>
-      <h1 className="mt-2 font-display text-2xl font-extrabold text-ink sm:text-3xl">Set a new password</h1>
-      <p className="mt-2 text-sm text-slatey">Pick something at least 8 characters. You&apos;ll be signed in after saving.</p>
+      <div className="card-sport overflow-hidden bg-white dark:bg-[#111c38]">
+        {/* Card top accent stripe */}
+        <div aria-hidden className="tape-stripe h-1 w-full" />
 
-      {done ? (
-        <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
-          <div className="flex items-center gap-2 font-bold">
-            <ShieldCheck className="h-4 w-4" /> Password updated
-          </div>
-          <p className="mt-2">Redirecting you to the login page…</p>
-        </div>
-      ) : (
-        <form onSubmit={onSubmit} className="mt-6 grid gap-3">
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slatey">New password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-              required
-              minLength={8}
-              className="w-full rounded-xl border border-brand/15 bg-white px-4 py-3 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slatey">Confirm new password</span>
-            <input
-              type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              autoComplete="new-password"
-              required
-              minLength={8}
-              className="w-full rounded-xl border border-brand/15 bg-white px-4 py-3 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
-            />
-          </label>
-          {error && (
-            <div role="alert" className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
+        <div className="p-7 sm:p-9">
+          {/* Icon + eyebrow */}
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand text-white">
+              <KeyRound className="h-5 w-5" />
             </div>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="group mt-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 disabled:opacity-60"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Saving…
-              </>
-            ) : (
-              <>
-                Save new password <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-              </>
-            )}
-          </button>
-        </form>
-      )}
+            <span className="eyebrow text-brand dark:text-brand-300">Choose a new password</span>
+          </div>
 
-      <div className="mt-5 text-center text-xs text-slatey">
-        <Link href="/login" className="font-bold text-brand hover:underline">
-          Back to login
-        </Link>
+          <h1 className="heading-lg text-ink dark:text-white">
+            Set a new{" "}
+            <span className="mark-lime">password</span>
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-slatey dark:text-white/60">
+            Pick something at least 8 characters. You&apos;ll be signed in after saving.
+          </p>
+
+          {done ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-7 rounded-2xl border-2 border-lime/40 bg-lime/10 p-5"
+            >
+              <div className="flex items-center gap-2 font-display text-sm font-extrabold text-lime-dark">
+                <ShieldCheck className="h-4 w-4" /> Password updated
+              </div>
+              <p className="mt-2 text-sm text-ink/80 dark:text-white/70">
+                Redirecting you to the login page…
+              </p>
+            </motion.div>
+          ) : (
+            <form onSubmit={onSubmit} className="mt-7 grid gap-4">
+              <label className="block">
+                <span className="mb-1.5 block text-[0.65rem] font-extrabold uppercase tracking-[0.18em] text-slatey dark:text-white/50">
+                  New password
+                </span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  className="w-full rounded-xl border-2 border-ink/10 bg-white px-4 py-3 text-sm font-semibold text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-brand-300"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[0.65rem] font-extrabold uppercase tracking-[0.18em] text-slatey dark:text-white/50">
+                  Confirm new password
+                </span>
+                <input
+                  type="password"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  className="w-full rounded-xl border-2 border-ink/10 bg-white px-4 py-3 text-sm font-semibold text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-brand-300"
+                />
+              </label>
+
+              {error && (
+                <div role="alert" className="rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary group mt-1 w-full justify-center"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                  </>
+                ) : (
+                  <>
+                    Save new password <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          <div className="mt-6 border-t border-ink/10 pt-5 text-center text-xs text-slatey dark:border-white/10 dark:text-white/40">
+            <Link href="/login" className="font-extrabold text-brand hover:underline dark:text-brand-300">
+              Back to login
+            </Link>
+          </div>
+        </div>
       </div>
     </motion.div>
   );

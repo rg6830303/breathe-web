@@ -23,33 +23,36 @@ export function AdminSubHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-950 via-brand-900 to-brand-700 text-white shadow-glow">
-      <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-[0.12]" />
+    <div className="relative overflow-hidden rounded-3xl bg-ink text-white">
+      {/* Court line texture */}
+      <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-[0.1]" stroke="white" />
+      {/* Tape stripe accent */}
+      <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
+
       <motion.div
-        aria-hidden
-        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-lime/20 blur-3xl"
-        animate={{ scale: [1, 1.18, 1], opacity: [0.35, 0.55, 0.35] }}
-        transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <div className="relative flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className="relative flex flex-wrap items-center justify-between gap-4 px-5 py-6 sm:px-6"
+      >
         <div className="flex items-center gap-3">
           <Link
             href="/admin"
-            className="liquid-glass flex h-10 w-10 items-center justify-center rounded-xl text-white transition hover:opacity-90"
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-white/20 text-white transition hover:border-lime hover:bg-white/10"
             aria-label="Back to admin"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="flex items-center gap-2 font-display text-2xl font-extrabold sm:text-3xl">
-              {icon}
-              {title}
-            </h1>
-            {subtitle && <p className="mt-0.5 text-xs text-white/70">{subtitle}</p>}
+            <span className="eyebrow text-lime">{icon ? <span className="inline-flex items-center gap-1.5">{icon} Sub-page</span> : "Admin"}</span>
+            <h1 className="mt-1 font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl">{title}</h1>
+            {subtitle && <p className="mt-0.5 text-xs text-white/60">{subtitle}</p>}
           </div>
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-      </div>
+        {actions && (
+          <div className="flex flex-wrap items-center gap-2">{actions}</div>
+        )}
+      </motion.div>
     </div>
   );
 }

@@ -17,12 +17,12 @@ import {
 } from "lucide-react";
 import { LiveAvailability } from "@/components/live-availability";
 import { NoticeBoard } from "@/components/notice-board";
-import { Container, SectionHeading } from "@/components/ui";
+import { Container } from "@/components/ui";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { StatCounter } from "@/components/motion/stat-counter";
-import { GlowCard } from "@/components/ui/glow-card";
 import { TiltCard } from "@/components/motion/tilt-card";
 import { TestimonialsCarousel } from "@/components/testimonials-carousel";
+import { PaddleScene } from "@/components/ui/paddle-scene";
 import type { Notice } from "@/lib/types";
 
 const features = [
@@ -73,71 +73,63 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
     hidden: {},
     visible: {
       transition: {
-        staggerChildren: 0.15,
+        staggerChildren: 0.12,
       },
     },
   };
 
   const spanVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 24 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const } },
   };
 
   return (
     <>
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-700 to-brand-800 text-white">
-        {/* Real court photo, subtly blended behind the gradient (all screens) */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18] mix-blend-luminosity"
-          style={{ backgroundImage: "url(/gallery/court-night-wide.jpg)" }}
-        />
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-br from-brand-700/80 to-brand-900/80" />
+      {/* ── HERO — solid ink, court lines, PaddleScene ── */}
+      <section className="relative min-h-[88svh] overflow-hidden bg-ink text-white">
+        {/* Court-tape accent stripe */}
+        <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
+
+        {/* Court grid */}
         <CourtLinesSVG />
-        <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-lime/10 blur-3xl animate-blob" />
-        <div className="pointer-events-none absolute -right-16 bottom-0 h-80 w-80 rounded-full bg-white/10 blur-3xl animate-blob [animation-delay:3s]" />
 
-        {/* Floating 3D paddle — visible on ALL breakpoints (smaller on mobile) */}
-        <motion.div
-          className="absolute right-3 top-24 z-0 h-20 w-20 opacity-20 pointer-events-none sm:right-10 sm:top-1/4 sm:h-32 sm:w-32"
-          style={{ perspective: 800 }}
-          animate={{ y: [0, -14, 0], rotateY: [-18, 18, -18], rotateX: [6, -6, 6] }}
-          transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-        >
-          <svg viewBox="0 0 100 100" className="h-full w-full fill-current text-white drop-shadow-[0_12px_24px_rgba(0,0,0,0.3)]">
-            <ellipse cx="50" cy="40" rx="22" ry="27" />
-            <rect x="46" y="66" width="8" height="22" rx="3" />
-            <g fill="#2F5BFF">
-              <circle cx="44" cy="32" r="2" /><circle cx="50" cy="32" r="2" /><circle cx="56" cy="32" r="2" />
-              <circle cx="44" cy="40" r="2" /><circle cx="50" cy="40" r="2" /><circle cx="56" cy="40" r="2" />
-              <circle cx="47" cy="48" r="2" /><circle cx="53" cy="48" r="2" />
-            </g>
-          </svg>
-        </motion.div>
+        {/* Lime corner wash */}
+        <div aria-hidden className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-lime/10 blur-3xl" />
 
-        {/* Bouncing pickleball — visible on ALL breakpoints */}
-        <div className="absolute left-4 bottom-8 z-0 pointer-events-none sm:left-10 sm:bottom-16">
-          <div
-            className="h-8 w-8 rounded-full bg-lime/80 shadow-[0_0_24px_rgba(198,242,62,0.5)] animate-ball-bounce sm:h-10 sm:w-10"
-            style={{ backgroundImage: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6), transparent 40%)" }}
-          />
+        {/* PaddleScene — visible md+ */}
+        <div className="pointer-events-none absolute right-0 top-1/2 hidden -translate-y-1/2 opacity-95 lg:block xl:right-8">
+          <PaddleScene size={360} />
+        </div>
+        {/* PaddleScene mini — mobile accent */}
+        <div className="pointer-events-none absolute right-3 top-20 opacity-30 sm:right-8 sm:top-16 lg:hidden">
+          <PaddleScene size={120} />
         </div>
 
-        <Container className="relative z-10 grid items-center gap-10 py-14 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
+        {/* Bouncing pickleball accent */}
+        <div
+          aria-hidden
+          className="animate-ball-bounce absolute bottom-10 left-4 z-0 h-7 w-7 rounded-full sm:left-10 sm:h-10 sm:w-10"
+          style={{
+            background: "radial-gradient(circle at 32% 28%, #f7ff8a, #c6f432 55%, #8fae12)",
+            boxShadow: "0 8px 20px rgba(198,242,62,0.4)",
+          }}
+        />
+
+        <Container className="relative z-10 grid items-center gap-10 py-20 sm:py-28 lg:grid-cols-[1.1fr_0.9fr] lg:py-32">
           <motion.div variants={containerVariants} initial="hidden" animate="visible">
+            {/* Location tag */}
             <motion.span
               variants={spanVariants}
-              className="inline-flex items-center gap-2 rounded-full border border-lime/40 bg-lime/10 px-4 py-1.5 text-[0.65rem] font-extrabold uppercase tracking-[0.2em] text-lime sm:text-xs"
+              className="tag-sport"
             >
-              <MapPin className="h-3.5 w-3.5" /> Kaikhali · North Kolkata
+              <MapPin className="h-3 w-3" /> Kaikhali · North Kolkata
             </motion.span>
 
-            {/* Athletic stacked wordmark — big, tight, lime-on-white blocks. */}
-            <motion.h1 variants={containerVariants} className="mt-5">
+            {/* Athletic stacked wordmark */}
+            <motion.h1 variants={containerVariants} className="mt-6">
               <motion.span
                 variants={spanVariants}
-                className="block text-xs font-extrabold uppercase tracking-[0.32em] text-white/55 sm:text-sm"
+                className="block text-[0.7rem] font-extrabold uppercase tracking-[0.32em] text-white/50"
               >
                 Welcome to
               </motion.span>
@@ -149,11 +141,11 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
               </motion.span>
             </motion.h1>
 
-            <motion.p variants={spanVariants} className="mt-5 max-w-xl text-[0.95rem] leading-7 text-white/85 sm:text-lg">
+            <motion.p variants={spanVariants} className="mt-6 max-w-md text-base leading-7 text-white/70 sm:text-lg">
               Three professional courts, complimentary equipment, and a thriving community — all bookable in seconds from your phone.
             </motion.p>
 
-            {/* Primary & Secondary CTA Buttons — full width on mobile */}
+            {/* CTAs */}
             <motion.div variants={spanVariants} className="mt-8 flex flex-col gap-3 sm:flex-row">
               <motion.div whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
                 <Link href="/book" className="btn-accent w-full sm:w-auto">
@@ -163,31 +155,32 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
               <motion.div whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
                 <Link
                   href="/gallery"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-white/30 px-7 py-3.5 text-sm font-extrabold uppercase tracking-wide text-white transition hover:border-white hover:bg-white/10 sm:w-auto"
+                  className="btn-outline w-full sm:w-auto"
                 >
                   View the Courts
                 </Link>
               </motion.div>
             </motion.div>
 
-            {/* Stat Counters — 3-up even on mobile */}
-            <motion.div variants={spanVariants} className="mt-10 grid grid-cols-3 gap-3 sm:gap-4">
-              <div>
-                <div className="font-display text-xl font-extrabold text-lime sm:text-3xl">
-                  <StatCounter end={3} />
+            {/* Stat counters */}
+            <motion.div variants={spanVariants} className="mt-10 grid grid-cols-3 gap-3">
+              {[
+                { value: <StatCounter end={3} />, label: "Pro courts" },
+                {
+                  value: (
+                    <span className="whitespace-nowrap">
+                      6<span className="text-sm">AM</span>–11<span className="text-sm">PM</span>
+                    </span>
+                  ),
+                  label: "Open daily",
+                },
+                { value: "All", label: "Skill levels" },
+              ].map(({ value, label }) => (
+                <div key={label} className="rounded-2xl border-2 border-white/10 bg-white/5 px-3 py-4 text-center">
+                  <div className="font-display text-2xl font-extrabold text-lime sm:text-3xl">{value}</div>
+                  <div className="mt-1 text-[0.6rem] font-extrabold uppercase tracking-wider text-white/50 sm:text-xs">{label}</div>
                 </div>
-                <div className="mt-1 text-[0.6rem] font-semibold uppercase tracking-wide text-white/70 sm:text-xs">Pro courts</div>
-              </div>
-              <div>
-                <div className="font-display text-xl font-extrabold text-lime sm:text-3xl whitespace-nowrap">
-                  6<span className="text-sm">AM</span>–11<span className="text-sm">PM</span>
-                </div>
-                <div className="mt-1 text-[0.6rem] font-semibold uppercase tracking-wide text-white/70 sm:text-xs">Open daily</div>
-              </div>
-              <div>
-                <div className="font-display text-xl font-extrabold text-lime sm:text-3xl">All</div>
-                <div className="mt-1 text-[0.6rem] font-semibold uppercase tracking-wide text-white/70 sm:text-xs">Skill levels</div>
-              </div>
+              ))}
             </motion.div>
           </motion.div>
 
@@ -197,8 +190,8 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
         </Container>
       </section>
 
-      {/* Trust strip */}
-      <section className="border-b border-brand/10 bg-white">
+      {/* ── TRUST STRIP — light section ── */}
+      <section className="border-b-2 border-ink/8 bg-white dark:border-white/10 dark:bg-[#111c38]">
         <Container className="grid grid-cols-2 gap-6 py-8 text-center sm:grid-cols-4">
           {[
             [Users, "All skill levels"],
@@ -209,39 +202,48 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
             const I = Icon as typeof Users;
             return (
               <ScrollReveal key={label as string} delay={idx * 0.1} direction="up" className="flex flex-col items-center gap-2">
-                <I className="h-6 w-6 text-brand" />
-                <span className="text-sm font-semibold text-ink">{label as string}</span>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10">
+                  <I className="h-5 w-5 text-brand" />
+                </div>
+                <span className="text-sm font-extrabold uppercase tracking-wide text-ink dark:text-white">{label as string}</span>
               </ScrollReveal>
             );
           })}
         </Container>
       </section>
 
-      {/* Features with Tilt Card */}
-      <section className="bg-brand-50 px-4 py-20 sm:px-6 lg:px-8">
+      {/* ── FEATURES — dark ink section ── */}
+      <section className="bg-ink px-4 py-20 text-white sm:px-6 lg:px-8">
         <Container className="!px-0">
-          <SectionHeading
-            center
-            gradient
-            eyebrow="Why Breathe"
-            title="Everything a great game needs, in one place"
-            description="From the surface under your feet to the snacks after match point, every detail is built for players."
-          />
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Section header */}
+          <ScrollReveal direction="up">
+            <div className="mb-12 text-center">
+              <span className="eyebrow text-lime">Why Breathe</span>
+              <h2 className="heading-lg mt-4 text-white">
+                Everything a great game needs,{" "}
+                <span className="mark-lime">in one place</span>
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-base text-white/65">
+                From the surface under your feet to the snacks after match point, every detail is built for players.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <div className="mt-2 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {features.map(({ icon: Icon, title, text }, i) => (
               <ScrollReveal key={title} delay={i * 0.08} direction="up">
                 <TiltCard maxTilt={4} className="h-full">
-                  <GlowCard className="group h-full flex flex-col justify-between">
-                    <div>
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                        <motion.div whileHover={{ rotate: 15, scale: 1.2 }}>
-                          <Icon className="h-6 w-6" />
-                        </motion.div>
-                      </div>
-                      <h3 className="mt-5 font-display text-lg font-bold text-ink">{title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-slatey">{text}</p>
+                  <div className="card-sport group h-full flex flex-col gap-4 p-6">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime/15">
+                      <motion.div whileHover={{ rotate: 15, scale: 1.2 }}>
+                        <Icon className="h-6 w-6 text-lime" />
+                      </motion.div>
                     </div>
-                  </GlowCard>
+                    <div>
+                      <h3 className="font-display text-base font-extrabold text-ink dark:text-white">{title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-slatey dark:text-white/60">{text}</p>
+                    </div>
+                  </div>
                 </TiltCard>
               </ScrollReveal>
             ))}
@@ -249,64 +251,47 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
         </Container>
       </section>
 
-      {/* How it works with Drawing Connectors */}
-      <section className="bg-white px-4 py-20 sm:px-6 lg:px-8">
+      {/* ── HOW IT WORKS — light section ── */}
+      <section className="bg-white px-4 py-20 dark:bg-[#111c38] sm:px-6 lg:px-8">
         <Container className="!px-0">
           <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-            <SectionHeading
-              eyebrow="How it works"
-              title="From phone to court in three steps"
-              description="Most of our players book on their phone minutes before they leave home. Here's how simple it is."
-            />
-            
+            <ScrollReveal direction="up">
+              <div>
+                <span className="eyebrow">How it works</span>
+                <h2 className="heading-lg mt-4 text-ink dark:text-white">
+                  From phone to court in{" "}
+                  <span className="mark-lime">three steps</span>
+                </h2>
+                <p className="mt-4 text-base leading-7 text-slatey dark:text-white/65">
+                  Most of our players book on their phone minutes before they leave home. Here's how simple it is.
+                </p>
+              </div>
+            </ScrollReveal>
+
             <div className="relative">
-              {/* Animated vertical connector line */}
+              {/* Connector line */}
               <motion.div
                 initial={{ scaleY: 0 }}
                 whileInView={{ scaleY: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 1.2, ease: "easeInOut" }}
-                className="absolute left-6 top-10 bottom-10 w-0.5 bg-brand-200 origin-top hidden sm:block"
+                className="absolute left-7 top-10 bottom-10 hidden w-0.5 origin-top bg-lime/40 sm:block"
               />
 
-              <div className="grid gap-6 relative">
+              <div className="grid gap-5 relative">
                 {steps.map(({ icon: Icon, title, text }, i) => (
                   <ScrollReveal key={title} delay={i * 0.15} direction="left">
-                    <div className="flex items-start gap-4 rounded-3xl border border-brand/10 bg-white p-5 shadow-soft hover:shadow-card transition-all">
-                      {/* SVG circle filling animation */}
-                      <div className="relative flex h-12 w-12 shrink-0 items-center justify-center z-10 bg-white rounded-full">
-                        <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
-                          <circle
-                            cx="18"
-                            cy="18"
-                            r="16"
-                            fill="none"
-                            stroke="rgba(47,91,255,0.08)"
-                            strokeWidth="2.5"
-                          />
-                          <motion.circle
-                            cx="18"
-                            cy="18"
-                            r="16"
-                            fill="none"
-                            stroke="#2F5BFF"
-                            strokeWidth="2.5"
-                            strokeDasharray="100"
-                            initial={{ pathLength: 0 }}
-                            whileInView={{ pathLength: 1 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.8, delay: i * 0.15, ease: "easeOut" }}
-                          />
-                        </svg>
-                        <span className="font-display text-sm font-extrabold text-brand">{i + 1}</span>
+                    <div className="card-sport flex items-start gap-4 p-5">
+                      {/* Step number */}
+                      <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-lime">
+                        <span className="font-display text-lg font-extrabold text-ink">{i + 1}</span>
                       </div>
-                      
-                      <div>
+                      <div className="pt-1">
                         <div className="flex items-center gap-2">
-                          <Icon className="h-4 w-4 text-brand" />
-                          <h3 className="font-display text-base font-bold text-ink">{title}</h3>
+                          <Icon className="h-4 w-4 text-brand dark:text-lime" />
+                          <h3 className="font-display text-base font-extrabold text-ink dark:text-white">{title}</h3>
                         </div>
-                        <p className="mt-1 text-sm leading-6 text-slatey">{text}</p>
+                        <p className="mt-1 text-sm leading-6 text-slatey dark:text-white/60">{text}</p>
                       </div>
                     </div>
                   </ScrollReveal>
@@ -317,39 +302,64 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
         </Container>
       </section>
 
-      {/* Split Section */}
-      <section className="bg-brand-50 px-4 py-20 sm:px-6 lg:px-8">
+      {/* ── SPLIT PROMO — alternating ink/lime ── */}
+      <section className="bg-ink px-4 py-20 sm:px-6 lg:px-8">
         <Container className="!px-0 grid gap-5 lg:grid-cols-2">
+          {/* Court booking card — light */}
           <ScrollReveal direction="left" className="h-full">
             <TiltCard maxTilt={3} className="h-full">
-              <div className="relative overflow-hidden rounded-3xl border border-brand/10 bg-white p-8 shadow-soft h-full flex flex-col justify-between">
+              <div className="card-sport group relative h-full overflow-hidden p-8 flex flex-col justify-between">
                 <div>
-                  <CalendarCheck className="h-10 w-10 text-brand" />
-                  <h3 className="mt-4 font-display text-2xl font-extrabold text-ink">Your court, one tap away</h3>
-                  <p className="mt-3 text-sm leading-6 text-slatey">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10">
+                    <CalendarCheck className="h-6 w-6 text-brand" />
+                  </div>
+                  <h3 className="heading-lg mt-5 text-ink dark:text-white" style={{ fontSize: "clamp(1.5rem,3vw,2rem)" }}>
+                    Your court,{" "}
+                    <span className="mark-lime">one tap away</span>
+                  </h3>
+                  <p className="mt-3 text-sm leading-7 text-slatey dark:text-white/60">
                     Live availability across all three courts, transparent pricing, and instant confirmation. Paddles and balls are on us.
                   </p>
                 </div>
-                <Link href="/book" className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-brand hover:gap-3 transition-all">
+                <Link
+                  href="/book"
+                  className="btn-primary mt-8 self-start"
+                >
                   Book a slot now <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             </TiltCard>
           </ScrollReveal>
 
+          {/* Tournament card — dark with lime */}
           <ScrollReveal direction="right" className="h-full">
             <TiltCard maxTilt={3} className="h-full">
-              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 to-brand-800 p-8 text-white shadow-glow h-full flex flex-col justify-between">
+              <div className="relative h-full overflow-hidden rounded-3xl bg-lime p-8 text-ink flex flex-col justify-between">
                 <CourtLinesSVG />
                 <div className="relative">
-                  <Trophy className="h-10 w-10 text-lime" />
-                  <h3 className="mt-4 font-display text-2xl font-extrabold">Tournaments with real stakes</h3>
-                  <p className="mt-3 text-sm leading-6 text-white/85">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-ink/10">
+                    <Trophy className="h-6 w-6 text-ink" />
+                  </div>
+                  <h3 className="heading-lg mt-5 text-ink" style={{ fontSize: "clamp(1.5rem,3vw,2rem)" }}>
+                    Tournaments with{" "}
+                    <span className="relative inline-block">
+                      <span className="relative z-10">real stakes</span>
+                      <span
+                        aria-hidden
+                        className="absolute inset-x-[-0.1em] bottom-[0.08em] -z-0 h-[0.38em] bg-ink/15"
+                        style={{ transform: "skewX(-8deg)" }}
+                      />
+                    </span>
+                  </h3>
+                  <p className="mt-3 text-sm leading-7 text-ink/70">
                     Monthly opens and beginner brackets with cash prizes, ranking points, and the best courtside atmosphere in the city.
                   </p>
                 </div>
-                <Link href="/tournaments" className="relative mt-6 inline-flex items-center gap-2 text-sm font-bold text-lime hover:gap-3 transition-all">
-                  See the tournament calendar <ArrowRight className="h-4 w-4" />
+                <Link
+                  href="/tournaments"
+                  className="btn-dark relative mt-8 self-start"
+                >
+                  See tournament calendar <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             </TiltCard>
@@ -357,13 +367,21 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
         </Container>
       </section>
 
-      {/* Notice Board */}
+      {/* ── NOTICE BOARD — light section ── */}
       <NoticeBoard notices={notices} />
 
-      {/* Testimonials */}
-      <section className="bg-brand-50 px-4 py-20 sm:px-6 lg:px-8">
+      {/* ── TESTIMONIALS — dark ink section ── */}
+      <section className="bg-ink px-4 py-20 sm:px-6 lg:px-8">
         <Container className="!px-0">
-          <SectionHeading center eyebrow="From our community" title="Loved by players across Kolkata" />
+          <ScrollReveal direction="up">
+            <div className="mb-2 text-center">
+              <span className="eyebrow text-lime">From our community</span>
+              <h2 className="heading-lg mt-4 text-white">
+                Loved by players{" "}
+                <span className="mark-lime">across Kolkata</span>
+              </h2>
+            </div>
+          </ScrollReveal>
           <TestimonialsCarousel testimonials={testimonials} />
         </Container>
       </section>

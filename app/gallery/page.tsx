@@ -28,9 +28,9 @@ async function getGalleryImages(): Promise<InstaPost[] | null> {
       sql: "SELECT id, blob_url, caption, created_at FROM gallery_images WHERE active = 1 ORDER BY display_order ASC, created_at DESC",
       args: [],
     });
-    
+
     if (result.rows.length === 0) return null;
-    
+
     return result.rows.map((row) => ({
       id: String(row.id),
       caption: row.caption ? String(row.caption) : undefined,
@@ -66,7 +66,7 @@ async function getInstagramPosts(): Promise<InstaPost[] | null> {
 export default async function GalleryPage() {
   // First, check for hosted images in our Vercel Blob/Turso database
   let posts = await getGalleryImages();
-  
+
   // If none are uploaded, fall back to Instagram API
   if (!posts || posts.length === 0) {
     posts = await getInstagramPosts();
@@ -75,7 +75,7 @@ export default async function GalleryPage() {
   return (
     <>
       <Nav />
-      <main className="app-surface overflow-x-hidden min-h-screen bg-brand-50/10">
+      <main className="overflow-x-hidden">
         <PageHero
           dark
           label="Gallery"

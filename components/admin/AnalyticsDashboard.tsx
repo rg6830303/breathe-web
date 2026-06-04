@@ -34,9 +34,10 @@ const AXIS = "#94A3B8";
 
 const tooltipStyle = {
   backgroundColor: "#ffffff",
-  border: "1px solid rgba(47,91,255,0.18)",
+  border: "2px solid rgba(47,91,255,0.15)",
   borderRadius: "12px",
   boxShadow: "0 8px 24px -12px rgba(13,20,38,0.25)",
+  fontSize: "12px",
 };
 
 function formatMoney(n: number) {
@@ -127,15 +128,21 @@ export function AnalyticsDashboard() {
   }, [current]);
 
   const exportCsv = () => { if (from && to) window.open(`/api/admin/analytics/export?from=${from}&to=${to}`, "_blank"); };
-  const cardCls = "rounded-2xl border border-brand/10 bg-white p-5 shadow-soft";
+
+  const inputCls = "rounded-xl border-2 border-ink/10 bg-white px-3 py-1.5 text-xs text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
 
   return (
     <div className="grid gap-5">
-      <div className="flex flex-col gap-4 rounded-2xl border border-brand/10 bg-white p-4 shadow-soft md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap gap-1.5">
+      {/* Period selector */}
+      <div className="card-sport flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-wrap gap-1">
           {(["today", "7d", "30d", "90d", "year", "custom"] as const).map((p) => (
             <button key={p} onClick={() => setPeriod(p)}
-              className={`rounded-xl px-3.5 py-2 text-xs font-bold uppercase tracking-wide transition ${period === p ? "bg-brand text-white shadow-soft" : "bg-brand/5 text-ink/60 hover:bg-brand/10 hover:text-brand"}`}>
+              className={`rounded-xl px-3.5 py-2 text-xs font-extrabold uppercase tracking-wide transition ${
+                period === p
+                  ? "bg-brand text-white"
+                  : "border-2 border-ink/10 text-ink/60 hover:border-brand/30 hover:text-brand dark:border-white/10 dark:text-white/60 dark:hover:text-brand-300"
+              }`}>
               {PERIOD_LABELS[p]}
             </button>
           ))}
@@ -143,59 +150,64 @@ export function AnalyticsDashboard() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {period === "custom" && (
             <div className="flex items-center gap-2">
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-xl border border-brand/15 bg-white px-3 py-1.5 text-xs text-ink outline-none focus:border-brand" />
-              <span className="text-xs text-slatey">to</span>
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-xl border border-brand/15 bg-white px-3 py-1.5 text-xs text-ink outline-none focus:border-brand" />
+              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputCls} />
+              <span className="text-xs text-ink/40 dark:text-white/40">to</span>
+              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={inputCls} />
             </div>
           )}
           <div className="flex items-center gap-3">
             <label className="flex cursor-pointer items-center gap-2">
               <input type="checkbox" checked={compare} onChange={(e) => setCompare(e.target.checked)} className="h-4 w-4 accent-brand" />
-              <span className="select-none text-xs font-semibold text-ink/70">Compare vs previous</span>
+              <span className="select-none text-xs font-semibold text-ink/60 dark:text-white/60">Compare vs previous</span>
             </label>
-            <button onClick={exportCsv} className="inline-flex items-center gap-2 rounded-xl border border-brand/15 bg-brand/5 px-3.5 py-2 text-xs font-bold text-brand transition hover:bg-brand/10">
-              <FileSpreadsheet className="h-4 w-4" /> Export CSV
+            <button onClick={exportCsv} className="btn-outline px-3.5 py-2 text-xs">
+              <FileSpreadsheet className="h-3.5 w-3.5" /> Export CSV
             </button>
           </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-brand/10 bg-white py-20 shadow-soft">
+        <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-ink/10 py-20 dark:border-white/10">
           <Loader2 className="h-8 w-8 animate-spin text-brand" />
-          <p className="mt-4 text-xs text-slatey">Aggregating statistics…</p>
+          <p className="mt-4 text-xs font-bold uppercase tracking-wide text-ink/40 dark:text-white/40">Aggregating statistics…</p>
         </div>
       ) : error || !current ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 py-16 text-center">
-          <p className="text-sm font-bold text-red-600">Failed to load analytics{error ? `: ${error}` : ""}</p>
-          <button onClick={fetchData} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-bold text-brand shadow-soft hover:bg-brand/5">
+        <div className="card-sport rounded-2xl border-red-300 py-16 text-center dark:border-red-700/40">
+          <p className="text-sm font-bold text-red-600 dark:text-red-400">Failed to load analytics{error ? `: ${error}` : ""}</p>
+          <button onClick={fetchData} className="btn-outline mt-4 px-4 py-2 text-xs">
             <RefreshCw className="h-3.5 w-3.5" /> Try again
           </button>
         </div>
       ) : (
         <div className="grid gap-5">
+          {/* KPI Cards */}
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
             {kpiCards.map((kpi, idx) => {
               const Icon = kpi.icon;
               return (
                 <motion.div key={kpi.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }}
-                  className="rounded-2xl border border-brand/10 bg-white p-4 shadow-soft transition hover:border-brand/25 hover:shadow-card">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slatey">{kpi.label}</span>
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-brand"><Icon className="h-4 w-4" /></span>
+                  className="card-sport lift-3d p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">{kpi.label}</span>
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand dark:bg-brand-300/10 dark:text-brand-300">
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
                   </div>
-                  <div className="mt-2 font-display text-2xl font-extrabold text-ink">{kpi.value}</div>
+                  <div className="mt-2 font-display text-2xl font-extrabold tracking-tight text-ink dark:text-white">{kpi.value}</div>
                   <div className="mt-3 flex items-center justify-between">
                     {compare && kpi.change !== null ? (
-                      <span className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${kpi.isPositive ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"}`}>
+                      <span className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${
+                        kpi.isPositive ? "bg-lime/20 text-lime-dark" : "bg-red-100 text-red-600"
+                      }`}>
                         {kpi.isPositive ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
                         {kpi.isPositive ? "+" : ""}{kpi.change}%
                       </span>
-                    ) : (<span className="text-[10px] font-bold uppercase text-slatey/70">This period</span>)}
+                    ) : (<span className="text-[10px] font-bold uppercase tracking-wide text-ink/30 dark:text-white/30">Period</span>)}
                     <div className="h-6 w-16">
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={kpi.sparklineData}>
-                          <Line type="monotone" dataKey="val" stroke={kpi.isPositive ? "#22C55E" : "#EF4444"} strokeWidth={1.75} dot={false} />
+                          <Line type="monotone" dataKey="val" stroke={kpi.isPositive ? "#C6F432" : "#EF4444"} strokeWidth={2} dot={false} />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
@@ -205,21 +217,23 @@ export function AnalyticsDashboard() {
             })}
           </section>
 
-          <section className={cardCls}>
+          {/* Revenue trend */}
+          <section className="card-sport p-6">
             <div className="mb-4">
-              <h3 className="font-display text-base font-extrabold text-ink">Revenue trend over time</h3>
-              <p className="mt-0.5 text-xs text-slatey">Confirmed daily receipts across all courts</p>
+              <span className="eyebrow">Revenue trend</span>
+              <h3 className="mt-1 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">Daily receipts over time</h3>
+              <p className="mt-0.5 text-xs text-ink/50 dark:text-white/50">Confirmed daily receipts across all courts</p>
             </div>
             <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={current.series} margin={{ top: 6, right: 8, bottom: 0, left: -8 }}>
                   <defs>
                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={BRAND} stopOpacity={0.28} />
+                      <stop offset="5%" stopColor={BRAND} stopOpacity={0.22} />
                       <stop offset="95%" stopColor={BRAND} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,23,42,0.06)" vertical={false} />
+                  <CartesianGrid strokeDasharray="4 4" stroke="rgba(15,23,42,0.06)" vertical={false} />
                   <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} stroke={AXIS} fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke={AXIS} fontSize={10} tickFormatter={(v) => `₹${v}`} tickLine={false} axisLine={false} width={56} />
                   <Tooltip contentStyle={tooltipStyle} formatter={(v) => [formatMoney(Number(v)), "Revenue"]} />
@@ -229,13 +243,15 @@ export function AnalyticsDashboard() {
             </div>
           </section>
 
+          {/* Bookings by hour / DOW */}
           <section className="grid gap-5 md:grid-cols-2">
-            <div className={cardCls}>
-              <h4 className="mb-3 font-display text-sm font-extrabold text-ink">Bookings by hour</h4>
+            <div className="card-sport p-5">
+              <span className="eyebrow">Peak hours</span>
+              <h4 className="mt-1 mb-4 font-display text-sm font-extrabold tracking-tight text-ink dark:text-white">Bookings by hour</h4>
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={hourData} margin={{ top: 6, right: 8, bottom: 0, left: -16 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,23,42,0.06)" vertical={false} />
+                    <CartesianGrid strokeDasharray="4 4" stroke="rgba(15,23,42,0.06)" vertical={false} />
                     <XAxis dataKey="hour" stroke={AXIS} fontSize={9} interval="preserveStartEnd" tickLine={false} axisLine={false} />
                     <YAxis allowDecimals={false} stroke={AXIS} fontSize={9} tickLine={false} axisLine={false} />
                     <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(47,91,255,0.06)" }} />
@@ -244,12 +260,13 @@ export function AnalyticsDashboard() {
                 </ResponsiveContainer>
               </div>
             </div>
-            <div className={cardCls}>
-              <h4 className="mb-3 font-display text-sm font-extrabold text-ink">Bookings by day of week</h4>
+            <div className="card-sport p-5">
+              <span className="eyebrow">Day of week</span>
+              <h4 className="mt-1 mb-4 font-display text-sm font-extrabold tracking-tight text-ink dark:text-white">Bookings by day</h4>
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={dowData} margin={{ top: 6, right: 8, bottom: 0, left: -16 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,23,42,0.06)" vertical={false} />
+                    <CartesianGrid strokeDasharray="4 4" stroke="rgba(15,23,42,0.06)" vertical={false} />
                     <XAxis dataKey="day" stroke={AXIS} fontSize={10} tickLine={false} axisLine={false} />
                     <YAxis allowDecimals={false} stroke={AXIS} fontSize={10} tickLine={false} axisLine={false} />
                     <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(47,91,255,0.06)" }} />
@@ -260,53 +277,80 @@ export function AnalyticsDashboard() {
             </div>
           </section>
 
+          {/* Top slots / customers / activity */}
           <section className="grid gap-5 md:grid-cols-3">
-            <div className={cardCls}>
-              <h4 className="mb-4 font-display text-sm font-extrabold text-ink">Top time slots</h4>
-              {current.topSlots.length === 0 ? <p className="py-8 text-center text-xs italic text-slatey">No records yet</p> : (
+            <div className="card-sport p-5">
+              <span className="eyebrow">Popularity</span>
+              <h4 className="mt-1 mb-4 font-display text-sm font-extrabold tracking-tight text-ink dark:text-white">Top time slots</h4>
+              {current.topSlots.length === 0 ? (
+                <p className="py-8 text-center text-xs italic text-ink/40 dark:text-white/40">No records yet</p>
+              ) : (
                 <ul className="grid gap-2.5">
                   {current.topSlots.map((s, idx) => (
-                    <li key={idx} className="flex items-center justify-between border-b border-brand/5 pb-2 text-xs">
+                    <li key={idx} className="flex items-center justify-between border-b-2 border-ink/5 pb-2 text-xs last:border-0 dark:border-white/5">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-5 w-5 items-center justify-center rounded bg-brand/10 text-[10px] font-bold text-brand">{idx + 1}</span>
-                        <span className="font-bold text-ink">{s.time}</span>
+                        <span className="flex h-5 w-5 items-center justify-center rounded-md bg-brand/10 text-[10px] font-extrabold text-brand dark:bg-brand-300/10 dark:text-brand-300">{idx + 1}</span>
+                        <span className="font-bold text-ink dark:text-white">{s.time}</span>
                       </div>
-                      <div className="text-right"><p className="font-bold text-ink">{s.count} bookings</p><p className="text-[10px] text-slatey">{formatMoney(s.revenue)}</p></div>
+                      <div className="text-right">
+                        <p className="font-extrabold text-ink dark:text-white">{s.count} bookings</p>
+                        <p className="text-[10px] text-ink/50 dark:text-white/50">{formatMoney(s.revenue)}</p>
+                      </div>
                     </li>
                   ))}
                 </ul>
               )}
             </div>
-            <div className={cardCls}>
-              <h4 className="mb-4 font-display text-sm font-extrabold text-ink">Top customers</h4>
-              {current.topCustomers.length === 0 ? <p className="py-8 text-center text-xs italic text-slatey">No records yet</p> : (
+
+            <div className="card-sport p-5">
+              <span className="eyebrow">Loyalty</span>
+              <h4 className="mt-1 mb-4 font-display text-sm font-extrabold tracking-tight text-ink dark:text-white">Top customers</h4>
+              {current.topCustomers.length === 0 ? (
+                <p className="py-8 text-center text-xs italic text-ink/40 dark:text-white/40">No records yet</p>
+              ) : (
                 <ul className="grid gap-2.5">
                   {current.topCustomers.map((c, idx) => (
-                    <li key={idx} className="flex items-center justify-between border-b border-brand/5 pb-2 text-xs">
-                      <div className="flex items-center gap-3 truncate">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-brand/10 text-[10px] font-bold text-brand">{idx + 1}</span>
-                        <span className="truncate font-bold text-ink">{c.name}</span>
+                    <li key={idx} className="flex items-center justify-between border-b-2 border-ink/5 pb-2 text-xs last:border-0 dark:border-white/5">
+                      <div className="flex min-w-0 items-center gap-3 truncate">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-brand/10 text-[10px] font-extrabold text-brand dark:bg-brand-300/10 dark:text-brand-300">{idx + 1}</span>
+                        <span className="truncate font-bold text-ink dark:text-white">{c.name}</span>
                       </div>
-                      <div className="shrink-0 text-right"><p className="font-bold text-brand">{formatMoney(c.spent)}</p><p className="text-[10px] text-slatey">{c.bookings} bookings</p></div>
+                      <div className="shrink-0 text-right">
+                        <p className="font-extrabold text-brand dark:text-brand-300">{formatMoney(c.spent)}</p>
+                        <p className="text-[10px] text-ink/50 dark:text-white/50">{c.bookings} bookings</p>
+                      </div>
                     </li>
                   ))}
                 </ul>
               )}
             </div>
-            <div className={cardCls}>
+
+            <div className="card-sport p-5">
               <div className="mb-4 flex items-center justify-between">
-                <h4 className="font-display text-sm font-extrabold text-ink">Recent activity</h4>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600">
-                  <span className="h-1 w-1 animate-pulse rounded-full bg-emerald-500" /> Live
+                <div>
+                  <span className="eyebrow">Live feed</span>
+                  <h4 className="mt-1 font-display text-sm font-extrabold tracking-tight text-ink dark:text-white">Recent activity</h4>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-lime/20 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-lime-dark">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lime-dark" /> Live
                 </span>
               </div>
-              {recentEvents.length === 0 ? <p className="py-8 text-center text-xs italic text-slatey">No recent bookings</p> : (
+              {recentEvents.length === 0 ? (
+                <p className="py-8 text-center text-xs italic text-ink/40 dark:text-white/40">No recent bookings</p>
+              ) : (
                 <ul className="grid max-h-[360px] gap-2.5 overflow-y-auto pr-1">
                   {recentEvents.slice(0, 10).map((b) => (
-                    <li key={b.id} className="border-b border-brand/5 pb-2 text-xs">
+                    <li key={b.id} className="border-b-2 border-ink/5 pb-2 text-xs last:border-0 dark:border-white/5">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0"><p className="truncate font-bold text-ink">{b.user_name}</p><p className="mt-0.5 text-[10px] text-slatey">C{b.court_number} · {b.slot_date} at {b.slot_time}</p></div>
-                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${b.status === "confirmed" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"}`}>{b.status}</span>
+                        <div className="min-w-0">
+                          <p className="truncate font-bold text-ink dark:text-white">{b.user_name}</p>
+                          <p className="mt-0.5 text-[10px] text-ink/50 dark:text-white/50">
+                            C{b.court_number} · {b.slot_date} at {b.slot_time}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider ${
+                          b.status === "confirmed" ? "bg-lime/20 text-lime-dark" : "bg-red-100 text-red-600"
+                        }`}>{b.status}</span>
                       </div>
                     </li>
                   ))}

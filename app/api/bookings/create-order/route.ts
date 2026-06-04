@@ -4,6 +4,7 @@ import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { getSlotPrice, calculateTotals } from "@/lib/pricing";
+import { BULK_PACKAGE } from "@/lib/credits";
 
 export const runtime = "nodejs";
 
@@ -27,7 +28,6 @@ export async function POST(req: Request) {
       if (!keyIdEarly || !keySecretEarly) {
         return NextResponse.json({ error: "Razorpay is not configured." }, { status: 500 });
       }
-      const { BULK_PACKAGE } = require("@/lib/credits");
       try {
         const rzp = new Razorpay({ key_id: keyIdEarly, key_secret: keySecretEarly });
         const order = await rzp.orders.create({
@@ -44,10 +44,11 @@ export async function POST(req: Request) {
         // is wrong, missing, or mismatched (test key id with live secret etc.).
         const statusCode = (rzpErr as { statusCode?: number })?.statusCode;
         const desc = (rzpErr as { error?: { description?: string } })?.error?.description;
+        const rawMsg = (rzpErr as { message?: string })?.message;
         const msg =
           statusCode === 401
             ? "Payment gateway rejected the keys. Check RAZORPAY_KEY_SECRET and NEXT_PUBLIC_RAZORPAY_KEY_ID in your environment variables."
-            : desc || "Could not start the payment. Please try again.";
+            : desc || rawMsg || "Could not start the payment. Please try again.";
         return NextResponse.json({ error: msg }, { status: 502 });
       }
     }

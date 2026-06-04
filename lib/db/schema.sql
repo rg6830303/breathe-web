@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   court_number INTEGER NOT NULL CHECK (court_number IN (1, 2, 3)),
   slot_date TEXT NOT NULL,
   slot_time TEXT NOT NULL,
-  duration_minutes INTEGER DEFAULT 30,
+  duration_minutes INTEGER DEFAULT 60,
   price REAL NOT NULL,
   addons TEXT DEFAULT '[]',
   subtotal REAL NOT NULL,

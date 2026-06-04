@@ -11,8 +11,8 @@ export const BULK_PACKAGE = {
   blurb: "Prepay 12 hours of court time and then book any open slot instantly — no payment needed each time.",
 } as const;
 
-/** Each booked slot consumes this many minutes of credit. */
-export const SLOT_MINUTES = 30;
+/** Each booked slot consumes this many minutes of credit. Slots are 1 hour. */
+export const SLOT_MINUTES = 60;
 
 /** Read a user's remaining prepaid balance (minutes). Falls back to Supabase. */
 export async function getCreditBalance(userId: string): Promise<number> {

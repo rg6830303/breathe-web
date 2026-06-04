@@ -109,55 +109,34 @@ export function AdminConsole() {
 
 
   return (
-    <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand/10 bg-white p-2 shadow-soft">
-        <div className="flex flex-wrap gap-1">
-          {TABS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setTab(key)}
-              className={`relative inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-bold transition ${
-                tab === key ? "text-white" : "text-ink/70 hover:bg-brand/5"
-              }`}
-            >
-              {tab === key && (
-                <motion.span
-                  layoutId="admin-tab-pill"
-                  className="absolute inset-0 rounded-xl bg-brand shadow-soft"
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                />
-              )}
-              <span className="relative z-10 inline-flex items-center gap-2">
-                <Icon className="h-4 w-4" /> {label}
-              </span>
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="grid gap-5">
+      {/* Tab bar */}
+      <div className="card-sport overflow-hidden rounded-2xl p-0">
+        {/* Top action bar */}
+        <div className="flex flex-wrap items-center justify-end gap-2 border-b-2 border-ink/10 bg-ink/[0.03] px-4 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
           <button
             type="button"
             onClick={() => setWalkInOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-brand px-3 py-2 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600"
+            className="btn-primary px-3 py-1.5 text-xs"
           >
-            <UserPlus className="h-4 w-4" /> Walk-in
+            <UserPlus className="h-3.5 w-3.5" /> Walk-in
           </button>
           <button
             type="button"
             onClick={() => setBulkBlockOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl border border-brand/15 px-3 py-2 text-sm font-bold text-ink/80 transition hover:bg-brand/5"
+            className="btn-dark px-3 py-1.5 text-xs"
           >
-            <ShieldOff className="h-4 w-4" /> Close slots
+            <ShieldOff className="h-3.5 w-3.5" /> Close slots
           </button>
           <Link
             href="/admin/gallery"
-            className="inline-flex items-center gap-2 rounded-xl border border-brand/15 px-3 py-2 text-sm font-bold text-brand transition hover:bg-brand/5"
+            className="btn-outline px-3 py-1.5 text-xs"
           >
             Gallery
           </Link>
           <Link
             href="/admin/import"
-            className="inline-flex items-center gap-2 rounded-xl border border-brand/15 px-3 py-2 text-sm font-bold text-brand transition hover:bg-brand/5"
+            className="btn-outline px-3 py-1.5 text-xs"
           >
             Import
           </Link>
@@ -165,20 +144,46 @@ export function AdminConsole() {
             type="button"
             onClick={logout}
             disabled={loggingOut}
-            className="inline-flex items-center gap-2 rounded-xl border border-brand/15 px-3 py-2 text-sm font-bold text-ink/70 transition hover:bg-brand/5 disabled:opacity-60"
+            className="btn-outline px-3 py-1.5 text-xs disabled:opacity-60"
           >
-            {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />} Log out
+            {loggingOut ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />} Log out
           </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex flex-wrap gap-0 border-b-2 border-ink/10 dark:border-white/10">
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTab(key)}
+              className={`relative inline-flex items-center gap-2 px-4 py-3 text-xs font-extrabold uppercase tracking-wide transition-colors ${
+                tab === key
+                  ? "text-brand dark:text-brand-300"
+                  : "text-ink/50 hover:text-ink dark:text-white/50 dark:hover:text-white"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{label}</span>
+              {tab === key && (
+                <motion.span
+                  layoutId="admin-tab-underline"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand dark:bg-brand-300"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
       <AnimatePresence mode="wait">
         <motion.div
           key={tab}
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         >
           {tab === "overview" && <AnalyticsDashboard />}
           {tab === "bookings" && <BookingsTab />}
@@ -217,30 +222,42 @@ function OverviewTab() {
   ];
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-5">
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {cards.map((c) => (
-          <div key={c.label} className="rounded-2xl border border-brand/10 bg-white p-4 shadow-soft">
-            <p className="text-xs font-bold uppercase tracking-wide text-slatey">{c.label}</p>
-            <div className="mt-2 font-display text-2xl font-extrabold text-brand">{c.value}</div>
-          </div>
+        {cards.map((c, i) => (
+          <motion.div
+            key={c.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06 }}
+            className="card-sport lift-3d p-5"
+          >
+            <p className="eyebrow text-xs">{c.label}</p>
+            <div className="mt-3 font-display text-3xl font-extrabold tracking-tight text-ink dark:text-white">{c.value}</div>
+          </motion.div>
         ))}
       </section>
 
-      <section className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
-        <h3 className="mb-3 font-display text-base font-extrabold text-ink">Bookings this week</h3>
+      <section className="card-sport p-6">
+        <h3 className="mb-1 font-display text-base font-extrabold uppercase tracking-tight text-ink dark:text-white">
+          Bookings this week
+        </h3>
+        <p className="mb-4 text-xs text-ink/50 dark:text-white/50">Daily confirmed bookings across all courts</p>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={stats.weekly}>
-              <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} stroke="#888780" fontSize={11} />
-              <YAxis allowDecimals={false} stroke="#888780" fontSize={11} />
-              <Tooltip cursor={{ fill: "rgba(47,91,255,0.06)" }} />
+              <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis allowDecimals={false} stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
+              <Tooltip
+                cursor={{ fill: "rgba(47,91,255,0.08)" }}
+                contentStyle={{ background: "#fff", border: "2px solid #2f5bff22", borderRadius: 12 }}
+              />
               <Bar dataKey="bookings" fill="#2F5BFF" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <p className="mt-2 text-xs text-slatey">
-          Total revenue (confirmed): <strong className="text-ink">{money(stats.total_revenue)}</strong>
+        <p className="mt-3 border-t-2 border-ink/10 pt-3 text-xs text-ink/60 dark:border-white/10 dark:text-white/60">
+          Total confirmed revenue: <strong className="text-ink dark:text-white">{money(stats.total_revenue)}</strong>
         </p>
       </section>
     </div>
@@ -280,24 +297,25 @@ function BookingsTab() {
   }
 
   return (
-    <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <div className="card-sport p-5">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="font-display text-lg font-extrabold text-ink">All bookings</h3>
-          <p className="text-xs text-slatey">Most recent first. Filter by slot date.</p>
+          <span className="eyebrow">All bookings</span>
+          <h3 className="mt-1 font-display text-xl font-extrabold tracking-tight text-ink dark:text-white">Booking log</h3>
+          <p className="text-xs text-ink/50 dark:text-white/50">Most recent first. Filter by slot date.</p>
         </div>
         <div className="flex items-center gap-2">
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+            className="rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white"
           />
           {date && (
             <button
               type="button"
               onClick={() => setDate("")}
-              className="inline-flex items-center gap-1 rounded-xl border border-brand/15 px-2.5 py-2 text-xs font-bold text-ink/70 hover:bg-brand/5"
+              className="btn-outline px-2.5 py-2 text-xs"
             >
               <X className="h-3.5 w-3.5" /> Clear
             </button>
@@ -305,7 +323,7 @@ function BookingsTab() {
           <button
             type="button"
             onClick={reload}
-            className="inline-flex items-center gap-1 rounded-xl border border-brand/15 px-2.5 py-2 text-xs font-bold text-ink/70 hover:bg-brand/5"
+            className="btn-outline px-2.5 py-2 text-xs"
           >
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </button>
@@ -315,56 +333,56 @@ function BookingsTab() {
       {loading ? (
         <LoadingCard />
       ) : bookings.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-brand/20 bg-brand/[0.03] p-6 text-center text-sm text-slatey">
-          No bookings.
-        </p>
+        <div className="rounded-2xl border-2 border-dashed border-ink/10 p-8 text-center text-sm text-ink/40 dark:border-white/10 dark:text-white/40">
+          No bookings found.
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] border-collapse text-sm">
-            <thead className="bg-brand/5 text-left text-xs uppercase tracking-wide text-slatey">
-              <tr>
-                <th className="p-3">User</th>
-                <th className="p-3">Court</th>
-                <th className="p-3">Date</th>
-                <th className="p-3">Time</th>
-                <th className="p-3">Amount</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Created</th>
+            <thead>
+              <tr className="border-b-2 border-ink/10 dark:border-white/10">
+                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">User</th>
+                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Court</th>
+                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Date</th>
+                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Time</th>
+                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Amount</th>
+                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Status</th>
+                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Created</th>
                 <th className="p-3"></th>
               </tr>
             </thead>
             <tbody>
               {bookings.map((b) => (
-                <tr key={b.id} className="border-t border-brand/10">
+                <tr key={b.id} className="border-b border-ink/5 transition-colors hover:bg-brand/[0.03] dark:border-white/5 dark:hover:bg-white/[0.03]">
                   <td className="p-3">
-                    <div className="font-bold text-ink">{b.user_name}</div>
-                    <div className="text-xs text-slatey">{b.user_email}</div>
+                    <div className="font-bold text-ink dark:text-white">{b.user_name}</div>
+                    <div className="text-[11px] text-ink/50 dark:text-white/50">{b.user_email}</div>
                   </td>
-                  <td className="p-3 text-ink">Court {b.court_number}</td>
-                  <td className="p-3 text-ink">{b.slot_date}</td>
-                  <td className="p-3 text-ink">{b.slot_time}</td>
-                  <td className="p-3 font-semibold text-ink">{money(b.total_amount)}</td>
+                  <td className="p-3 font-semibold text-ink dark:text-white">Court {b.court_number}</td>
+                  <td className="p-3 text-ink dark:text-white">{b.slot_date}</td>
+                  <td className="p-3 text-ink dark:text-white">{b.slot_time}</td>
+                  <td className="p-3 font-extrabold text-ink dark:text-white">{money(b.total_amount)}</td>
                   <td className="p-3">
                     <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                      className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${
                         b.status === "confirmed"
                           ? "bg-lime/20 text-lime-dark"
                           : b.status === "cancelled"
                             ? "bg-red-100 text-red-700"
-                            : "bg-gray-100 text-gray-700"
+                            : "bg-ink/5 text-ink/60 dark:bg-white/5 dark:text-white/60"
                       }`}
                     >
                       {b.status}
                     </span>
                   </td>
-                  <td className="p-3 text-xs text-slatey">{new Date(b.created_at + "Z").toLocaleString("en-IN")}</td>
+                  <td className="p-3 text-[11px] text-ink/50 dark:text-white/50">{new Date(b.created_at + "Z").toLocaleString("en-IN")}</td>
                   <td className="p-3 text-right">
                     {b.status === "confirmed" && (
                       <button
                         type="button"
                         onClick={() => cancel(b.id)}
                         disabled={busy === b.id}
-                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-60"
+                        className="inline-flex items-center gap-1 rounded-lg border-2 border-red-200 px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-60"
                       >
                         {busy === b.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />} Cancel
                       </button>
@@ -445,29 +463,32 @@ function CourtTab() {
   }
 
   return (
-    <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="card-sport p-5">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-display text-lg font-extrabold text-ink">Court management</h3>
-          <p className="text-xs text-slatey">Block off slots manually for maintenance or events.</p>
+          <span className="eyebrow">Court management</span>
+          <h3 className="mt-1 font-display text-xl font-extrabold tracking-tight text-ink dark:text-white">Slot grid</h3>
+          <p className="text-xs text-ink/50 dark:text-white/50">Block off slots manually for maintenance or events.</p>
         </div>
         <input
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+          className="rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white"
         />
       </div>
 
       {loading || !data ? (
         <LoadingCard />
       ) : (
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3">
           {[1, 2, 3].map((court) => (
-            <div key={court} className="rounded-2xl border border-brand/10 bg-brand/[0.03] p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="font-display text-sm font-extrabold text-ink">Court {court}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wide text-slatey">
+            <div key={court} className="rounded-2xl border-2 border-ink/10 bg-ink/[0.02] p-4 dark:border-white/10 dark:bg-white/[0.02]">
+              <div className="mb-3 flex items-center justify-between border-b-2 border-ink/10 pb-2 dark:border-white/10">
+                <span className="font-display text-sm font-extrabold uppercase tracking-tight text-ink dark:text-white">
+                  Court {court}
+                </span>
+                <span className="tag-sport">
                   {byCourt[court]?.filter((s) => s.status === "booked").length ?? 0} booked
                 </span>
               </div>
@@ -476,9 +497,9 @@ function CourtTab() {
                   const key = `${court}@${s.time}`;
                   const booking = s.status === "booked" ? bookingForSlot(court, s.time) : null;
                   const isBusy = busy === key;
-                  let cls = "border-brand/15 bg-white text-ink hover:border-brand";
-                  if (s.status === "booked") cls = "border-red-200 bg-red-50 text-red-700";
-                  if (s.status === "blocked") cls = "border-gray-300 bg-gray-100 text-gray-600";
+                  let cls = "border-2 border-ink/10 bg-white text-ink hover:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
+                  if (s.status === "booked") cls = "border-2 border-red-300 bg-red-50 text-red-700 dark:border-red-700/50 dark:bg-red-950/20 dark:text-red-300";
+                  if (s.status === "blocked") cls = "border-2 border-ink/20 bg-ink/10 text-ink/50 dark:border-white/10 dark:bg-white/5 dark:text-white/40";
                   return (
                     <li key={key}>
                       <button
@@ -486,22 +507,22 @@ function CourtTab() {
                         disabled={s.status === "booked" || isBusy}
                         onClick={() => (s.status === "blocked" ? unblock(court, s.time) : block(court, s.time))}
                         title={booking ? `${booking.user_name} (${booking.user_email})` : s.status}
-                        className={`flex w-full items-center justify-between rounded-lg border px-2 py-1.5 text-[11px] font-bold transition ${cls} ${
+                        className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-[11px] font-bold transition ${cls} ${
                           isBusy ? "opacity-50" : ""
                         }`}
                       >
                         <span>{s.time}</span>
-                        <span className="text-[9px] uppercase">
-                          {s.status === "booked" ? "Booked" : s.status === "blocked" ? "Blocked" : "Open"}
+                        <span className="text-[9px] font-extrabold uppercase tracking-wide">
+                          {s.status === "booked" ? "Booked" : s.status === "blocked" ? "Closed" : "Open"}
                         </span>
                       </button>
                     </li>
                   );
                 })}
               </ul>
-              <p className="mt-2 text-[10px] text-slatey">
-                <ShieldOff className="mr-1 inline h-3 w-3" />
-                Click open → block · click blocked → unblock
+              <p className="mt-2 flex items-center gap-1 text-[10px] text-ink/40 dark:text-white/40">
+                <ShieldOff className="h-3 w-3" />
+                Tap open slot to block · blocked to reopen
               </p>
             </div>
           ))}
@@ -575,23 +596,29 @@ function UsersTab() {
     : users;
 
   return (
-    <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-display text-lg font-extrabold text-ink">
-          Registered users <span className="text-xs font-semibold text-slatey">({filtered.length} of {users.length})</span>
-        </h3>
+    <div className="card-sport p-5">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span className="eyebrow">Registered users</span>
+          <h3 className="mt-1 font-display text-xl font-extrabold tracking-tight text-ink dark:text-white">
+            Members{" "}
+            <span className="text-sm font-semibold text-ink/40 dark:text-white/40">
+              ({filtered.length}/{users.length})
+            </span>
+          </h3>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, email, or phone…"
-            className="w-full max-w-xs rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand sm:w-64"
+            className="w-full max-w-xs rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white sm:w-64"
           />
           <button
             type="button"
             onClick={load}
-            className="inline-flex items-center gap-1 rounded-xl border border-brand/15 px-2.5 py-2 text-xs font-bold text-ink/70 hover:bg-brand/5"
+            className="btn-outline px-2.5 py-2 text-xs"
           >
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </button>
@@ -599,14 +626,14 @@ function UsersTab() {
             type="button"
             onClick={exportCsv}
             disabled={filtered.length === 0}
-            className="inline-flex items-center gap-1 rounded-xl border border-brand/15 px-2.5 py-2 text-xs font-bold text-ink/70 hover:bg-brand/5 disabled:opacity-50"
+            className="btn-outline px-2.5 py-2 text-xs disabled:opacity-50"
           >
             <Download className="h-3.5 w-3.5" /> Export CSV
           </button>
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="inline-flex items-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-bold text-white shadow-soft transition hover:bg-brand-600"
+            className="btn-primary px-3 py-2 text-xs"
           >
             <UserPlus className="h-3.5 w-3.5" /> Add user
           </button>
@@ -614,45 +641,41 @@ function UsersTab() {
       </div>
       <AddUserModal open={addOpen} onClose={() => setAddOpen(false)} onAdded={load} />
       {filtered.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-brand/20 bg-brand/[0.03] p-6 text-center text-sm text-slatey">
+        <div className="rounded-2xl border-2 border-dashed border-ink/10 p-8 text-center text-sm text-ink/40 dark:border-white/10 dark:text-white/40">
           {q ? `No users match "${search}".` : "No users yet."}
-        </p>
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] border-collapse text-sm">
-            <thead className="bg-brand/5 text-left text-xs uppercase tracking-wide text-slatey">
-              <tr>
-                <th className="p-3">Name</th>
-                <th className="p-3">Email</th>
-                <th className="p-3">Phone</th>
-                <th className="p-3">Joined</th>
-                <th className="p-3">Bookings</th>
-                <th className="p-3">Spent</th>
-                <th className="p-3"></th>
+            <thead>
+              <tr className="border-b-2 border-ink/10 dark:border-white/10">
+                {["Name", "Email", "Phone", "Joined", "Bookings", "Spent", ""].map((h) => (
+                  <th key={h} className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {filtered.map((u) => (
                 <Fragment key={u.id}>
-                  <tr className="border-t border-brand/10">
-                    <td className="p-3 font-bold text-ink">{u.name}</td>
-                    <td className="p-3 text-slatey">{u.email}</td>
-                    <td className="p-3 text-slatey">{u.phone ?? "—"}</td>
-                    <td className="p-3 text-xs text-slatey">{u.created_at.slice(0, 10)}</td>
-                    <td className="p-3 text-ink">{u.booking_count}</td>
-                    <td className="p-3 font-semibold text-ink">{money(u.total_spent)}</td>
+                  <tr className="border-b border-ink/5 transition-colors hover:bg-brand/[0.03] dark:border-white/5 dark:hover:bg-white/[0.03]">
+                    <td className="p-3 font-bold text-ink dark:text-white">{u.name}</td>
+                    <td className="p-3 text-ink/60 dark:text-white/60">{u.email}</td>
+                    <td className="p-3 text-ink/60 dark:text-white/60">{u.phone ?? "—"}</td>
+                    <td className="p-3 text-[11px] text-ink/50 dark:text-white/50">{u.created_at.slice(0, 10)}</td>
+                    <td className="p-3 font-semibold text-ink dark:text-white">{u.booking_count}</td>
+                    <td className="p-3 font-extrabold text-brand">{money(u.total_spent)}</td>
                     <td className="p-3 text-right">
                       <div className="inline-flex gap-1">
                         <button
                           type="button"
                           onClick={() => toggle(u.id)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-brand/15 px-2.5 py-1.5 text-xs font-bold text-brand hover:bg-brand/5"
+                          className="btn-outline px-2.5 py-1.5 text-xs"
                         >
                           {expanded === u.id ? "Hide" : "View"}
                         </button>
                         <Link
                           href={`/admin/customers/${u.id}`}
-                          className="inline-flex items-center gap-1 rounded-lg border border-brand/15 px-2.5 py-1.5 text-xs font-bold text-ink/70 hover:bg-brand/5"
+                          className="btn-outline inline-flex items-center gap-1 px-2.5 py-1.5 text-xs"
                         >
                           Profile <ArrowRight className="h-3 w-3" />
                         </Link>
@@ -660,8 +683,8 @@ function UsersTab() {
                     </td>
                   </tr>
                   {expanded === u.id && (
-                    <tr className="border-t border-brand/5 bg-brand/[0.03]">
-                      <td colSpan={7} className="p-3">
+                    <tr className="border-b border-ink/5 bg-brand/[0.02] dark:border-white/5 dark:bg-white/[0.02]">
+                      <td colSpan={7} className="px-3 py-2">
                         <UserBookingsList rows={userBookings[u.id] ?? []} />
                       </td>
                     </tr>
@@ -677,14 +700,18 @@ function UsersTab() {
 }
 
 function UserBookingsList({ rows }: { rows: Booking[] }) {
-  if (rows.length === 0) return <p className="text-xs text-slatey">No bookings.</p>;
+  if (rows.length === 0) return <p className="text-xs text-ink/50 dark:text-white/50">No bookings.</p>;
   return (
-    <ul className="grid gap-1.5 sm:grid-cols-2">
+    <ul className="grid gap-1.5 py-1 sm:grid-cols-2">
       {rows.map((b) => (
-        <li key={b.id} className="rounded-lg border border-brand/10 bg-white px-3 py-1.5 text-xs">
-          <span className="font-bold text-ink">Court {b.court_number}</span> · {b.slot_date} {b.slot_time} ·{" "}
-          <span className="text-brand">{money(b.total_amount)}</span> ·{" "}
-          <span className="uppercase text-slatey">{b.status}</span>
+        <li key={b.id} className="rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-xs dark:border-white/10 dark:bg-[#111c38]">
+          <span className="font-bold text-ink dark:text-white">Court {b.court_number}</span>
+          {" · "}
+          {b.slot_date} {b.slot_time}
+          {" · "}
+          <span className="font-extrabold text-brand">{money(b.total_amount)}</span>
+          {" · "}
+          <span className="font-bold uppercase tracking-wide text-ink/50 dark:text-white/50">{b.status}</span>
         </li>
       ))}
     </ul>
@@ -768,45 +795,52 @@ function ExpensesTab() {
     URL.revokeObjectURL(url);
   }
 
+  const inputCls = "w-full rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
+
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-5">
       {/* Summary + add form */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
-        <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
-          <h3 className="font-display text-base font-extrabold text-ink">Add daily expense</h3>
-          <form onSubmit={add} className="mt-3 grid gap-2.5">
+      <div className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
+        <div className="card-sport p-5">
+          <span className="eyebrow">Log expense</span>
+          <h3 className="mt-1 mb-4 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">Add daily expense</h3>
+          <form onSubmit={add} className="grid gap-2.5">
             <div className="grid grid-cols-2 gap-2">
-              <input type="date" value={form.expense_date} onChange={(e) => setForm({ ...form, expense_date: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
-              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm capitalize outline-none focus:border-brand">
+              <input type="date" value={form.expense_date} onChange={(e) => setForm({ ...form, expense_date: e.target.value })} className={inputCls} />
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className={inputCls}>
                 {EXPENSE_CATS.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <input placeholder="Description (e.g. Lunch for staff)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+            <input placeholder="Description (e.g. Lunch for staff)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={inputCls} />
             <div className="grid grid-cols-2 gap-2">
-              <input type="number" min="0" placeholder="Amount ₹" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
-              <input placeholder="Paid via (Cash/UPI…)" value={form.payment_method} onChange={(e) => setForm({ ...form, payment_method: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+              <input type="number" min="0" placeholder="Amount ₹" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className={inputCls} />
+              <input placeholder="Paid via (Cash/UPI…)" value={form.payment_method} onChange={(e) => setForm({ ...form, payment_method: e.target.value })} className={inputCls} />
             </div>
-            <button type="submit" disabled={busy} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white shadow-glow hover:bg-brand-600 disabled:opacity-60">
+            <button type="submit" disabled={busy} className="btn-primary mt-1 w-full justify-center disabled:opacity-60">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Add expense
             </button>
           </form>
         </div>
-        <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="font-display text-base font-extrabold text-ink">This period</h3>
+
+        <div className="card-sport p-5">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <span className="eyebrow">Period summary</span>
+              <h3 className="mt-1 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">This period</h3>
+            </div>
             <div className="flex items-center gap-2">
-              <input type="date" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value })} className="rounded-lg border border-brand/15 px-2 py-1 text-xs outline-none focus:border-brand" />
-              <span className="text-xs text-slatey">to</span>
-              <input type="date" value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} className="rounded-lg border border-brand/15 px-2 py-1 text-xs outline-none focus:border-brand" />
+              <input type="date" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value })} className="rounded-lg border-2 border-ink/10 px-2 py-1 text-xs outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white" />
+              <span className="text-xs text-ink/40 dark:text-white/40">to</span>
+              <input type="date" value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} className="rounded-lg border-2 border-ink/10 px-2 py-1 text-xs outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white" />
             </div>
           </div>
-          <div className="mt-3 font-display text-3xl font-extrabold text-brand">{money(total)}</div>
-          <div className="text-xs text-slatey">Total spend across {expenses.length} entries</div>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="mt-4 font-display text-4xl font-extrabold tracking-tight text-brand">{money(total)}</div>
+          <div className="mt-1 text-xs text-ink/50 dark:text-white/50">Total spend across {expenses.length} entries</div>
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => (
-              <div key={c} className="rounded-xl border border-brand/10 bg-brand/[0.03] p-2.5">
-                <div className="text-[10px] font-bold uppercase tracking-wide text-slatey">{c}</div>
-                <div className="font-display text-sm font-extrabold text-ink">{money(v)}</div>
+              <div key={c} className="rounded-xl border-2 border-ink/10 p-2.5 dark:border-white/10">
+                <div className="text-[10px] font-extrabold uppercase tracking-wide text-ink/40 dark:text-white/40">{c}</div>
+                <div className="mt-1 font-display text-sm font-extrabold text-ink dark:text-white">{money(v)}</div>
               </div>
             ))}
           </div>
@@ -814,31 +848,37 @@ function ExpensesTab() {
       </div>
 
       {/* List */}
-      <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-extrabold text-ink">Expense log</h3>
-          <button type="button" onClick={exportCsv} disabled={expenses.length === 0} className="inline-flex items-center gap-1 rounded-xl border border-brand/15 px-2.5 py-1.5 text-xs font-bold text-ink/70 hover:bg-brand/5 disabled:opacity-50">
+      <div className="card-sport p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-display text-base font-extrabold tracking-tight text-ink dark:text-white">Expense log</h3>
+          <button type="button" onClick={exportCsv} disabled={expenses.length === 0} className="btn-outline px-2.5 py-1.5 text-xs disabled:opacity-50">
             <Download className="h-3.5 w-3.5" /> Export CSV
           </button>
         </div>
         {loading ? <LoadingCard /> : expenses.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-brand/20 bg-brand/[0.03] p-6 text-center text-sm text-slatey">No expenses in this period.</p>
+          <div className="rounded-2xl border-2 border-dashed border-ink/10 p-8 text-center text-sm text-ink/40 dark:border-white/10 dark:text-white/40">No expenses in this period.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse text-sm">
-              <thead className="bg-brand/5 text-left text-xs uppercase tracking-wide text-slatey">
-                <tr><th className="p-3">Date</th><th className="p-3">Category</th><th className="p-3">Description</th><th className="p-3">Method</th><th className="p-3">Amount</th><th className="p-3"></th></tr>
+              <thead>
+                <tr className="border-b-2 border-ink/10 dark:border-white/10">
+                  {["Date", "Category", "Description", "Method", "Amount", ""].map((h) => (
+                    <th key={h} className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">{h}</th>
+                  ))}
+                </tr>
               </thead>
               <tbody>
                 {expenses.map((e) => (
-                  <tr key={e.id} className="border-t border-brand/10">
-                    <td className="p-3 text-ink">{e.expense_date}</td>
-                    <td className="p-3"><span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold uppercase text-brand">{e.category}</span></td>
-                    <td className="p-3 text-slatey">{e.description || "—"}</td>
-                    <td className="p-3 text-slatey">{e.payment_method || "—"}</td>
-                    <td className="p-3 font-semibold text-ink">{money(e.amount)}</td>
+                  <tr key={e.id} className="border-b border-ink/5 hover:bg-brand/[0.02] dark:border-white/5 dark:hover:bg-white/[0.02]">
+                    <td className="p-3 text-ink dark:text-white">{e.expense_date}</td>
+                    <td className="p-3">
+                      <span className="tag-sport capitalize">{e.category}</span>
+                    </td>
+                    <td className="p-3 text-ink/60 dark:text-white/60">{e.description || "—"}</td>
+                    <td className="p-3 text-ink/60 dark:text-white/60">{e.payment_method || "—"}</td>
+                    <td className="p-3 font-extrabold text-ink dark:text-white">{money(e.amount)}</td>
                     <td className="p-3 text-right">
-                      <button onClick={() => remove(e.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50">
+                      <button onClick={() => remove(e.id)} className="inline-flex items-center gap-1 rounded-lg border-2 border-red-200 px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50">
                         <Trash2 className="h-3 w-3" />
                       </button>
                     </td>
@@ -909,48 +949,53 @@ function TournamentsTab() {
     else toast.show("Could not delete.", "error");
   }
 
+  const inputCls = "w-full rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
+
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
-      <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft h-fit">
-        <h3 className="font-display text-base font-extrabold text-ink">Host a tournament</h3>
-        <form onSubmit={add} className="mt-3 grid gap-2.5">
-          <input placeholder="Tournament name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+    <div className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
+      <div className="card-sport h-fit p-5">
+        <span className="eyebrow">Host event</span>
+        <h3 className="mt-1 mb-4 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">New tournament</h3>
+        <form onSubmit={add} className="grid gap-2.5">
+          <input placeholder="Tournament name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} />
           <div className="grid grid-cols-2 gap-2">
-            <input type="date" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm capitalize outline-none focus:border-brand">
+            <input type="date" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} className={inputCls} />
+            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={inputCls}>
               {["upcoming", "open", "completed", "cancelled"].map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <input placeholder="Format (e.g. Open Doubles)" value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+          <input placeholder="Format (e.g. Open Doubles)" value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value })} className={inputCls} />
           <div className="grid grid-cols-2 gap-2">
-            <input placeholder="Prize (e.g. ₹10,000)" value={form.prize} onChange={(e) => setForm({ ...form, prize: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
-            <input type="number" min="0" placeholder="Entry fee ₹" value={form.fee} onChange={(e) => setForm({ ...form, fee: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
+            <input placeholder="Prize (e.g. ₹10,000)" value={form.prize} onChange={(e) => setForm({ ...form, prize: e.target.value })} className={inputCls} />
+            <input type="number" min="0" placeholder="Entry fee ₹" value={form.fee} onChange={(e) => setForm({ ...form, fee: e.target.value })} className={inputCls} />
           </div>
-          <textarea placeholder="Details" rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="rounded-xl border border-brand/15 px-3 py-2 text-sm outline-none focus:border-brand" />
-          <button type="submit" disabled={busy} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white shadow-glow hover:bg-brand-600 disabled:opacity-60">
+          <textarea placeholder="Details" rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={inputCls} />
+          <button type="submit" disabled={busy} className="btn-primary mt-1 w-full justify-center disabled:opacity-60">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Add tournament
           </button>
         </form>
       </div>
-      <div className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
-        <h3 className="mb-3 font-display text-base font-extrabold text-ink">Scheduled tournaments</h3>
+
+      <div className="card-sport p-5">
+        <span className="eyebrow">Events</span>
+        <h3 className="mt-1 mb-4 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">Scheduled tournaments</h3>
         {loading ? <LoadingCard /> : items.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-brand/20 bg-brand/[0.03] p-6 text-center text-sm text-slatey">No tournaments yet.</p>
+          <div className="rounded-2xl border-2 border-dashed border-ink/10 p-8 text-center text-sm text-ink/40 dark:border-white/10 dark:text-white/40">No tournaments yet.</div>
         ) : (
-          <ul className="grid gap-2.5">
+          <ul className="grid gap-3">
             {items.map((t) => (
-              <li key={t.id} className="flex items-start justify-between gap-3 rounded-2xl border border-brand/10 bg-brand/[0.02] p-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-ink">{t.name}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${t.status === "open" ? "bg-lime/20 text-lime-dark" : t.status === "cancelled" ? "bg-red-100 text-red-700" : "bg-brand/10 text-brand"}`}>{t.status}</span>
+              <li key={t.id} className="flex items-start justify-between gap-3 rounded-2xl border-2 border-ink/10 p-4 dark:border-white/10">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-ink dark:text-white">{t.name}</span>
+                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${t.status === "open" ? "bg-lime/20 text-lime-dark" : t.status === "cancelled" ? "bg-red-100 text-red-700" : "tag-sport"}`}>{t.status}</span>
                   </div>
-                  <div className="mt-0.5 text-xs text-slatey">
+                  <div className="mt-1 text-xs text-ink/50 dark:text-white/50">
                     {t.event_date || "TBD"} · {t.format || "—"}{t.prize ? ` · 🏆 ${t.prize}` : ""}{t.fee ? ` · ₹${t.fee} entry` : ""}
                   </div>
-                  {t.description && <p className="mt-1 text-xs text-slatey">{t.description}</p>}
+                  {t.description && <p className="mt-1 text-xs text-ink/50 dark:text-white/50">{t.description}</p>}
                 </div>
-                <button onClick={() => remove(t.id)} className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-red-200 px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50">
+                <button onClick={() => remove(t.id)} className="inline-flex shrink-0 items-center gap-1 rounded-lg border-2 border-red-200 px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50">
                   <Trash2 className="h-3 w-3" />
                 </button>
               </li>
@@ -964,8 +1009,8 @@ function TournamentsTab() {
 
 function LoadingCard() {
   return (
-    <div className="flex items-center justify-center rounded-2xl border border-brand/10 bg-white p-10 text-sm text-slatey">
-      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+    <div className="flex items-center justify-center rounded-2xl border-2 border-ink/10 p-10 text-sm text-ink/40 dark:border-white/10 dark:text-white/40">
+      <Loader2 className="mr-2 h-4 w-4 animate-spin text-brand" /> Loading…
     </div>
   );
 }

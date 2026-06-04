@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
+import { PaddleScene } from "@/components/ui/paddle-scene";
 
 export default function AdminLoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -36,43 +37,99 @@ export default function AdminLoginPage() {
   return (
     <>
       <Nav />
-      <main className="min-h-[calc(100vh-200px)] bg-ink/95 px-4 py-12 sm:py-16">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-[#0E1426] p-7 shadow-glow"
-        >
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-lime">
-            <ShieldCheck className="h-4 w-4" /> Owner console
-          </div>
-          <h1 className="mt-2 font-display text-2xl font-extrabold text-white sm:text-3xl">Admin login</h1>
-          <p className="mt-2 text-sm text-white/70">Restricted access. Use your owner credentials to manage Breathe.</p>
+      <main className="relative min-h-screen-safe overflow-hidden bg-ink">
+        {/* Court lines background */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.18) 1px, transparent 1px)",
+            backgroundSize: "44px 44px",
+          }}
+        />
+        {/* Tape stripe top accent */}
+        <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
 
-          <form onSubmit={onSubmit} className="mt-6 grid gap-3">
-            <Field label="Owner email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} autoComplete="email" required />
-            <Field label="Password" type="password" value={form.password} onChange={(v) => setForm({ ...form, password: v })} autoComplete="current-password" required />
-            {error && (
-              <div role="alert" className="rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-                {error}
-              </div>
-            )}
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-lime px-5 py-3.5 text-sm font-bold text-gray-900 transition hover:bg-lime-dark disabled:opacity-60"
+        {/* 3D paddle accent — right side, large screens only */}
+        <div className="pointer-events-none absolute right-8 top-1/2 hidden -translate-y-1/2 opacity-80 xl:block">
+          <PaddleScene size={280} faceFrom="#c6f432" faceTo="#9bbd18" />
+        </div>
+
+        <div className="relative flex min-h-screen-safe items-center justify-center px-4 py-16">
+          <div className="w-full max-w-md">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enter console"}
-            </button>
-          </form>
+              {/* Header above card */}
+              <div className="mb-6 text-center">
+                <span className="eyebrow text-lime">
+                  <ShieldCheck className="h-4 w-4" /> Restricted access
+                </span>
+                <h1 className="heading-lg mt-2 text-white">Owner <span className="mark-lime">Console</span></h1>
+                <p className="mt-2 text-sm text-white/60">
+                  Use your owner credentials to manage Breathe Pickleball.
+                </p>
+              </div>
 
-          <div className="mt-5 text-center text-xs text-white/60">
-            Not the owner?{" "}
-            <Link href="/login" className="font-semibold text-lime hover:underline">
-              Player login
-            </Link>
+              {/* Login card */}
+              <div className="overflow-hidden rounded-3xl border-2 border-white/10 bg-[#0E1426] shadow-2xl">
+                {/* Card top stripe */}
+                <div className="h-1 bg-brand" />
+
+                <div className="p-7">
+                  <form onSubmit={onSubmit} className="grid gap-4">
+                    <Field
+                      label="Owner email"
+                      type="email"
+                      value={form.email}
+                      onChange={(v) => setForm({ ...form, email: v })}
+                      autoComplete="email"
+                      required
+                    />
+                    <Field
+                      label="Password"
+                      type="password"
+                      value={form.password}
+                      onChange={(v) => setForm({ ...form, password: v })}
+                      autoComplete="current-password"
+                      required
+                    />
+                    {error && (
+                      <div
+                        role="alert"
+                        className="rounded-xl border-2 border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-300"
+                      >
+                        {error}
+                      </div>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="btn-accent mt-1 w-full justify-center py-3.5 text-sm disabled:opacity-60"
+                    >
+                      {loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ShieldCheck className="h-4 w-4" />
+                      )}
+                      {loading ? "Verifying…" : "Enter console"}
+                    </button>
+                  </form>
+
+                  <div className="mt-5 border-t-2 border-white/10 pt-4 text-center text-xs text-white/40">
+                    Not the owner?{" "}
+                    <Link href="/login" className="font-bold text-lime hover:underline">
+                      Player login
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </motion.div>
+        </div>
       </main>
       <Footer />
     </>
@@ -89,14 +146,16 @@ function Field(props: {
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-white/60">{props.label}</span>
+      <span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/50">
+        {props.label}
+      </span>
       <input
         type={props.type ?? "text"}
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
         autoComplete={props.autoComplete}
         required={props.required}
-        className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-lime focus:ring-2 focus:ring-lime/20"
+        className="w-full rounded-xl border-2 border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-lime focus:ring-2 focus:ring-lime/20"
       />
     </label>
   );

@@ -21,29 +21,29 @@ export default async function AdminPage() {
       <main className="app-surface bg-brand-50/30 dark:bg-ink">
         <PortalHero
           eyebrow="Owner console"
-          title={<h1 className="font-serif-hero text-3xl italic sm:text-4xl">Breathe Pickleball admin</h1>}
+          title={<h1 className="heading-lg text-white">Breathe Pickleball <span className="mark-lime">Admin</span></h1>}
           subtitle="Bookings, court availability, users, and revenue — live from Turso."
           right={
-            <div className="flex flex-col items-start gap-2 md:items-end">
-              <span className="glass-pill px-4 py-2 text-xs font-semibold text-white">
+            <div className="flex flex-col items-start gap-3 md:items-end">
+              <span className="tag-sport border-white/20 bg-white/10 text-white/90 dark:border-white/20 dark:bg-white/10 dark:text-white/90">
                 Signed in as {admin.email}
               </span>
               <div className="flex flex-wrap gap-2">
                 <Link
                   href="/admin/notices"
-                  className="glass-pill inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
+                  className="inline-flex items-center gap-1.5 rounded-full border-2 border-white/20 px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-wide text-white transition hover:border-lime hover:text-lime"
                 >
                   <Megaphone className="h-3.5 w-3.5" /> Notices
                 </Link>
                 <Link
                   href="/admin/settings"
-                  className="glass-pill inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
+                  className="inline-flex items-center gap-1.5 rounded-full border-2 border-white/20 px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-wide text-white transition hover:border-lime hover:text-lime"
                 >
                   <SettingsIcon className="h-3.5 w-3.5" /> Settings
                 </Link>
                 <Link
                   href="/admin/diagnostics"
-                  className="glass-pill inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
+                  className="inline-flex items-center gap-1.5 rounded-full border-2 border-white/20 px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-wide text-white transition hover:border-lime hover:text-lime"
                 >
                   <Activity className="h-3.5 w-3.5" /> Diagnostics
                 </Link>
@@ -52,7 +52,7 @@ export default async function AdminPage() {
           }
         />
 
-        <Container className="py-8 space-y-6">
+        <Container className="space-y-6 py-8">
           <TodayPanel />
           <AdminConsole />
         </Container>

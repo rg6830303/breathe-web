@@ -72,6 +72,9 @@ export function BulkBlockModal({ open, onClose }: { open: boolean; onClose: () =
     }
   }
 
+  const inputCls = "w-full rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/15 dark:bg-[#111c38] dark:text-white";
+  const labelCls = "mb-1.5 block text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50";
+
   return (
     <AnimatePresence>
       {open && (
@@ -79,25 +82,32 @@ export function BulkBlockModal({ open, onClose }: { open: boolean; onClose: () =
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 320, damping: 28 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md overflow-hidden rounded-3xl border border-brand/10 bg-white shadow-2xl"
+            className="w-full max-w-md overflow-hidden rounded-3xl border-2 border-ink/10 bg-white shadow-2xl dark:border-white/10 dark:bg-[#0d1426]"
           >
-            <div className="flex items-center justify-between border-b border-brand/10 px-5 py-4">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b-2 border-ink/10 bg-ink/[0.03] px-5 py-4 dark:border-white/10 dark:bg-white/[0.03]">
               <div className="flex items-center gap-2">
-                <ShieldOff className="h-5 w-5 text-brand" />
-                <h3 className="font-display text-lg font-extrabold text-ink">Close slots</h3>
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-ink text-white dark:bg-white/10">
+                  <ShieldOff className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Court control</p>
+                  <h3 className="font-display text-base font-extrabold tracking-tight text-ink dark:text-white">Close slots</h3>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-brand/15 text-ink hover:bg-brand/5"
+                className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-ink/10 text-ink/50 transition hover:border-ink/30 hover:text-ink dark:border-white/10 dark:text-white/50 dark:hover:text-white"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
@@ -106,61 +116,61 @@ export function BulkBlockModal({ open, onClose }: { open: boolean; onClose: () =
 
             <form onSubmit={onSubmit} className="grid gap-3 p-5">
               <label className="block">
-                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">Date</span>
+                <span className={labelCls}>Date</span>
                 <input
                   type="date"
                   value={form.slot_date}
                   onChange={(e) => setForm({ ...form, slot_date: e.target.value })}
                   required
-                  className="w-full rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                  className={inputCls}
                 />
               </label>
 
-              <label className="flex items-center gap-2">
+              <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border-2 border-ink/10 px-3 py-2 transition hover:border-brand/30 dark:border-white/10">
                 <input
                   type="checkbox"
                   checked={form.fullDay}
                   onChange={(e) => setForm({ ...form, fullDay: e.target.checked })}
                   className="h-4 w-4 accent-brand"
                 />
-                <span className="text-sm font-semibold text-ink">Close the entire day</span>
+                <span className="text-sm font-semibold text-ink dark:text-white">Close the entire day</span>
               </label>
 
               {!form.fullDay && (
                 <div className="grid grid-cols-2 gap-3">
                   <label className="block">
-                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">From</span>
+                    <span className={labelCls}>From</span>
                     <input
                       type="time"
                       value={form.start_time}
                       onChange={(e) => setForm({ ...form, start_time: e.target.value })}
-                      className="w-full rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                      className={inputCls}
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">To</span>
+                    <span className={labelCls}>To</span>
                     <input
                       type="time"
                       value={form.end_time}
                       onChange={(e) => setForm({ ...form, end_time: e.target.value })}
-                      className="w-full rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                      className={inputCls}
                     />
                   </label>
                 </div>
               )}
 
               <div>
-                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">Courts</span>
+                <span className={labelCls}>Courts to close</span>
                 <div className="flex gap-2">
                   {[1, 2, 3].map((c) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => toggleCourt(c)}
-                      className={`flex-1 rounded-xl border px-3 py-2 text-sm font-bold transition ${
+                      className={`flex-1 rounded-xl border-2 px-3 py-2.5 text-sm font-extrabold uppercase tracking-wide transition ${
                         form.courts.includes(c)
                           ? "border-brand bg-brand text-white"
-                          : "border-brand/15 bg-white text-ink hover:bg-brand/5"
+                          : "border-ink/10 bg-white text-ink hover:border-brand/30 dark:border-white/10 dark:bg-[#111c38] dark:text-white"
                       }`}
                     >
                       Court {c}
@@ -170,39 +180,39 @@ export function BulkBlockModal({ open, onClose }: { open: boolean; onClose: () =
               </div>
 
               <label className="block">
-                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">Reason</span>
+                <span className={labelCls}>Reason</span>
                 <input
                   type="text"
                   value={form.reason}
                   onChange={(e) => setForm({ ...form, reason: e.target.value })}
                   placeholder="Maintenance, holiday, private event…"
-                  className="w-full rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                  className={inputCls}
                 />
               </label>
 
               {error && (
-                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <div role="alert" className="rounded-xl border-2 border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
                   {error}
                 </div>
               )}
               {done && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                <div className="rounded-xl border-2 border-lime/40 bg-lime/10 px-3 py-2 text-sm font-semibold text-lime-dark">
                   Blocked {done.inserted} slot{done.inserted === 1 ? "" : "s"}. Existing bookings were left alone.
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-1">
+              <div className="mt-1 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-full border border-brand/15 px-4 py-2 text-sm font-bold text-ink hover:bg-brand/5"
+                  className="btn-outline px-4 py-2.5 text-xs"
                 >
                   Close
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2 text-sm font-bold text-white shadow-soft transition hover:bg-ink/85 disabled:opacity-60"
+                  className="btn-dark px-5 py-2.5 text-xs disabled:opacity-60"
                 >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldOff className="h-4 w-4" />}
                   Block slots

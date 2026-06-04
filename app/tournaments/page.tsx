@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Award, CalendarDays, Crown, IndianRupee, MapPin, Medal, Trophy, Users, Check } from "lucide-react";
+import { Award, Crown, Medal, Trophy, Users, Check } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { CTABand, Container, SectionDivider } from "@/components/ui";
 import { PageHero } from "@/components/ui/page-hero";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { StatCounter } from "@/components/motion/stat-counter";
-import { GlowCard } from "@/components/ui/glow-card";
 import { TiltCard } from "@/components/motion/tilt-card";
 import { TournamentBracket } from "@/components/ui/tournament-bracket";
 import { motion } from "framer-motion";
@@ -36,18 +35,17 @@ export default function TournamentsPage() {
   return (
     <>
       <Nav />
-      <main className="app-surface overflow-x-hidden">
-        {/* Cinematic dark hero section */}
+      <main className="overflow-x-hidden">
+        {/* Page Hero with floating lime particles */}
         <div className="relative">
           <PageHero
             dark={true}
-            bgClassName="bg-gradient-to-br from-gray-950 via-brand-900 to-brand-700 text-white"
             label="Tournaments"
             title="Compete for real prizes at Breathe"
             subtitle="We regularly host open tournaments with cash prizes alongside beginner-friendly brackets — bringing together the best of Kolkata's pickleball community for a day of serious, joyful competition."
           />
 
-          {/* Seeded particles to avoid hydration mismatches */}
+          {/* Seeded particles */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
             {particles.map((p, i) => (
               <motion.div
@@ -60,7 +58,7 @@ export default function TournamentsPage() {
                   height: p.size,
                   borderRadius: "50%",
                   backgroundColor: "#C6F432",
-                  opacity: 0.2,
+                  opacity: 0.25,
                 }}
                 animate={{
                   y: [0, -30, 0],
@@ -77,32 +75,30 @@ export default function TournamentsPage() {
           </div>
         </div>
 
-        {/* Tournament Formats in a Dark Style GlowCard */}
-        <section className="px-4 py-20 sm:px-6 lg:px-8 bg-gray-950 text-white relative">
+        {/* ── TOURNAMENT FORMATS — dark ink section ── */}
+        <section className="bg-ink px-4 py-20 text-white sm:px-6 lg:px-8">
           <Container className="!px-0">
-            <div className="text-center mb-12">
-              <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.2em] uppercase text-lime">
-                <span className="w-1.5 h-1.5 rounded-full bg-lime" /> EVENT FORMATS
-              </span>
-              <h2 className="mt-3 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl text-white">
-                A bracket for every kind of player
-              </h2>
-            </div>
+            <ScrollReveal direction="up">
+              <div className="mb-12 text-center">
+                <span className="eyebrow text-lime">Event formats</span>
+                <h2 className="heading-lg mt-4 text-white">
+                  A bracket for{" "}
+                  <span className="mark-lime">every kind</span> of player
+                </h2>
+              </div>
+            </ScrollReveal>
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {formats.map(({ icon: Icon, title, text }, i) => (
                 <ScrollReveal key={title} delay={i * 0.1} direction="up">
                   <TiltCard maxTilt={5} className="h-full">
-                    <GlowCard
-                      glow="0 0 40px rgba(255,201,60,0.2)"
-                      className="h-full bg-gray-900 border border-white/10 text-white p-6 shadow-soft hover:shadow-card transition-all"
-                    >
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-lime">
-                        <Icon className="h-6 w-6" />
+                    <div className="card-sport h-full p-6">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime/15">
+                        <Icon className="h-6 w-6 text-lime" />
                       </div>
-                      <h3 className="mt-5 font-display text-lg font-bold text-white">{title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-gray-400">{text}</p>
-                    </GlowCard>
+                      <h3 className="mt-5 font-display text-base font-extrabold text-ink dark:text-white">{title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-slatey dark:text-white/60">{text}</p>
+                    </div>
                   </TiltCard>
                 </ScrollReveal>
               ))}
@@ -110,35 +106,33 @@ export default function TournamentsPage() {
           </Container>
         </section>
 
-        {/* Prize / Stats strip */}
-        <section className="bg-brand-800 text-white py-12 px-4 sm:px-6 lg:px-8 shadow-inner relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_#ffffff_1px,_transparent_1px)] bg-[size:16px_16px]" />
-          <Container className="!px-0 relative">
+        {/* ── PRIZE / STATS STRIP — lime bar ── */}
+        <section className="bg-lime py-12 px-4 sm:px-6 lg:px-8">
+          <Container className="!px-0">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
               {[
-                { label: "Cash prizes", value: "₹₹₹", prefix: "Prize Pool: " },
+                { label: "Cash prizes", value: "₹₹₹", isText: true },
                 { label: "Categories", value: 4, suffix: " divisions" },
                 { label: "Events", value: 1, prefix: "Monthly " },
                 { label: "Full Venue", value: 3, suffix: " courts" },
               ].map((stat, i) => (
                 <ScrollReveal key={stat.label} delay={i * 0.1} direction="up" className="flex flex-col items-center">
-                  <div className="font-display text-2xl sm:text-3xl font-extrabold text-lime flex items-center justify-center gap-1">
-                    {typeof stat.value === "number" ? (
-                      <>
-                        {stat.prefix}
-                        <StatCounter end={stat.value} suffix={stat.suffix} />
-                      </>
-                    ) : (
+                  <div className="font-display text-2xl font-extrabold text-ink sm:text-3xl">
+                    {stat.isText ? (
                       <motion.span
-                        animate={{ color: ["#FFC93C", "#C6F432", "#FFC93C"] }}
-                        transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
-                        className="font-bold"
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
                       >
                         {stat.value}
                       </motion.span>
+                    ) : (
+                      <>
+                        {stat.prefix}
+                        <StatCounter end={stat.value as number} suffix={stat.suffix} />
+                      </>
                     )}
                   </div>
-                  <div className="mt-2 text-xs font-semibold uppercase tracking-wider text-white/70">
+                  <div className="mt-2 text-[0.65rem] font-extrabold uppercase tracking-wider text-ink/60">
                     {stat.label}
                   </div>
                 </ScrollReveal>
@@ -147,20 +141,17 @@ export default function TournamentsPage() {
           </Container>
         </section>
 
-        <SectionDivider />
-
-        {/* Experience & Bracket draw section */}
-        <section className="px-4 py-20 sm:px-6 lg:px-8 bg-white">
+        {/* ── EXPERIENCE + BRACKET — light section ── */}
+        <section className="bg-white px-4 py-20 dark:bg-[#111c38] sm:px-6 lg:px-8">
           <Container className="!px-0 grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <ScrollReveal direction="left">
               <div>
-                <span className="flex items-center gap-2 text-xs font-bold tracking-[0.2em] uppercase text-brand-600">
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand-600" /> THE BREATHE EXPERIENCE
-                </span>
-                <h2 className="mt-3 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl text-ink">
-                  Run well, played hard, celebrated together
+                <span className="eyebrow">The Breathe experience</span>
+                <h2 className="heading-lg mt-4 text-ink dark:text-white">
+                  Run well, played hard,{" "}
+                  <span className="mark-lime">celebrated together</span>
                 </h2>
-                <p className="mt-4 text-sm text-slatey leading-relaxed">
+                <p className="mt-4 text-sm text-slatey leading-relaxed dark:text-white/65">
                   Our events are organised end-to-end so you can focus on your game — clear draws, on-time matches, referees where it counts, and a courtside kitchen to keep you fuelled.
                 </p>
 
@@ -171,9 +162,10 @@ export default function TournamentsPage() {
                     "Multiple skill divisions so matches stay competitive",
                     "Live scoreboard and finals atmosphere under the lights",
                     "Refreshments and seating for players and spectators",
-                  ].map((item, idx) => (
-                    <li key={item} className="flex items-start gap-3 rounded-2xl border border-brand/5 bg-gray-50 p-4 text-sm text-ink shadow-soft">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /> {item}
+                  ].map((item) => (
+                    <li key={item} className="card-sport flex items-start gap-3 p-4 text-sm">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-lime" />
+                      <span className="text-ink dark:text-white/80">{item}</span>
                     </li>
                   ))}
                 </ul>
@@ -183,11 +175,11 @@ export default function TournamentsPage() {
             {/* Bracket draw visualization */}
             <ScrollReveal direction="right">
               <div className="flex flex-col gap-4">
-                <div className="text-center md:text-left mb-2">
-                  <h3 className="font-display text-lg font-bold text-ink flex items-center justify-center md:justify-start gap-2">
-                    <Trophy className="h-5 w-5 text-brand" /> Interactive Tournament Bracket
+                <div className="mb-2 text-center md:text-left">
+                  <h3 className="font-display text-lg font-extrabold text-ink dark:text-white flex items-center justify-center md:justify-start gap-2">
+                    <Trophy className="h-5 w-5 text-lime" /> Interactive Tournament Bracket
                   </h3>
-                  <p className="text-xs text-slatey mt-1">Watch how the bracket resolves under the lights</p>
+                  <p className="text-xs text-slatey dark:text-white/50 mt-1">Watch how the bracket resolves under the lights</p>
                 </div>
                 <TournamentBracket />
               </div>
@@ -195,33 +187,43 @@ export default function TournamentsPage() {
           </Container>
         </section>
 
-        <SectionDivider />
-
-        {/* Next event CTA */}
-        <section className="px-4 py-16 sm:px-6 lg:px-8 bg-brand-50/20">
+        {/* ── NEXT EVENT CTA — dark ink section ── */}
+        <section className="bg-ink px-4 py-16 sm:px-6 lg:px-8">
           <Container className="!px-0">
             <ScrollReveal direction="up">
-              <div className="bg-gray-950 border border-brand-500/20 relative overflow-hidden rounded-3xl p-8 text-center text-white shadow-card sm:p-12">
-                <div className="court-lines absolute inset-0 opacity-10" />
+              <div className="relative overflow-hidden rounded-3xl border-2 border-lime/20 p-8 text-center text-white sm:p-12">
+                <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 opacity-[0.05]"
+                  style={{
+                    backgroundImage: "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
+                    backgroundSize: "44px 44px",
+                  }}
+                />
                 <div className="relative">
-                  <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.2em] uppercase text-lime">
-                    <span className="w-1.5 h-1.5 rounded-full bg-lime" /> NEXT EVENT
-                  </span>
-                  <h2 className="mx-auto mt-4 max-w-2xl font-display text-2xl font-extrabold sm:text-3xl text-white">
-                    Want in on the next Breathe Open?
+                  <span className="eyebrow text-lime justify-center">Next event</span>
+                  <h2 className="heading-lg mx-auto mt-4 max-w-2xl text-white" style={{ fontSize: "clamp(1.75rem,4vw,2.5rem)" }}>
+                    Want in on the next{" "}
+                    <span className="mark-lime">Breathe Open?</span>
                   </h2>
-                  <p className="mx-auto mt-3 max-w-xl text-gray-400 text-sm leading-relaxed">
+                  <p className="mx-auto mt-4 max-w-xl text-white/60 text-sm leading-relaxed">
                     Registrations open ahead of each event. Follow us on Instagram or reach out and we'll make sure you don't miss the next one.
                   </p>
-                  
+
                   <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                     <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} className="w-full sm:w-auto">
-                      <a href={site.instagram} target="_blank" rel="noopener noreferrer" className="inline-flex w-full sm:w-auto items-center justify-center rounded-full bg-lime px-7 py-3 text-sm font-bold text-gray-900 shadow-soft hover:bg-lime-dark transition-colors">
+                      <a
+                        href={site.instagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-accent w-full sm:w-auto"
+                      >
                         Follow for updates
                       </a>
                     </motion.div>
                     <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} className="w-full sm:w-auto">
-                      <Link href="/contact" className="inline-flex w-full sm:w-auto items-center justify-center rounded-full border border-white/20 px-7 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10">
+                      <Link href="/contact" className="btn-outline w-full sm:w-auto">
                         Register interest
                       </Link>
                     </motion.div>
