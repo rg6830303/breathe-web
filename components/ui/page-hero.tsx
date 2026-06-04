@@ -2,87 +2,87 @@
 
 import { motion } from "framer-motion";
 import { CourtPatternBg } from "@/components/ui/court-pattern-bg";
+import { PaddleScene } from "@/components/ui/paddle-scene";
 
 type Props = {
   label: string;
   title: string;
   subtitle?: string;
+  /** Kept for API compatibility — the hero is always the bold dark treatment now. */
   dark?: boolean;
   bgClassName?: string;
+  /** Optional CTA / content slot rendered under the subtitle. */
+  children?: React.ReactNode;
 };
 
-export function PageHero({ label, title, subtitle, dark = false, bgClassName }: Props) {
+/**
+ * Bold & sporty marketing page header. Solid ink/brand block, court-line
+ * pattern, a lime court-tape stripe, big athletic stacked heading, and the
+ * signature 3D paddle scene floating on the right. Used across all secondary
+ * marketing pages (about, contact, tournaments, gallery).
+ */
+export function PageHero({ label, title, subtitle, bgClassName, children }: Props) {
   const words = title.split(" ");
 
-  const containerVariants = {
+  const container = {
     hidden: {},
-    visible: {
-      transition: {
-        staggerChildren: 0.05,
-      },
-    },
+    visible: { transition: { staggerChildren: 0.06 } },
   };
-
-  const wordVariants = {
-    hidden: { opacity: 0, y: 12 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const },
-    },
+  const word = {
+    hidden: { opacity: 0, y: 16 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const } },
   };
-
-  const defaultBg = dark
-    ? "bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 text-white"
-    : "bg-gradient-to-br from-brand-50 via-white to-brand-100 text-gray-900";
 
   return (
-    <section
-      className={`relative overflow-hidden ${bgClassName ?? defaultBg}`}
-    >
-      {/* Court line SVG overlay */}
-      <CourtPatternBg
-        className="absolute inset-0 h-full w-full opacity-5 object-cover"
-        stroke={dark ? "white" : "#2F5BFF"}
-      />
+    <section className={`relative overflow-hidden bg-ink text-white ${bgClassName ?? ""}`}>
+      <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-brand-800 via-ink to-ink" />
+      <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-[0.1]" stroke="white" />
+      {/* Court-tape accent stripe */}
+      <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
+      <div aria-hidden className="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rotate-12 rounded-[2.5rem] bg-lime/10" />
 
-      <div className="relative mx-auto max-w-4xl px-6 pb-14 pt-24 sm:pb-16 sm:pt-28 md:pb-20 md:pt-32">
-        {/* Label */}
-        <span
-          className={`flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] ${
-            dark ? "text-brand-300" : "text-brand-600"
-          }`}
-        >
-          <span className={`h-1.5 w-1.5 rounded-full ${dark ? "bg-brand-300" : "bg-brand-600"}`} />
-          {label}
-        </span>
+      {/* Signature paddle, right side on large screens */}
+      <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 opacity-90 lg:block xl:right-12">
+        <PaddleScene size={340} />
+      </div>
 
-        {/* Title with stagger animation */}
-        <motion.h1
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className={`mt-4 font-display text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl ${
-            dark ? "text-white" : "text-gray-900"
-          }`}
-        >
-          {words.map((word, i) => (
-            <motion.span key={i} variants={wordVariants} className="inline-block mr-[0.25em]">
-              {word}
-            </motion.span>
-          ))}
-        </motion.h1>
-
-        {/* Subtitle */}
-        {subtitle && (
-          <p
-            className={`mt-4 text-base sm:text-lg md:text-xl leading-relaxed ${
-              dark ? "text-white/70" : "text-gray-600"
-            }`}
+      <div className="relative mx-auto max-w-7xl px-6 pb-16 pt-24 sm:pb-20 sm:pt-28 md:pt-32 lg:px-8">
+        <div className="max-w-2xl">
+          <motion.span
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="eyebrow text-lime"
           >
-            {subtitle}
-          </p>
-        )}
+            {label}
+          </motion.span>
+
+          <motion.h1
+            variants={container}
+            initial="hidden"
+            animate="visible"
+            className="heading-xl mt-4 text-white"
+          >
+            {words.map((w, i) => (
+              <motion.span key={i} variants={word} className="mr-[0.22em] inline-block">
+                {w}
+              </motion.span>
+            ))}
+          </motion.h1>
+
+          {subtitle && (
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.25 }}
+              className="mt-5 max-w-xl text-base leading-relaxed text-white/70 sm:text-lg"
+            >
+              {subtitle}
+            </motion.p>
+          )}
+
+          {children && <div className="mt-7">{children}</div>}
+        </div>
       </div>
     </section>
   );
