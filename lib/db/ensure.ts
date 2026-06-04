@@ -149,6 +149,12 @@ export const SCHEMA_INDEXES: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses (expense_date DESC)`,
   `CREATE INDEX IF NOT EXISTS idx_tournaments_active ON tournaments (active, event_date DESC)`,
   `CREATE INDEX IF NOT EXISTS idx_users_google ON users (google_id)`,
+  // Hard guarantee against double-booking: at most one CONFIRMED booking per
+  // court+date+time. Partial index so cancelled/no-show rows don't block
+  // re-booking the same slot. Concurrent payments that both pass the
+  // application-level availability check will now collide here, and the loser's
+  // INSERT throws (handled by the booking routes with a refund).
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_unique_confirmed_slot ON bookings (court_number, slot_date, slot_time) WHERE status = 'confirmed'`,
 ];
 
 /** Back-compat: combined list (tables + indexes) for any external reference. */

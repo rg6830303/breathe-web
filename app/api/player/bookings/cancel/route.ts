@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
+import { refundPayment, razorpayConfigured } from "@/lib/razorpay";
+import { adjustCredit, SLOT_MINUTES } from "@/lib/credits";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -18,7 +20,7 @@ export async function POST(req: Request) {
   let row;
   try {
     const result = await turso.execute({
-      sql: "SELECT id, user_id, slot_date, slot_time, status, court_number, amount_paid, guest_name, guest_email FROM bookings WHERE id = ? LIMIT 1",
+      sql: "SELECT id, user_id, slot_date, slot_time, status, court_number, amount_paid, duration_min, notes, guest_name, guest_email FROM bookings WHERE id = ? LIMIT 1",
       args: [id],
     });
     row = result.rows[0];
@@ -68,6 +70,40 @@ export async function POST(req: Request) {
     console.error("[player cancel supabase sync error]", sbErr);
   }
 
+  // Reverse the money: refund the Razorpay payment for paid bookings, or
+  // restore prepaid credit for bookings made with the bulk pass.
+  let refund: { type: "razorpay" | "credit" | "none"; ok: boolean; detail?: string } = {
+    type: "none",
+    ok: false,
+  };
+  try {
+    let notesObj: Record<string, unknown> = {};
+    try {
+      notesObj = row.notes ? (JSON.parse(String(row.notes)) as Record<string, unknown>) : {};
+    } catch {
+      notesObj = {};
+    }
+    const paymentId = typeof notesObj.razorpay_payment_id === "string" ? notesObj.razorpay_payment_id : "";
+    const paidWithCredit = notesObj.paid_with === "bulk_credit";
+    const amountPaid = row.amount_paid ? Number(row.amount_paid) : 0;
+
+    if (paidWithCredit) {
+      // Give the prepaid time back (this booking's duration, default one slot).
+      const mins = row.duration_min ? Number(row.duration_min) : SLOT_MINUTES;
+      await adjustCredit(session.id, mins, `Refund: cancelled booking ${id.slice(0, 8)}`);
+      refund = { type: "credit", ok: true, detail: `${mins} min restored` };
+    } else if (paymentId && amountPaid > 0 && razorpayConfigured()) {
+      // amount_paid is in rupees; Razorpay refunds are in paise.
+      const r = await refundPayment(paymentId, amountPaid * 100, { booking_id: id });
+      refund = { type: "razorpay", ok: r.status !== "failed", detail: r.id };
+    }
+  } catch (refundErr) {
+    console.error("[player cancel refund error]", refundErr);
+    // Booking stays cancelled even if the refund call fails; surface ok:false
+    // so the UI can tell the player a manual refund is being processed.
+    refund = { type: refund.type === "none" ? "razorpay" : refund.type, ok: false };
+  }
+
   // Cancellation email to the player + admin heads-up (best-effort).
   try {
     const { notifyBookingCancelled } = require("@/lib/notifications");
@@ -86,5 +122,5 @@ export async function POST(req: Request) {
     console.warn("[cancel notify dispatch skipped]", e);
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, refund });
 }

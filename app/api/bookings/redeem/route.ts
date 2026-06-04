@@ -46,6 +46,7 @@ export async function POST(req: Request) {
 
     const now = Date.now();
     const bookingIds: string[] = [];
+    const bookedSlots: { id: string; date: string; time: string; court: number }[] = [];
     let booked = 0;
 
     for (const s of slots) {
@@ -71,6 +72,7 @@ export async function POST(req: Request) {
           args: [id, session.id, s.date, s.time, SLOT_MINUTES, court, userName, userPhone, userEmail, notes, now],
         });
         bookingIds.push(id);
+        bookedSlots.push({ id, date: s.date, time: s.time, court });
         booked++;
       } catch (e) {
         console.error("[redeem insert error]", e);
@@ -95,6 +97,31 @@ export async function POST(req: Request) {
 
     // Deduct only for the slots actually booked.
     const newBalance = await adjustCredit(session.id, -(booked * SLOT_MINUTES), `Booked ${booked} slot(s) with bulk credit`);
+
+    // Confirmation email for every credit-booked slot (paid bookings already
+    // get this in verify-payment; previously credit bookings sent nothing).
+    try {
+      const { notifyBookingConfirmed } = require("@/lib/notifications");
+      const { waitUntil } = require("@vercel/functions");
+      for (const bs of bookedSlots) {
+        const run = notifyBookingConfirmed({
+          id: bs.id,
+          userEmail,
+          userName,
+          userPhone: userPhone || undefined,
+          slotDate: bs.date,
+          slotTime: bs.time,
+          durationMin: SLOT_MINUTES,
+          amount: 0,
+          courtNumber: bs.court,
+          subtotal: 0,
+          gst: 0,
+        }).catch((e: unknown) => console.error("[redeem notify error]", e));
+        if (waitUntil) waitUntil(run);
+      }
+    } catch (e) {
+      console.warn("[redeem notify dispatch skipped]", e);
+    }
 
     return NextResponse.json({ ok: true, bookingIds, booked, balanceMin: newBalance });
   } catch (err) {
