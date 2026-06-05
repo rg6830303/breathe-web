@@ -169,7 +169,7 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
                 {
                   value: (
                     <span className="whitespace-nowrap">
-                      6<span className="text-sm">AM</span>–11<span className="text-sm">PM</span>
+                      5<span className="text-sm">AM</span>–11<span className="text-sm">PM</span>
                     </span>
                   ),
                   label: "Open daily",

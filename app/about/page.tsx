@@ -61,20 +61,20 @@ export default function AboutPage() {
                     { display: "All ages", label: "Welcomed & coached" },
                     {
                       display: (
-                        <span className="whitespace-nowrap text-2xl">
-                          <StatCounter end={6} />AM–<StatCounter end={11} />PM
+                        <span className="whitespace-nowrap">
+                          <StatCounter end={5} />AM–<StatCounter end={11} />PM
                         </span>
                       ),
                       label: "Open daily",
                     },
                     { display: <>Monthly+</>, label: "Tournaments hosted" },
-                  ].map((stat, i) => (
+                  ].map((stat) => (
                     <TiltCard key={stat.label} maxTilt={6}>
-                      <div className="card-sport p-5">
-                        <div className="font-display text-3xl font-extrabold text-brand dark:text-lime">
+                      <div className="card-sport flex h-full flex-col p-5">
+                        <div className="font-display text-2xl font-extrabold leading-tight text-brand dark:text-lime sm:text-3xl">
                           {stat.display}
                         </div>
-                        <div className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-slatey dark:text-white/50">
+                        <div className="mt-1 text-[10px] font-extrabold uppercase leading-snug tracking-wider text-slatey dark:text-white/50">
                           {stat.label}
                         </div>
                       </div>

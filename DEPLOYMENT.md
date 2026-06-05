@@ -84,7 +84,7 @@ GMAIL_APP_PASSWORD=<16-char app password>   # from https://myaccount.google.com/
 ADMIN_EMAIL=yourclubgmail@gmail.com          # where booking notifications go
 NEXT_PUBLIC_SITE_URL=https://www.breathepickleball.in
 # optional:
-REPLY_TO_EMAIL=play@breathepickleball.in     # shown as Reply-To only
+REPLY_TO_EMAIL=breathepickleball@gmail.com   # shown as Reply-To only
 ```
 Do **not** set `GMAIL_FROM` to a non-Gmail address — it's ignored unless it
 equals `GMAIL_USER`.

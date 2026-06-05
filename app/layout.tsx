@@ -117,7 +117,7 @@ const jsonLd = {
       name: "Breathe Pickleball",
       url: SITE_URL,
       telephone: "+917439010356",
-      email: "play@breathepickleball.in",
+      email: "breathepickleball@gmail.com",
       image: `${SITE_URL}/icons/icon-512.png`,
       address: {
         "@type": "PostalAddress",

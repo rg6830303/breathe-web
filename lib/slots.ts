@@ -1,0 +1,58 @@
+import { getSlotPrice } from "@/lib/pricing";
+
+// Club hours, in minutes from midnight (IST). Slots run on the hour from
+// 05:00; the last bookable hour starts at 22:00 (closes 23:00). Extensions can
+// reach the close time but never past it, and never before opening.
+export const OPEN_MIN = 5 * 60; // 05:00
+export const CLOSE_MIN = 23 * 60; // 23:00
+
+export function toMin(hhmm: string): number {
+  const [h, m] = String(hhmm).slice(0, 5).split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+
+export function toHHMM(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/** The 30-minute cell start times a booking occupies (e.g. 06:00 + 90min →
+ *  ["06:00","06:30","07:00"]). Used for occupancy + overlap math. */
+export function cellsFor(startTime: string, durationMin: number): string[] {
+  const start = toMin(startTime);
+  const cells: string[] = [];
+  const dur = Math.max(30, durationMin || 60);
+  for (let o = 0; o < dur; o += 30) cells.push(toHHMM(start + o));
+  return cells;
+}
+
+/** Authoritative price for an arbitrary range, charged per half-hour so a
+ *  standard 60-min slot equals getSlotPrice() and each ±30-min extension adds
+ *  exactly half of the hour it lands in. */
+export function priceForRange(startTime: string, durationMin: number): number {
+  let total = 0;
+  for (const cell of cellsFor(startTime, durationMin)) total += getSlotPrice(cell) / 2;
+  return Math.round(total);
+}
+
+/** True if two [start, start+dur) ranges share any minute (i.e. any 30-min
+ *  cell), so an extension that pokes into a neighbour's hour is caught. */
+export function rangesOverlap(
+  aStart: string,
+  aDur: number,
+  bStart: string,
+  bDur: number,
+): boolean {
+  const a = toMin(aStart);
+  const b = toMin(bStart);
+  return a < b + (bDur || 60) && b < a + (aDur || 60);
+}
+
+/** Clamp/validate a requested range against club hours. Returns null if it
+ *  falls outside 05:00–23:00 or has a bad duration. */
+export function isWithinHours(startTime: string, durationMin: number): boolean {
+  const start = toMin(startTime);
+  const end = start + (durationMin || 60);
+  return start >= OPEN_MIN && end <= CLOSE_MIN && durationMin >= 30 && durationMin % 30 === 0;
+}

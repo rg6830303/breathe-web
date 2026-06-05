@@ -173,11 +173,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // An hour slot is only bookable when BOTH of its 30-minute cells are free.
+    // A neighbour's ±30-min extension occupies just one half of an hour, but it
+    // still makes that hour un-bookable as a full slot — so we OR the two cells.
     const slots: Slot[] = [];
     for (const time of allTimes) {
       for (const court of COURTS) {
-        const state = occupancy.get(key(court, time));
-        const status: Slot["status"] = state ?? "open";
+        const first = occupancy.get(key(court, time));
+        const second = occupancy.get(key(court, addMinutes(time, 30)));
+        const status: Slot["status"] =
+          first === "booked" || second === "booked"
+            ? "booked"
+            : first === "blocked" || second === "blocked"
+              ? "blocked"
+              : "open";
         slots.push({ court, time, status, price: getSlotPrice(time) });
       }
     }

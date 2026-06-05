@@ -4,8 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CalendarDays, Check, Gift, Loader2, Lock, LogIn, ReceiptText } from "lucide-react";
+import { CalendarDays, Check, Gift, Loader2, Lock, LogIn, Plus, ReceiptText } from "lucide-react";
 import { calculateTotals } from "@/lib/pricing";
+import { priceForRange } from "@/lib/slots";
+
+type Ext = { before: boolean; after: boolean };
 
 type Slot = { court: number; time: string; status: "open" | "booked" | "blocked"; price: number };
 type Account = { id: string; email: string; name: string; role: "user" | "admin" } | null;
@@ -15,7 +18,7 @@ const COURTS = [1, 2, 3] as const;
 
 type Band = "morning" | "afternoon" | "evening";
 const BANDS: { key: Band; label: string }[] = [
-  { key: "morning", label: "Morning · 6–12" },
+  { key: "morning", label: "Morning · 5–12" },
   { key: "afternoon", label: "Afternoon · 12–5" },
   { key: "evening", label: "Evening · 5–11" },
 ];
@@ -41,6 +44,14 @@ function timeLabel(t: string) {
   const d = new Date();
   d.setHours(h, m, 0, 0);
   return new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" }).format(d);
+}
+
+function addMinutes(t: string, mins: number) {
+  const [h, m] = t.split(":").map(Number);
+  const total = h * 60 + m + mins;
+  const hh = Math.floor(total / 60);
+  const mm = total % 60;
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
 
 function dateLabel(value: string) {
@@ -73,6 +84,8 @@ export function BookingGrid() {
   const [date, setDate] = useState<string>(todayIST());
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selected, setSelected] = useState<Slot[]>([]);
+  // Per-slot ±30-min extensions, keyed by `${court}-${time}`.
+  const [ext, setExt] = useState<Record<string, Ext>>({});
   const [loading, setLoading] = useState(true);
   const [account, setAccount] = useState<Account>(null);
   const [authLoaded, setAuthLoaded] = useState(false);
@@ -98,7 +111,40 @@ export function BookingGrid() {
       .catch(() => {});
   }, []);
 
-  const slotsNeededMin = selected.length * 30;
+  const slotKey = (court: number, time: string) => `${court}-${time}`;
+
+  // Is an hour slot open (and not itself selected) so it can host an extension?
+  function adjacentOpen(court: number, time: string) {
+    const cell = slots.find((s) => s.court === court && s.time === time);
+    if (!cell || cell.status !== "open") return false;
+    return !selected.some((x) => x.court === court && x.time === time);
+  }
+  function canExtendBefore(s: Slot) {
+    return adjacentOpen(s.court, addMinutes(s.time, -60));
+  }
+  function canExtendAfter(s: Slot) {
+    return adjacentOpen(s.court, addMinutes(s.time, 60));
+  }
+  // Effective booking range for a selected slot, honouring valid extensions.
+  function effective(s: Slot) {
+    const e = ext[slotKey(s.court, s.time)] ?? { before: false, after: false };
+    const before = e.before && canExtendBefore(s);
+    const after = e.after && canExtendAfter(s);
+    const startTime = before ? addMinutes(s.time, -30) : s.time;
+    const durationMin = 60 + (before ? 30 : 0) + (after ? 30 : 0);
+    return { before, after, startTime, durationMin };
+  }
+  function toggleExt(s: Slot, side: "before" | "after") {
+    const key = slotKey(s.court, s.time);
+    setError(null);
+    setConfirmed(false);
+    setExt((cur) => {
+      const prev = cur[key] ?? { before: false, after: false };
+      return { ...cur, [key]: { ...prev, [side]: !prev[side] } };
+    });
+  }
+
+  const slotsNeededMin = selected.reduce((sum, s) => sum + effective(s).durationMin, 0);
   const hasEnoughCredit = creditMin >= slotsNeededMin && selected.length > 0;
 
   async function bookWithCredit() {
@@ -109,7 +155,12 @@ export function BookingGrid() {
       const res = await fetch("/api/bookings/redeem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slots: selected.map((s) => ({ date, court: s.court, time: s.time })) }),
+        body: JSON.stringify({
+          slots: selected.map((s) => {
+            const ef = effective(s);
+            return { date, court: s.court, time: ef.startTime, durationMin: ef.durationMin };
+          }),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not book with credit.");
@@ -117,6 +168,7 @@ export function BookingGrid() {
       setEmailed(true);
       setConfirmed(true);
       setSelected([]);
+      setExt({});
       fetch(`/api/slots?date=${date}`).then((r) => r.json()).then((d) => setSlots(d.slots ?? []));
       setTimeout(() => router.push("/dashboard"), 1800);
     } catch (e) {
@@ -129,6 +181,7 @@ export function BookingGrid() {
   function refreshSlots() {
     setLoading(true);
     setSelected([]);
+    setExt({});
     setError(null);
     setConfirmed(false);
     fetch(`/api/slots?date=${date}`)
@@ -154,13 +207,24 @@ export function BookingGrid() {
     if (s.status !== "open") return;
     setError(null);
     setConfirmed(false);
+    const removing = isSelected(s);
     setSelected((cur) =>
-      isSelected(s) ? cur.filter((x) => !(x.court === s.court && x.time === s.time)) : [...cur, s],
+      removing ? cur.filter((x) => !(x.court === s.court && x.time === s.time)) : [...cur, s],
     );
+    if (removing) {
+      setExt((cur) => {
+        const next = { ...cur };
+        delete next[slotKey(s.court, s.time)];
+        return next;
+      });
+    }
   }
 
   const equipmentTotal = addons.filter((a) => a.on).reduce((sum, a) => sum + a.price * a.qty, 0);
-  const base = selected.reduce((sum, s) => sum + s.price, 0);
+  const base = selected.reduce((sum, s) => {
+    const ef = effective(s);
+    return sum + priceForRange(ef.startTime, ef.durationMin);
+  }, 0);
   const totals = calculateTotals(base, equipmentTotal);
 
   async function payNow() {
@@ -172,7 +236,10 @@ export function BookingGrid() {
     setPaying(true);
     setError(null);
     try {
-      const slotsPayload = selected.map((s) => ({ date, court: s.court, time: s.time }));
+      const slotsPayload = selected.map((s) => {
+        const ef = effective(s);
+        return { date, court: s.court, time: ef.startTime, durationMin: ef.durationMin };
+      });
       const addonsPayload = addons.filter((a) => a.on).map(({ id, label, price, qty }) => ({ id, label, price, qty }));
 
       const orderRes = await fetch("/api/bookings/create-order", {
@@ -215,6 +282,7 @@ export function BookingGrid() {
             setEmailed(verify.emailed !== false);
             setConfirmed(true);
             setSelected([]);
+            setExt({});
             fetch(`/api/slots?date=${date}`).then((r) => r.json()).then((d) => setSlots(d.slots ?? []));
             setTimeout(() => router.push("/dashboard"), 2600);
           } catch (e) {
@@ -260,7 +328,7 @@ export function BookingGrid() {
             </span>
             <div>
               <h2 className="font-display text-xl font-extrabold tracking-tight text-ink dark:text-white">Book a court</h2>
-              <p className="text-xs font-semibold text-slatey dark:text-white/50">30-minute slots · 3 courts</p>
+              <p className="text-xs font-semibold text-slatey dark:text-white/50">1-hour slots · extend ±30 min · 3 courts</p>
             </div>
           </div>
           <div className="flex items-center justify-between gap-3 sm:justify-end">
@@ -418,20 +486,38 @@ export function BookingGrid() {
               Tap open slots in the grid to build your booking.
             </p>
           )}
-          {selected.map((s) => (
-            <motion.div
-              key={`${s.court}-${s.time}`}
-              initial={{ opacity: 0, x: 8 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="rounded-2xl border-2 border-brand/15 bg-brand/5 p-3 dark:border-brand-300/15 dark:bg-brand/10"
-            >
-              <div className="flex justify-between text-sm font-extrabold text-ink dark:text-white">
-                <span>Court {s.court}</span>
-                <span className="text-brand dark:text-brand-300">₹{s.price}</span>
-              </div>
-              <p className="text-xs text-slatey dark:text-white/50">{timeLabel(s.time)} · 30 min</p>
-            </motion.div>
-          ))}
+          {selected.map((s) => {
+            const ef = effective(s);
+            const endTime = addMinutes(ef.startTime, ef.durationMin);
+            const beforeAvail = canExtendBefore(s);
+            const afterAvail = canExtendAfter(s);
+            return (
+              <motion.div
+                key={`${s.court}-${s.time}`}
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="rounded-2xl border-2 border-brand/15 bg-brand/5 p-3 dark:border-brand-300/15 dark:bg-brand/10"
+              >
+                <div className="flex justify-between text-sm font-extrabold text-ink dark:text-white">
+                  <span>Court {s.court}</span>
+                  <span className="text-brand dark:text-brand-300">₹{priceForRange(ef.startTime, ef.durationMin)}</span>
+                </div>
+                <p className="text-xs text-slatey dark:text-white/50">
+                  {timeLabel(ef.startTime)} – {timeLabel(endTime)} · {ef.durationMin} min
+                </p>
+                {(beforeAvail || afterAvail || ef.before || ef.after) && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {(beforeAvail || ef.before) && (
+                      <ExtChip on={ef.before} onClick={() => toggleExt(s, "before")} label="30 min before" />
+                    )}
+                    {(afterAvail || ef.after) && (
+                      <ExtChip on={ef.after} onClick={() => toggleExt(s, "after")} label="30 min after" />
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
         </div>
 
         {/* Complimentary gear notice */}
@@ -480,7 +566,7 @@ export function BookingGrid() {
         {account?.role === "user" && creditMin > 0 && (
           <div className="mt-4 flex items-center justify-between rounded-xl border-2 border-lime/40 bg-lime/10 px-3 py-2 text-xs font-extrabold text-lime-dark">
             <span>Prepaid balance</span>
-            <span>{Math.round((creditMin / 60) * 10) / 10} h · {Math.floor(creditMin / 30)} slots</span>
+            <span>{Math.round((creditMin / 60) * 10) / 10} h · {Math.floor(creditMin / 60)} slots</span>
           </div>
         )}
 
@@ -545,6 +631,23 @@ export function BookingGrid() {
         </motion.div>
       )}
     </div>
+  );
+}
+
+function ExtChip({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.65rem] font-extrabold uppercase tracking-wide transition ${
+        on
+          ? "bg-brand text-white"
+          : "border-2 border-brand/30 bg-white text-brand hover:border-brand dark:border-brand-300/30 dark:bg-white/5 dark:text-brand-300 dark:hover:border-brand-300"
+      }`}
+    >
+      {on ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />} {label}
+    </button>
   );
 }
 

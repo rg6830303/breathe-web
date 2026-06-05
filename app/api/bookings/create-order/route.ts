@@ -3,12 +3,14 @@ import Razorpay from "razorpay";
 import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
-import { getSlotPrice, calculateTotals } from "@/lib/pricing";
+import { calculateTotals } from "@/lib/pricing";
+import { priceForRange, rangesOverlap, isWithinHours } from "@/lib/slots";
 import { BULK_PACKAGE } from "@/lib/credits";
 
 export const runtime = "nodejs";
 
-type SlotInput = { date: string; time: string; court: number };
+type SlotInput = { date: string; time: string; court: number; durationMin?: number };
+const dur = (s: SlotInput) => Math.max(30, Number(s.durationMin) || 60);
 type AddonInput = { id: string; label: string; price: number; qty?: number };
 
 export async function POST(req: Request) {
@@ -71,16 +73,21 @@ export async function POST(req: Request) {
       if (!s.date || !s.time || ![1, 2, 3].includes(s.court)) {
         return NextResponse.json({ error: "Invalid slot." }, { status: 400 });
       }
+      if (!isWithinHours(s.time, dur(s))) {
+        return NextResponse.json({ error: "That time is outside opening hours." }, { status: 400 });
+      }
     }
 
     const dates = Array.from(new Set(slots.map((s) => s.date)));
-    
-    // Check database to ensure slots are not overbooked
+
+    // Reject if any requested range (slot, incl. ±30-min extensions) overlaps an
+    // existing confirmed booking on the SAME court — extensions are checked at
+    // 30-min granularity, not just on the hour.
     for (const d of dates) {
       let booked;
       try {
         booked = await turso.execute({
-          sql: "SELECT slot_time FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
+          sql: "SELECT slot_time, duration_min, court_number FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
           args: [d],
         });
       } catch (dbErr) {
@@ -88,31 +95,23 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
       }
 
-      // Count booked slots for each time
-      const bookingsCount: Record<string, number> = {};
-      for (const row of booked.rows) {
-        const time = String(row.slot_time).slice(0, 5);
-        bookingsCount[time] = (bookingsCount[time] ?? 0) + 1;
-      }
-
-      // Check capacity for the requested slots on this day
       for (const s of slots) {
         if (s.date !== d) continue;
-        const timeKey = s.time.slice(0, 5);
-        const bookedNum = bookingsCount[timeKey] ?? 0;
-        
-        // Max capacity is 3 courts (total_courts in venue_config)
-        const totalCourts = 3; 
-        if (bookedNum >= totalCourts) {
+        const clash = booked.rows.some(
+          (row) =>
+            Number(row.court_number) === Number(s.court) &&
+            rangesOverlap(s.time, dur(s), String(row.slot_time), Number(row.duration_min) || 60),
+        );
+        if (clash) {
           return NextResponse.json(
-            { error: `Slot at ${s.time} on ${s.date} is no longer available.` },
-            { status: 409 }
+            { error: `Court ${s.court} at ${s.time.slice(0, 5)} is no longer available.` },
+            { status: 409 },
           );
         }
       }
     }
 
-    const base = slots.reduce((sum, s) => sum + getSlotPrice(s.time), 0);
+    const base = slots.reduce((sum, s) => sum + priceForRange(s.time, dur(s)), 0);
     const addonTotal = addons.reduce((sum, a) => sum + (Number(a.price) || 0) * (Number(a.qty) || 1), 0);
     const totals = calculateTotals(base, addonTotal);
 

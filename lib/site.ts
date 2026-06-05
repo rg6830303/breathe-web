@@ -19,8 +19,8 @@ export const site = {
   phoneDisplay: "+91 74390 10356",
   phoneHref: "tel:+917439010356",
   whatsappHref: "https://wa.me/917439010356",
-  email: "play@breathepickleball.in",
-  emailHref: "mailto:play@breathepickleball.in",
+  email: "breathepickleball@gmail.com",
+  emailHref: "mailto:breathepickleball@gmail.com",
   address:
     "Panchawati Complex, Plot No. 2, near Shyam Baba Mandir, Mali Bagan, Biman Nagar, Kaikhali, Kolkata 700052",
   /** Short address for the moving header / ticker — no pincode or sub-locality. */

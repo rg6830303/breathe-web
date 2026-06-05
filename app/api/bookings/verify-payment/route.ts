@@ -4,14 +4,16 @@ import crypto from "node:crypto";
 import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
-import { getSlotPrice, calculateTotals } from "@/lib/pricing";
+import { calculateTotals } from "@/lib/pricing";
+import { priceForRange, rangesOverlap } from "@/lib/slots";
 import { refundPayment, razorpayConfigured } from "@/lib/razorpay";
 import { adjustCredit, BULK_PACKAGE } from "@/lib/credits";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-type SlotInput = { date: string; time: string; court: number };
+type SlotInput = { date: string; time: string; court: number; durationMin?: number };
+const slotDur = (s: SlotInput) => Math.max(30, Number(s.durationMin) || 60);
 type AddonInput = { id: string; label: string; price: number; qty?: number };
 
 export async function POST(req: Request) {
@@ -95,10 +97,13 @@ export async function POST(req: Request) {
       const court = clampCourt(s.court);
       try {
         const ex = await turso.execute({
-          sql: "SELECT id FROM bookings WHERE slot_date = ? AND slot_time = ? AND court_number = ? AND status = 'confirmed' LIMIT 1",
-          args: [s.date, s.time, court],
+          sql: "SELECT slot_time, duration_min FROM bookings WHERE slot_date = ? AND court_number = ? AND status = 'confirmed'",
+          args: [s.date, court],
         });
-        if (ex.rows.length) {
+        const clash = ex.rows.some((row) =>
+          rangesOverlap(s.time, slotDur(s), String(row.slot_time), Number(row.duration_min) || 60),
+        );
+        if (clash) {
           const refunded = await refundFull("slot taken before confirmation");
           return NextResponse.json(
             {
@@ -115,7 +120,8 @@ export async function POST(req: Request) {
     }
 
     for (const s of slots) {
-      const price = getSlotPrice(s.time);
+      const duration = slotDur(s);
+      const price = priceForRange(s.time, duration);
       const totals = calculateTotals(price, addonTotal / slotCount);
       const id = uuid();
       bookingIds.push(id);
@@ -136,12 +142,13 @@ export async function POST(req: Request) {
             guest_name, guest_phone, guest_email,
             subtotal, gst, total, amount_paid,
             status, source, notes, created_at
-          ) VALUES (?, ?, ?, ?, 60, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'online', ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'online', ?, ?)`,
           args: [
             id,
             session.id,
             s.date,
             s.time,
+            duration,
             court,
             userName,
             userPhone,
@@ -188,7 +195,7 @@ export async function POST(req: Request) {
             user_id: session.id,
             slot_date: s.date,
             slot_time: s.time,
-            duration_min: 60,
+            duration_min: duration,
             court_number: court,
             guest_name: userName,
             guest_phone: userPhone,
@@ -219,7 +226,8 @@ export async function POST(req: Request) {
       if (notifyBookingConfirmed) {
         const payloadFor = (i: number) => {
           const s = slots[i];
-          const price = getSlotPrice(s.time);
+          const duration = slotDur(s);
+          const price = priceForRange(s.time, duration);
           const totals = calculateTotals(price, addonTotal / slotCount);
           const court = Number.isFinite(Number(s.court))
             ? Math.max(1, Math.min(9, Number(s.court)))
@@ -231,7 +239,7 @@ export async function POST(req: Request) {
             userPhone: userPhone || undefined,
             slotDate: s.date,
             slotTime: s.time,
-            durationMin: 60,
+            durationMin: duration,
             amount: Math.round(totals.total),
             courtNumber: court,
             subtotal: Math.round(totals.subtotal),
