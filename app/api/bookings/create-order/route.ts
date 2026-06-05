@@ -20,13 +20,16 @@ export async function POST(req: Request) {
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
     const addons: AddonInput[] = Array.isArray(body.addons) ? body.addons : [];
 
-    const keyIdEarly = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    const keyIdEarly = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID;
     const keySecretEarly = process.env.RAZORPAY_KEY_SECRET;
 
     // Bulk-hours package purchase: fixed-price order, no slots required.
     if (body.purchase === "bulk-12h") {
       if (!keyIdEarly || !keySecretEarly) {
-        return NextResponse.json({ error: "Razorpay is not configured." }, { status: 500 });
+        return NextResponse.json(
+          { error: "Razorpay is not configured on the server (missing NEXT_PUBLIC_RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET)." },
+          { status: 500 },
+        );
       }
       try {
         const rzp = new Razorpay({ key_id: keyIdEarly, key_secret: keySecretEarly });
@@ -38,18 +41,25 @@ export async function POST(req: Request) {
         });
         return NextResponse.json({ orderId: order.id, amount: order.amount, currency: "INR", keyId: keyIdEarly });
       } catch (rzpErr) {
-        console.error("[create-order bulk razorpay error]", rzpErr);
-        // Surface a clear cause. A 401 from Razorpay almost always means the
-        // RAZORPAY_KEY_SECRET / NEXT_PUBLIC_RAZORPAY_KEY_ID pair on the server
-        // is wrong, missing, or mismatched (test key id with live secret etc.).
+        // Log the FULL error (own props included) so the real cause is visible
+        // in the server logs, and surface the exact Razorpay reason to the UI.
+        try {
+          console.error(
+            "[create-order bulk razorpay error]",
+            JSON.stringify(rzpErr, Object.getOwnPropertyNames(rzpErr as object)),
+          );
+        } catch {
+          console.error("[create-order bulk razorpay error]", rzpErr);
+        }
         const statusCode = (rzpErr as { statusCode?: number })?.statusCode;
         const desc = (rzpErr as { error?: { description?: string } })?.error?.description;
         const rawMsg = (rzpErr as { message?: string })?.message;
+        const reason = desc || rawMsg || "unknown error";
         const msg =
           statusCode === 401
-            ? "Payment gateway rejected the keys. Check RAZORPAY_KEY_SECRET and NEXT_PUBLIC_RAZORPAY_KEY_ID in your environment variables."
-            : desc || rawMsg || "Could not start the payment. Please try again.";
-        return NextResponse.json({ error: msg }, { status: 502 });
+            ? "Payment gateway rejected the keys. The RAZORPAY_KEY_SECRET / NEXT_PUBLIC_RAZORPAY_KEY_ID pair is wrong, missing, or mixes test+live."
+            : `Could not start the payment (${reason}).`;
+        return NextResponse.json({ error: msg, statusCode: statusCode ?? null }, { status: 502 });
       }
     }
 
