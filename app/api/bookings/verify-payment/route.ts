@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { getSlotPrice, calculateTotals } from "@/lib/pricing";
 import { refundPayment, razorpayConfigured } from "@/lib/razorpay";
+import { adjustCredit, BULK_PACKAGE } from "@/lib/credits";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -43,7 +44,6 @@ export async function POST(req: Request) {
 
     // Bulk-hours package purchase: grant prepaid credit instead of booking slots.
     if (body.purchase === "bulk-12h") {
-      const { adjustCredit, BULK_PACKAGE } = require("@/lib/credits");
       const balanceMin = await adjustCredit(session.id, BULK_PACKAGE.minutes, "Purchased 12h bulk pass");
       return NextResponse.json({ ok: true, purchased: "bulk-12h", balanceMin });
     }
