@@ -248,24 +248,30 @@ export function BookingGrid() {
       });
       const addonsPayload = addons.filter((a) => a.on).map(({ id, label, price, qty }) => ({ id, label, price, qty }));
 
-      // TEMP ₹1 test: open the hosted payment link in a new tab, then record the
-      // booking (test bypass) so it confirms on the dashboard + admin views.
+      // TEMP ₹1 test: open the hosted payment link in a new tab for the rupee
+      // payment, record the booking (test bypass) so it confirms on the
+      // dashboard + admin, then HARD-redirect this tab to the portal so the
+      // fresh booking is guaranteed to render (bypasses the client router cache).
       if (TEST_PAYMENT_LINK) {
-        window.open(TEST_PAYMENT_LINK, "_blank", "noopener,noreferrer");
+        // Opened inside the click gesture so it isn't pop-up-blocked.
+        const payTab = window.open(TEST_PAYMENT_LINK, "_blank", "noopener,noreferrer");
         const verifyRes = await fetch("/api/bookings/verify-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ test: true, slots: slotsPayload, addons: addonsPayload }),
         });
         const verify = await verifyRes.json();
-        if (!verifyRes.ok) throw new Error(verify.error ?? "Could not confirm booking");
+        if (!verifyRes.ok) {
+          if (payTab) payTab.close();
+          throw new Error(verify.error ?? "Could not confirm booking");
+        }
         setEmailed(verify.emailed !== false);
         setConfirmed(true);
         setSelected([]);
         setExt({});
-        fetch(`/api/slots?date=${date}`).then((r) => r.json()).then((d) => setSlots(d.slots ?? []));
-        setPaying(false);
-        setTimeout(() => router.push("/dashboard"), 2600);
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 1500);
         return;
       }
 
