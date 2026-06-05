@@ -178,7 +178,7 @@ export async function GET() {
     const configSeeds = [
       { key: "total_courts", value: "3" },
       { key: "slot_duration_min", value: "60" },
-      { key: "open_time", value: "06:00" },
+      { key: "open_time", value: "05:00" },
       { key: "close_time", value: "23:00" },
       { key: "default_price", value: "700" },
       { key: "prime_price", value: "900" },

@@ -42,11 +42,11 @@ type SendResp = {
 
 function Row({ label, ok, value }: { label: string; ok?: boolean; value?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between border-b border-brand/5 py-2 text-sm last:border-0">
-      <span className="text-slatey">{label}</span>
-      <span className="flex items-center gap-2 font-mono text-ink">
+    <div className="flex items-center justify-between border-b-2 border-ink/5 py-2.5 text-sm last:border-0 dark:border-white/5">
+      <span className="text-ink/60 dark:text-white/60">{label}</span>
+      <span className="flex items-center gap-2 font-mono text-ink dark:text-white">
         {value}
-        {ok === true && <Check className="h-4 w-4 text-emerald-600" />}
+        {ok === true && <Check className="h-4 w-4 text-lime-dark" />}
         {ok === false && <X className="h-4 w-4 text-red-600" />}
       </span>
     </div>
@@ -113,26 +113,30 @@ export default function DiagnosticsPage() {
     v?.ok === true;
 
   return (
-    <main className="min-h-screen bg-brand-50/30 px-4 py-8 sm:px-6">
+    <main className="min-h-screen-safe bg-brand-50/30 px-4 py-8 dark:bg-ink sm:px-6">
       <div className="mx-auto max-w-3xl">
+        {/* Header */}
         <div className="mb-6 flex items-center gap-3">
           <Link
             href="/admin"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand/15 bg-white text-ink hover:bg-brand/5"
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-ink/10 bg-white text-ink transition hover:border-brand/30 hover:text-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white"
+            aria-label="Back to admin"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="flex-1">
-            <h1 className="font-display text-2xl font-extrabold text-ink sm:text-3xl">Email diagnostics</h1>
-            <p className="text-xs text-slatey">
-              Live status of the Gmail SMTP transport used for password resets, booking confirmations, and admin
-              notifications.
+            <span className="eyebrow">System</span>
+            <h1 className="mt-1 font-display text-2xl font-extrabold tracking-tight text-ink dark:text-white sm:text-3xl">
+              Email diagnostics
+            </h1>
+            <p className="mt-0.5 text-xs text-ink/50 dark:text-white/50">
+              Live status of the Gmail SMTP transport used for password resets, booking confirmations, and admin notifications.
             </p>
           </div>
           <button
             type="button"
             onClick={load}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand/15 bg-white text-ink hover:bg-brand/5"
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-ink/10 bg-white text-ink transition hover:border-brand/30 hover:text-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white"
             aria-label="Reload"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -140,35 +144,42 @@ export default function DiagnosticsPage() {
         </div>
 
         {authError && (
-          <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            <AlertTriangle className="h-4 w-4 shrink-0" /> {authError}
+          <div className="mb-5 flex items-start gap-2 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {authError}
           </div>
         )}
 
         {loading && !health ? (
-          <div className="rounded-3xl border border-brand/10 bg-white p-10 text-center text-sm text-slatey shadow-soft">
-            <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-brand" /> Querying SMTP…
+          <div className="flex items-center justify-center rounded-3xl border-2 border-ink/10 bg-white p-10 text-sm text-ink/40 dark:border-white/10 dark:bg-[#111c38] dark:text-white/40">
+            <Loader2 className="mr-2 h-5 w-5 animate-spin text-brand" /> Querying SMTP…
           </div>
         ) : health ? (
           <>
+            {/* Status banner */}
             <div
-              className={`mb-4 rounded-3xl border p-5 shadow-soft ${
-                allGood ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"
+              className={`mb-5 overflow-hidden rounded-3xl border-2 p-5 ${
+                allGood
+                  ? "border-lime/40 bg-lime/10"
+                  : "border-amber-300 bg-amber-50 dark:border-amber-600/30 dark:bg-amber-950/20"
               }`}
             >
               <div className="flex items-center gap-3">
-                <Mail className={`h-8 w-8 ${allGood ? "text-emerald-600" : "text-amber-600"}`} />
+                <Mail className={`h-8 w-8 ${allGood ? "text-lime-dark" : "text-amber-600 dark:text-amber-400"}`} />
                 <div>
-                  <div className="font-display text-lg font-extrabold text-ink">
+                  <div className="font-display text-lg font-extrabold tracking-tight text-ink dark:text-white">
                     {allGood ? "Mailer healthy" : "Mailer not ready"}
                   </div>
-                  <div className="text-xs text-ink/70">{health.hint}</div>
+                  <div className="text-xs text-ink/60 dark:text-white/60">{health.hint}</div>
                 </div>
               </div>
             </div>
 
-            <section className="rounded-3xl border border-brand/10 bg-white p-5 shadow-soft">
-              <h2 className="mb-2 font-display text-base font-extrabold text-ink">Configuration</h2>
+            {/* Config */}
+            <section className="card-sport mb-5 p-5">
+              <span className="eyebrow">Environment</span>
+              <h2 className="mt-1 mb-4 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">
+                Configuration
+              </h2>
               <Row label="GMAIL_USER set" ok={c?.gmailUserPresent} value={c?.gmailUserPresent ? "✓" : "missing"} />
               <Row
                 label="GMAIL_USER trimmed length"
@@ -194,32 +205,40 @@ export default function DiagnosticsPage() {
               <Row label="ADMIN_EMAIL set" ok={c?.adminEmailPresent} value={c?.adminEmailPresent ? "✓" : "missing"} />
             </section>
 
-            <section className="mt-4 rounded-3xl border border-brand/10 bg-white p-5 shadow-soft">
-              <h2 className="mb-2 font-display text-base font-extrabold text-ink">SMTP verify</h2>
+            {/* SMTP verify */}
+            <section className="card-sport mb-5 p-5">
+              <span className="eyebrow">Connection</span>
+              <h2 className="mt-1 mb-4 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">
+                SMTP verify
+              </h2>
               <Row label="Verify result" ok={v?.ok} value={v?.ok ? "passed" : "failed"} />
               {v?.code && <Row label="Error code" value={v.code} />}
               {v?.error && (
-                <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-                  <div className="font-bold">SMTP error</div>
+                <div className="mt-3 rounded-xl border-2 border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                  <div className="font-extrabold uppercase tracking-wide">SMTP error</div>
                   <pre className="mt-1 whitespace-pre-wrap break-all">{v.error}</pre>
                 </div>
               )}
             </section>
 
-            <section className="mt-4 rounded-3xl border border-brand/10 bg-white p-5 shadow-soft">
-              <h2 className="mb-3 font-display text-base font-extrabold text-ink">Send a test email</h2>
+            {/* Test send */}
+            <section className="card-sport mb-5 p-5">
+              <span className="eyebrow">Test delivery</span>
+              <h2 className="mt-1 mb-4 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">
+                Send a test email
+              </h2>
               <form onSubmit={onSend} className="flex flex-col gap-3 sm:flex-row">
                 <input
                   type="email"
                   value={sendTo}
                   onChange={(e) => setSendTo(e.target.value)}
                   placeholder="leave blank to send to ADMIN_EMAIL"
-                  className="flex-1 rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                  className="flex-1 rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white"
                 />
                 <button
                   type="submit"
                   disabled={sendBusy}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 disabled:opacity-60"
+                  className="btn-primary disabled:opacity-60"
                 >
                   {sendBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Send test
                 </button>
@@ -227,13 +246,13 @@ export default function DiagnosticsPage() {
 
               {sendResult && (
                 <div
-                  className={`mt-4 rounded-xl border p-3 text-sm ${
+                  className={`mt-4 rounded-xl border-2 p-3 text-sm font-semibold ${
                     sendResult.ok
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                      ? "border-lime/40 bg-lime/10 text-lime-dark"
                       : "border-red-200 bg-red-50 text-red-700"
                   }`}
                 >
-                  <div className="font-bold">
+                  <div className="font-extrabold uppercase tracking-wide">
                     {sendResult.ok ? `Sent to ${sendResult.to}` : `Send failed${sendResult.code ? ` (${sendResult.code})` : ""}`}
                   </div>
                   {sendResult.messageId && (
@@ -251,31 +270,35 @@ export default function DiagnosticsPage() {
               )}
             </section>
 
-            <section className="mt-4 rounded-3xl border border-brand/10 bg-white p-5 shadow-soft">
-              <h2 className="mb-2 font-display text-base font-extrabold text-ink">If verify fails</h2>
-              <ul className="list-disc space-y-2 pl-5 text-sm text-slatey">
+            {/* Troubleshooting tips */}
+            <section className="card-sport p-5">
+              <span className="eyebrow">Help</span>
+              <h2 className="mt-1 mb-4 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">
+                If verify fails
+              </h2>
+              <ul className="list-disc space-y-2.5 pl-5 text-sm text-ink/60 dark:text-white/60">
                 <li>
-                  Code <code className="font-mono text-ink">EAUTH</code> → Gmail rejected the credentials. Most common cause is
+                  Code <code className="rounded-md bg-ink/5 px-1.5 py-0.5 font-mono text-ink dark:bg-white/10 dark:text-white">EAUTH</code> → Gmail rejected the credentials. Most common cause is
                   a wrong / revoked App Password. Generate a fresh one at{" "}
                   <a
                     href="https://myaccount.google.com/apppasswords"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-brand underline"
+                    className="font-bold text-brand underline dark:text-brand-300"
                   >
                     myaccount.google.com/apppasswords
                   </a>
-                  , paste it into <code className="font-mono text-ink">GMAIL_APP_PASSWORD</code> in Vercel, and redeploy.
+                  , paste it into <code className="rounded-md bg-ink/5 px-1.5 py-0.5 font-mono text-ink dark:bg-white/10 dark:text-white">GMAIL_APP_PASSWORD</code> in Vercel, and redeploy.
                 </li>
                 <li>
-                  Code <code className="font-mono text-ink">ETIMEDOUT</code> → outbound port 465 is blocked from Vercel. Rare,
+                  Code <code className="rounded-md bg-ink/5 px-1.5 py-0.5 font-mono text-ink dark:bg-white/10 dark:text-white">ETIMEDOUT</code> → outbound port 465 is blocked from Vercel. Rare,
                   but happens. We&apos;ll switch to port 587 STARTTLS.
                 </li>
                 <li>
                   Length ≠ 16 → the value in Vercel has extra characters (quotes, newline). Re-paste it cleanly.
                 </li>
                 <li>
-                  After changing any env var in Vercel: <strong>redeploy</strong>. Functions cache env at cold start.
+                  After changing any env var in Vercel: <strong className="text-ink dark:text-white">redeploy</strong>. Functions cache env at cold start.
                 </li>
               </ul>
             </section>

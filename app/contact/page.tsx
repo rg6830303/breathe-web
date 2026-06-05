@@ -4,10 +4,9 @@ import { useState } from "react";
 import { Clock, Facebook, Instagram, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
-import { Container, SectionDivider } from "@/components/ui";
+import { Container } from "@/components/ui";
 import { PageHero } from "@/components/ui/page-hero";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
-import { GlowCard } from "@/components/ui/glow-card";
 import { TiltCard } from "@/components/motion/tilt-card";
 import { CourtPatternBg } from "@/components/ui/court-pattern-bg";
 import { motion } from "framer-motion";
@@ -35,24 +34,24 @@ function ContactMethodCard({ icon: Icon, label, value, href, delay }: CardProps)
           onMouseLeave={() => setHovered(false)}
           className="block h-full"
         >
-          <GlowCard className="h-full border border-brand/5 p-6 flex flex-col justify-between hover:shadow-card transition-all">
+          <div className="card-sport h-full p-6 flex flex-col justify-between">
             <div>
               <motion.div
                 animate={hovered ? { rotate: 10, scale: 1.2 } : { rotate: 0, scale: 1 }}
                 className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-colors duration-300 ${
-                  hovered ? "bg-brand text-lime" : "bg-brand/10 text-brand"
+                  hovered ? "bg-lime text-ink" : "bg-brand/10 text-brand dark:bg-white/10 dark:text-lime"
                 }`}
               >
                 <Icon className="h-6 w-6" />
               </motion.div>
-              <div className="mt-5 text-xs font-bold uppercase tracking-wide text-slatey">{label}</div>
-              <div className="mt-1 font-display text-base font-extrabold text-ink leading-tight">{value}</div>
+              <div className="mt-5 text-[0.65rem] font-extrabold uppercase tracking-[0.2em] text-slatey dark:text-white/50">{label}</div>
+              <div className="mt-1 font-display text-base font-extrabold text-ink leading-tight dark:text-white">{value}</div>
             </div>
-            
-            <div className="mt-4 text-xs font-bold text-brand-600 group-hover:text-brand-800 transition-colors flex items-center gap-1">
+
+            <div className="mt-4 text-xs font-extrabold uppercase tracking-wide text-brand dark:text-lime">
               {label === "Visit" ? "View Map →" : "Get in Touch →"}
             </div>
-          </GlowCard>
+          </div>
         </a>
       </TiltCard>
     </ScrollReveal>
@@ -70,8 +69,8 @@ export default function ContactPage() {
   return (
     <>
       <Nav />
-      <main className="app-surface overflow-x-hidden">
-        {/* Light Hero */}
+      <main className="overflow-x-hidden">
+        {/* Page Hero */}
         <PageHero
           dark={false}
           label="Contact"
@@ -79,8 +78,8 @@ export default function ContactPage() {
           subtitle="Questions about booking or tournaments? Reach out any way you like — or just drop by. We're open every day."
         />
 
-        {/* Contact Method Cards Grid */}
-        <section className="px-4 py-16 sm:px-6 lg:px-8 bg-white">
+        {/* ── CONTACT CARDS — light section ── */}
+        <section className="bg-white px-4 py-16 dark:bg-[#111c38] sm:px-6 lg:px-8">
           <Container className="!px-0">
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {contactCards.map((card, i) => (
@@ -97,55 +96,60 @@ export default function ContactPage() {
           </Container>
         </section>
 
-        <SectionDivider />
-
-        {/* Split Info Card + Google Map Section */}
-        <section className="px-4 py-16 sm:px-6 lg:px-8 bg-brand-50/20">
+        {/* ── ADDRESS + MAP — dark ink section ── */}
+        <section className="bg-ink px-4 py-16 sm:px-6 lg:px-8">
           <Container className="!px-0">
             <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+              {/* Info panel */}
               <ScrollReveal direction="left" className="h-full">
-                <div className="rounded-3xl bg-white border border-brand/5 p-8 shadow-soft h-full flex flex-col justify-between">
+                <div className="rounded-3xl border-2 border-white/10 p-8 h-full flex flex-col justify-between">
                   <div>
-                    <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.2em] uppercase text-brand-600 mb-6">
-                      <span className="w-1.5 h-1.5 rounded-full bg-brand-600" /> FIND US
-                    </span>
-                    <h2 className="font-display text-2xl font-extrabold text-ink leading-tight">Address & hours</h2>
-                    
+                    <span className="eyebrow text-lime">Find us</span>
+                    <h2 className="heading-lg mt-4 text-white" style={{ fontSize: "clamp(1.6rem,3vw,2.2rem)" }}>
+                      Address &{" "}
+                      <span className="mark-lime">hours</span>
+                    </h2>
+
                     <div className="mt-8 space-y-6 text-sm">
                       <div className="flex items-start gap-4">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                          <MapPin className="h-5 w-5" />
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime/15">
+                          <MapPin className="h-5 w-5 text-lime" />
                         </div>
                         <div>
-                          <div className="font-bold text-ink text-sm">Address</div>
-                          <p className="mt-1 text-xs text-slatey leading-relaxed">{site.address}</p>
+                          <div className="font-extrabold uppercase tracking-wide text-white/80 text-xs">Address</div>
+                          <p className="mt-1 text-xs text-white/55 leading-relaxed">{site.address}</p>
                         </div>
                       </div>
 
                       <div className="flex items-start gap-4">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                          <Clock className="h-5 w-5" />
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime/15">
+                          <Clock className="h-5 w-5 text-lime" />
                         </div>
                         <div>
-                          <div className="font-bold text-ink text-sm">Opening hours</div>
-                          <p className="mt-1 text-xs text-slatey leading-relaxed">{site.hoursShort}</p>
+                          <div className="font-extrabold uppercase tracking-wide text-white/80 text-xs">Opening hours</div>
+                          <p className="mt-1 text-xs text-white/55 leading-relaxed">{site.hoursShort}</p>
                         </div>
                       </div>
 
                       <div className="flex items-start gap-4">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                          <Phone className="h-5 w-5" />
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime/15">
+                          <Phone className="h-5 w-5 text-lime" />
                         </div>
                         <div>
-                          <div className="font-bold text-ink text-sm">Phone</div>
-                          <a href={site.phoneHref} className="mt-1 block text-xs font-semibold text-brand hover:underline">{site.phoneDisplay}</a>
+                          <div className="font-extrabold uppercase tracking-wide text-white/80 text-xs">Phone</div>
+                          <a
+                            href={site.phoneHref}
+                            className="mt-1 block text-xs font-bold text-lime hover:underline"
+                          >
+                            {site.phoneDisplay}
+                          </a>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Social Handles */}
-                  <div className="mt-8 pt-6 border-t border-brand/10 flex items-center gap-3">
+                  {/* Social handles */}
+                  <div className="mt-8 flex items-center gap-3 border-t border-white/10 pt-6">
                     <motion.a
                       whileHover={{ y: -3, scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -153,9 +157,9 @@ export default function ContactPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Instagram"
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand/10 text-brand transition-colors hover:bg-brand hover:text-white"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/15 text-white transition hover:border-lime hover:text-lime"
                     >
-                      <Instagram className="h-5 w-5" />
+                      <Instagram className="h-4 w-4" />
                     </motion.a>
                     <motion.a
                       whileHover={{ y: -3, scale: 1.05 }}
@@ -164,17 +168,17 @@ export default function ContactPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Facebook"
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand/10 text-brand transition-colors hover:bg-brand hover:text-white"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/15 text-white transition hover:border-lime hover:text-lime"
                     >
-                      <Facebook className="h-5 w-5" />
+                      <Facebook className="h-4 w-4" />
                     </motion.a>
                   </div>
                 </div>
               </ScrollReveal>
 
-              {/* Resolved Google Map Embed */}
+              {/* Map */}
               <ScrollReveal direction="right" className="h-full">
-                <div className="overflow-hidden rounded-3xl border border-brand/5 shadow-soft h-full min-h-[380px] relative">
+                <div className="overflow-hidden rounded-3xl border-2 border-white/10 h-full min-h-[380px] relative">
                   <iframe
                     title="Breathe Pickleball location"
                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3682.0!2d88.4347!3d22.6548!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2sBreathe+Pickleball!5e0!3m2!1sen!2sin!4v1234"
@@ -191,18 +195,21 @@ export default function ContactPage() {
           </Container>
         </section>
 
-        <SectionDivider />
-
-        {/* Social Strip */}
-        <section className="px-4 py-16 sm:px-6 lg:px-8 bg-white">
+        {/* ── SOCIAL COMMUNITY — light section ── */}
+        <section className="bg-white px-4 py-16 dark:bg-[#111c38] sm:px-6 lg:px-8">
           <Container className="!px-0">
             <ScrollReveal direction="up">
-              <div className="bg-brand-700 rounded-3xl p-8 text-white relative overflow-hidden shadow-glow">
-                <CourtPatternBg className="absolute inset-0 opacity-5 w-full h-full object-cover" />
-                <div className="relative flex flex-col md:flex-row items-center justify-between gap-6 max-w-4xl mx-auto">
+              <div className="relative overflow-hidden rounded-3xl bg-ink p-8 text-white">
+                <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
+                <CourtPatternBg className="absolute inset-0 opacity-[0.07] w-full h-full object-cover" />
+                <div className="relative flex flex-col md:flex-row items-center justify-between gap-6 max-w-4xl mx-auto pt-2">
                   <div className="text-center md:text-left">
-                    <h3 className="font-display text-xl md:text-2xl font-extrabold text-white leading-tight">Join the community</h3>
-                    <p className="text-xs text-white/70 mt-1">Get updates on court bookings, tournaments, and social events</p>
+                    <span className="eyebrow text-lime">Social</span>
+                    <h3 className="heading-lg mt-3 text-white" style={{ fontSize: "clamp(1.5rem,3vw,2rem)" }}>
+                      Join the{" "}
+                      <span className="mark-lime">community</span>
+                    </h3>
+                    <p className="mt-2 text-sm text-white/60">Get updates on court bookings, tournaments, and social events</p>
                   </div>
 
                   <div className="flex items-center gap-4">
@@ -212,7 +219,7 @@ export default function ContactPage() {
                       href={site.instagram}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      className="inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-white/20 text-white transition hover:border-lime hover:text-lime"
                       aria-label="Follow us on Instagram"
                     >
                       <Instagram className="w-5 h-5" />
@@ -223,7 +230,7 @@ export default function ContactPage() {
                       href={site.facebook}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      className="inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-white/20 text-white transition hover:border-lime hover:text-lime"
                       aria-label="Follow us on Facebook"
                     >
                       <Facebook className="w-5 h-5" />
@@ -235,20 +242,22 @@ export default function ContactPage() {
           </Container>
         </section>
 
-        {/* WhatsApp community band */}
-        <section className="px-4 pb-20 sm:px-6 lg:px-8">
+        {/* ── WHATSAPP COMMUNITY — dark ink section ── */}
+        <section className="bg-ink px-4 pb-20 pt-8 sm:px-6 lg:px-8">
           <Container className="!px-0">
             <ScrollReveal direction="up">
-              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#075E54] via-[#128C7E] to-[#25D366] p-8 text-white shadow-glow sm:p-10">
-                <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-[0.12]" />
+              <div className="relative overflow-hidden rounded-3xl bg-lime p-8 text-ink sm:p-10">
+                <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-[0.08]" />
                 <div className="relative flex flex-col items-start gap-5 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-start gap-4">
-                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
-                      <MessageCircle className="h-7 w-7" />
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-ink/10">
+                      <MessageCircle className="h-7 w-7 text-ink" />
                     </span>
                     <div>
-                      <h2 className="font-display text-2xl font-extrabold leading-tight">Join the Breathe community</h2>
-                      <p className="mt-1.5 max-w-md text-sm text-white/85">
+                      <h2 className="font-display text-2xl font-extrabold leading-tight text-ink">
+                        Join the Breathe community
+                      </h2>
+                      <p className="mt-1.5 max-w-md text-sm text-ink/70">
                         Game invites, open-play sessions, tournament alerts, and the friendliest pickleball crew in Kolkata — all on WhatsApp.
                       </p>
                     </div>
@@ -259,7 +268,7 @@ export default function ContactPage() {
                     href={site.whatsappCommunity}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-bold text-[#128C7E] shadow-soft transition hover:bg-gray-50"
+                    className="btn-dark shrink-0"
                   >
                     <MessageCircle className="h-4 w-4" /> Join the group
                   </motion.a>

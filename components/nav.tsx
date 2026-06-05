@@ -59,53 +59,58 @@ export function Nav() {
 
   return (
     <header className="sticky top-0 z-50">
-      {/* Brand ticker */}
-      <div className="brand-gradient overflow-hidden py-2 text-white">
-        <div className="no-scrollbar flex w-max animate-ticker items-center gap-12 whitespace-nowrap text-[0.7rem] font-semibold uppercase tracking-[0.2em]">
+      {/* Brand ticker — tape-stripe accented info bar */}
+      <div className="relative overflow-hidden bg-ink text-white">
+        <div
+          aria-hidden
+          className="tape-stripe absolute left-0 top-0 h-full w-1.5 opacity-90"
+        />
+        <div className="no-scrollbar flex w-max animate-ticker items-center gap-12 whitespace-nowrap py-2 pl-6 text-[0.68rem] font-extrabold uppercase tracking-[0.22em]">
           {Array.from({ length: 2 }).map((_, i) => (
             <span key={i} className="flex items-center gap-12">
               <span className="flex items-center gap-2">
-                <Phone className="h-3.5 w-3.5" /> {site.phoneDisplay}
+                <Phone className="h-3 w-3 text-lime" /> {site.phoneDisplay}
               </span>
               <span className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5" /> {site.headerAddress}
+                <MapPin className="h-3 w-3 text-lime" /> {site.headerAddress}
               </span>
-              <span>{site.hoursShort}</span>
-              <span>{site.courts} professional courts</span>
+              <span className="text-white/60">{site.hoursShort}</span>
+              <span className="text-white/60">{site.courts} professional courts</span>
             </span>
           ))}
         </div>
       </div>
 
-      {/* Main bar */}
+      {/* Main nav bar — crisp solid, no glass */}
       <div
-        className={`border-b transition-all ${
+        className={`border-b transition-colors duration-200 ${
           scrolled
-            ? "border-brand/10 bg-white/90 shadow-soft backdrop-blur-xl dark:border-white/10 dark:bg-ink/85"
-            : "border-transparent bg-white/70 backdrop-blur-md dark:bg-ink/60"
+            ? "border-ink/10 bg-white shadow-soft dark:border-white/10 dark:bg-ink"
+            : "border-transparent bg-white dark:bg-ink"
         }`}
       >
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <Logo />
 
-          <div className="hidden items-center gap-1 lg:flex">
+          {/* Desktop links */}
+          <div className="hidden items-center gap-0.5 lg:flex">
             {navLinks.map((link) => {
               const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  className={`relative rounded-lg px-4 py-2.5 text-sm font-extrabold uppercase tracking-wide transition-colors duration-150 ${
                     active
-                      ? "text-brand dark:text-brand-300"
-                      : "text-ink/70 hover:bg-brand/5 hover:text-brand dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+                      ? "text-brand dark:text-lime"
+                      : "text-ink/60 hover:text-ink dark:text-white/60 dark:hover:text-white"
                   }`}
                 >
                   {link.label}
                   {active && (
                     <motion.div
                       layoutId="nav-underline"
-                      className="absolute bottom-0 left-4 right-4 h-0.5 bg-brand-600"
+                      className="absolute bottom-0.5 left-4 right-4 h-[3px] rounded-full bg-lime"
                     />
                   )}
                 </Link>
@@ -113,21 +118,22 @@ export function Nav() {
             })}
           </div>
 
+          {/* Right-side actions */}
           <div className="flex items-center gap-2">
             {loaded && account ? (
               <div className="hidden items-center gap-2 lg:flex">
                 <Link
                   href={account.role === "admin" ? "/admin" : "/dashboard"}
-                  className="inline-flex items-center gap-2 rounded-full border border-brand/15 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-brand/5 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
+                  className="inline-flex items-center gap-2 rounded-full border-2 border-ink/10 bg-transparent px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-ink transition hover:border-brand hover:text-brand dark:border-white/15 dark:text-white dark:hover:border-lime dark:hover:text-lime"
                 >
-                  {account.role === "admin" ? <Shield className="h-4 w-4 text-brand" /> : <User className="h-4 w-4 text-brand" />}
+                  {account.role === "admin" ? <Shield className="h-3.5 w-3.5" /> : <User className="h-3.5 w-3.5" />}
                   <span className="max-w-[120px] truncate">{account.name}</span>
                 </Link>
                 <button
                   type="button"
                   onClick={handleLogout}
                   aria-label="Log out"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand/15 text-ink transition hover:bg-brand/5 dark:border-white/15 dark:text-white dark:hover:bg-white/10"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink/10 text-ink transition hover:border-brand hover:text-brand dark:border-white/15 dark:text-white dark:hover:border-lime dark:hover:text-lime"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>
@@ -136,35 +142,28 @@ export function Nav() {
               loaded && (
                 <Link
                   href="/login"
-                  className="hidden rounded-full px-4 py-2.5 text-sm font-semibold text-ink/70 transition hover:text-brand dark:text-white/70 dark:hover:text-white lg:inline-flex"
+                  className="hidden rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-ink/60 transition hover:text-brand dark:text-white/60 dark:hover:text-white lg:inline-flex"
                 >
                   Log in
                 </Link>
               )
             )}
-            <motion.div
-              animate={{
-                boxShadow: [
-                  "0 0 0 0 rgba(47,91,255,0.4)",
-                  "0 0 0 10px rgba(47,91,255,0)",
-                  "0 0 0 0 rgba(47,91,255,0)"
-                ]
-              }}
-              transition={{ repeat: Infinity, duration: 2.5, ease: "easeOut" }}
-              className="hidden sm:inline-block rounded-full"
+
+            {/* Book CTA — chunky btn-accent style */}
+            <Link
+              href="/book"
+              className="btn-accent hidden sm:inline-flex"
             >
-              <Link
-                href="/book"
-                className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 active:scale-[0.98]"
-              >
-                Book a Slot <ArrowRight className="h-4 w-4" />
-              </Link>
-            </motion.div>
+              Book a Slot <ArrowRight className="h-4 w-4" />
+            </Link>
+
             <ThemeToggle />
+
+            {/* Mobile hamburger */}
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-brand/15 text-ink transition dark:border-white/15 dark:text-white lg:hidden"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-ink/10 text-ink transition hover:border-brand hover:text-brand dark:border-white/15 dark:text-white dark:hover:border-lime dark:hover:text-lime lg:hidden"
               aria-label="Toggle menu"
               aria-expanded={open}
             >
@@ -183,25 +182,28 @@ export function Nav() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-ink/40 backdrop-blur-sm"
+              className="fixed inset-0 bg-ink/60"
               onClick={() => setOpen(false)}
             />
 
-            {/* Drawer Panel */}
+            {/* Drawer Panel — solid ink, no glass */}
             <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed inset-y-0 right-0 w-72 bg-white dark:bg-ink shadow-2xl z-50 flex flex-col justify-between p-6 pb-[max(env(safe-area-inset-bottom),1.5rem)] overflow-y-auto"
+              className="fixed inset-y-0 right-0 z-50 flex w-72 flex-col justify-between overflow-y-auto bg-white p-6 pb-[max(env(safe-area-inset-bottom),1.5rem)] shadow-2xl dark:bg-ink"
             >
-              <div>
-                <div className="flex items-center justify-between border-b border-brand/10 pb-4 mb-4 dark:border-white/10">
+              {/* Tape accent at top */}
+              <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
+
+              <div className="mt-3">
+                <div className="mb-5 flex items-center justify-between border-b-2 border-ink/8 pb-4 dark:border-white/10">
                   <Logo />
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand/15 text-ink dark:border-white/15 dark:text-white"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink/10 text-ink dark:border-white/15 dark:text-white"
                     aria-label="Close menu"
                   >
                     <X className="h-5 w-5" />
@@ -220,10 +222,10 @@ export function Nav() {
                       >
                         <Link
                           href={link.href}
-                          className={`flex items-center justify-between rounded-2xl px-4 py-3 text-base font-semibold transition ${
+                          className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-extrabold uppercase tracking-wide transition-colors ${
                             active
-                              ? "bg-brand/10 text-brand dark:bg-brand/25 dark:text-brand-200"
-                              : "text-ink hover:bg-brand/5 dark:text-white dark:hover:bg-white/10"
+                              ? "bg-lime text-ink"
+                              : "text-ink hover:bg-ink/5 dark:text-white dark:hover:bg-white/10"
                           }`}
                         >
                           {link.label}
@@ -235,10 +237,10 @@ export function Nav() {
                 </div>
               </div>
 
-              <div className="mt-6 border-t border-brand/10 pt-4 dark:border-white/10">
+              <div className="mt-6 space-y-3 border-t-2 border-ink/8 pt-5 dark:border-white/10">
                 <Link
                   href="/book"
-                  className="flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3.5 text-base font-bold text-white shadow-glow mb-4 animate-pulse-slow"
+                  className="btn-accent flex items-center justify-center gap-2 w-full"
                 >
                   Book a Slot <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -248,7 +250,7 @@ export function Nav() {
                     <>
                       <Link
                         href={account.role === "admin" ? "/admin" : "/dashboard"}
-                        className="flex items-center justify-between rounded-2xl bg-brand/5 px-4 py-3 text-sm font-semibold text-ink dark:bg-white/5 dark:text-white"
+                        className="flex items-center justify-between rounded-xl border-2 border-ink/10 px-4 py-3 text-xs font-extrabold uppercase tracking-wide text-ink dark:border-white/10 dark:text-white"
                       >
                         <span className="flex items-center gap-2">
                           {account.role === "admin" ? <Shield className="h-4 w-4 text-brand" /> : <LayoutDashboard className="h-4 w-4 text-brand" />}
@@ -259,17 +261,23 @@ export function Nav() {
                       <button
                         type="button"
                         onClick={handleLogout}
-                        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand dark:border-white/20 dark:text-brand-200"
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-ink/10 px-4 py-3 text-xs font-extrabold uppercase tracking-wide text-ink dark:border-white/10 dark:text-white"
                       >
                         <LogOut className="h-4 w-4" /> Log out ({account.name})
                       </button>
                     </>
                   ) : (
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      <Link href="/login" className="flex items-center justify-center rounded-2xl border border-brand/20 px-4 py-3 text-sm font-bold text-brand dark:border-white/20 dark:text-brand-200">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        href="/login"
+                        className="flex items-center justify-center rounded-xl border-2 border-ink/10 px-4 py-3 text-xs font-extrabold uppercase tracking-wide text-ink dark:border-white/10 dark:text-white"
+                      >
                         Log in
                       </Link>
-                      <Link href="/signup" className="flex items-center justify-center rounded-2xl bg-ink px-4 py-3 text-sm font-bold text-white dark:bg-white dark:text-ink">
+                      <Link
+                        href="/signup"
+                        className="btn-primary flex items-center justify-center text-xs"
+                      >
                         Sign up
                       </Link>
                     </div>
@@ -278,9 +286,9 @@ export function Nav() {
 
                 <a
                   href={site.phoneHref}
-                  className="flex items-center justify-center gap-2 rounded-2xl border border-brand/20 px-5 py-3 text-sm font-bold text-brand dark:border-white/20 dark:text-brand-200"
+                  className="flex items-center justify-center gap-2 rounded-xl border-2 border-ink/10 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-ink dark:border-white/10 dark:text-white"
                 >
-                  <Phone className="h-4 w-4" /> {site.phoneDisplay}
+                  <Phone className="h-4 w-4 text-brand" /> {site.phoneDisplay}
                 </a>
               </div>
             </motion.div>

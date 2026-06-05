@@ -63,72 +63,93 @@ export async function TodayPanel() {
   const { rows, revenue, courtsInUse } = data;
 
   return (
-    <section className="rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section className="card-sport overflow-hidden p-0">
+      {/* Header bar */}
+      <div className="tape-stripe h-1.5 w-full" />
+      <div className="flex flex-wrap items-center justify-between gap-4 px-6 pt-5 pb-4 border-b-2 border-ink/10 dark:border-white/10">
         <div>
-          <h2 className="font-display text-lg font-extrabold text-ink">
-            <CalendarDays className="mr-2 inline h-5 w-5 text-brand" /> Today
-          </h2>
-          <p className="text-xs text-slatey">{todayIST()}</p>
+          <span className="eyebrow">
+            <CalendarDays className="h-3.5 w-3.5" />
+            Today
+          </span>
+          <p className="mt-0.5 text-xs font-bold text-ink/40 dark:text-white/40 tracking-wide">
+            {todayIST()}
+          </p>
         </div>
-        <div className="flex gap-4 text-sm">
+
+        {/* KPI strip */}
+        <div className="flex flex-wrap items-center gap-5">
           <div className="text-right">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-slatey">Bookings</div>
-            <div className="font-display text-lg font-extrabold text-ink">{rows.length}</div>
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/40 dark:text-white/40">
+              Bookings
+            </div>
+            <div className="font-display text-2xl font-extrabold tracking-tight text-ink dark:text-white">
+              {rows.length}
+            </div>
           </div>
+          <div className="h-8 w-px bg-ink/10 dark:bg-white/10" aria-hidden />
           <div className="text-right">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-slatey">Courts in use</div>
-            <div className="font-display text-lg font-extrabold text-ink">
-              <Users className="mr-1 inline h-4 w-4 text-brand" />
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/40 dark:text-white/40">
+              Courts
+            </div>
+            <div className="flex items-center justify-end gap-1 font-display text-2xl font-extrabold tracking-tight text-ink dark:text-white">
+              <Users className="h-4 w-4 text-brand" aria-hidden />
               {courtsInUse}/3
             </div>
           </div>
+          <div className="h-8 w-px bg-ink/10 dark:bg-white/10" aria-hidden />
           <div className="text-right">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-slatey">Revenue</div>
-            <div className="font-display text-lg font-extrabold text-brand">
-              <IndianRupee className="inline h-4 w-4" />
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/40 dark:text-white/40">
+              Revenue
+            </div>
+            <div className="flex items-center justify-end gap-0.5 font-display text-2xl font-extrabold tracking-tight text-brand">
+              <IndianRupee className="h-5 w-5" aria-hidden />
               {revenue.toLocaleString("en-IN")}
             </div>
           </div>
         </div>
       </div>
 
-      {rows.length === 0 ? (
-        <p className="mt-5 rounded-2xl border border-dashed border-brand/20 bg-brand/[0.03] p-6 text-center text-sm text-slatey">
-          No bookings today.
-        </p>
-      ) : (
-        <ul className="mt-5 grid gap-2">
-          {rows.map((b) => (
-            <li
-              key={b.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand/10 bg-brand/[0.02] px-4 py-3"
-            >
-              <div className="flex items-center gap-3">
-                <span className="inline-flex h-10 w-12 items-center justify-center rounded-xl bg-brand text-xs font-extrabold uppercase text-white">
-                  {format12h(b.slot_time).replace(" ", "")}
-                </span>
-                <div>
-                  <div className="font-semibold text-ink">{b.user_name}</div>
-                  <div className="text-xs text-slatey">
-                    Court {b.court_number}
-                    {b.user_phone && (
-                      <>
-                        {" · "}
-                        <Phone className="mr-0.5 inline h-3 w-3" />
-                        {b.user_phone}
-                      </>
-                    )}
+      {/* Booking list */}
+      <div className="px-6 py-4">
+        {rows.length === 0 ? (
+          <p className="rounded-2xl border-2 border-dashed border-ink/10 p-6 text-center text-sm text-ink/40 dark:border-white/10 dark:text-white/40">
+            No bookings today.
+          </p>
+        ) : (
+          <ul className="grid gap-2">
+            {rows.map((b) => (
+              <li
+                key={b.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-ink/10 bg-ink/[0.02] px-4 py-3 dark:border-white/10 dark:bg-white/[0.02]"
+              >
+                <div className="flex items-center gap-3">
+                  {/* Time chip */}
+                  <span className="inline-flex h-10 min-w-[3.5rem] items-center justify-center rounded-xl bg-brand px-2 text-xs font-extrabold uppercase text-white">
+                    {format12h(b.slot_time).replace(" ", "\n")}
+                  </span>
+                  <div>
+                    <div className="font-bold text-ink dark:text-white">{b.user_name}</div>
+                    <div className="text-xs text-ink/50 dark:text-white/50">
+                      Court {b.court_number}
+                      {b.user_phone && (
+                        <>
+                          {" · "}
+                          <Phone className="mr-0.5 inline h-3 w-3" aria-hidden />
+                          {b.user_phone}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <span className="font-display text-sm font-extrabold text-brand">
-                ₹{b.total.toLocaleString("en-IN")}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+                <span className="font-display text-base font-extrabold text-brand">
+                  ₹{b.total.toLocaleString("en-IN")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }

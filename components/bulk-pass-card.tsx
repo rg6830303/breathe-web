@@ -91,28 +91,60 @@ export function BulkPassCard() {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-brand/10 bg-gradient-to-br from-brand-700 to-brand-900 p-5 text-white shadow-glow sm:p-6">
-      <div className="court-lines absolute inset-0 opacity-15" />
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-lime">
-            <Sparkles className="h-3 w-3" /> Best value
+    <div className="relative overflow-hidden rounded-3xl bg-ink">
+      {/* Tape stripe top */}
+      <div aria-hidden className="tape-stripe h-1.5 w-full" />
+
+      {/* Court-line pattern */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
+          backgroundSize: "44px 44px",
+        }}
+      />
+
+      {/* Brand block left accent */}
+      <div aria-hidden className="pointer-events-none absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-brand/25" />
+
+      <div className="relative flex flex-col gap-5 p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6 lg:p-7">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="eyebrow text-lime">
+              <Sparkles className="h-3 w-3" /> Best value
+            </span>
           </div>
-          <h3 className="mt-2 font-display text-xl font-extrabold sm:text-2xl">12-Hour Bulk Pass · ₹8,000</h3>
-          <p className="mt-1 max-w-md text-sm text-white/80">
-            Prepay 12 hours of court time, then book any open slot <strong>instantly with no further payment</strong>. Works out to ~₹667/hour.
+
+          <h3 className="heading-lg mt-3 text-white">
+            12-Hour{" "}
+            <span className="mark-lime">Bulk Pass</span>
+          </h3>
+
+          <div className="mt-1 font-display text-3xl font-extrabold text-lime">
+            ₹8,000
+          </div>
+
+          <p className="mt-3 max-w-md text-sm leading-relaxed text-white/70">
+            Prepay 12 hours of court time, then book any open slot{" "}
+            <strong className="font-extrabold text-white">instantly with no further payment</strong>.
+            Works out to ~₹667/hour.
           </p>
+
           {balanceMin > 0 && (
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-lime/20 px-3 py-1 text-xs font-bold text-lime">
-              <Clock className="h-3.5 w-3.5" /> You have {Math.round((balanceMin / 60) * 10) / 10}h prepaid
-            </p>
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full border-2 border-lime/40 bg-lime/15 px-4 py-1.5 text-sm font-extrabold text-lime">
+              <Clock className="h-4 w-4" />
+              You have {Math.round((balanceMin / 60) * 10) / 10}h prepaid
+            </div>
           )}
         </div>
+
         <button
           type="button"
           onClick={buy}
           disabled={busy}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-lime px-6 py-3.5 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark active:scale-[0.98] disabled:opacity-60"
+          className="btn-accent shrink-0 self-start sm:self-center"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
           {balanceMin > 0 ? "Top up 12 hours" : "Buy 12-Hour Pass"}

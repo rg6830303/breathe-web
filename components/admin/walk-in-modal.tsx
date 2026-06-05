@@ -75,6 +75,9 @@ export function WalkInModal({ open, onClose }: { open: boolean; onClose: () => v
     }
   }
 
+  const inputCls = "w-full rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/15 dark:bg-[#111c38] dark:text-white";
+  const labelCls = "mb-1.5 block text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50";
+
   return (
     <AnimatePresence>
       {open && (
@@ -82,49 +85,56 @@ export function WalkInModal({ open, onClose }: { open: boolean; onClose: () => v
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 320, damping: 28 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg overflow-hidden rounded-3xl border border-brand/10 bg-white shadow-2xl"
+            className="w-full max-w-lg overflow-hidden rounded-3xl border-2 border-ink/10 bg-white shadow-2xl dark:border-white/10 dark:bg-[#0d1426]"
           >
-            <div className="flex items-center justify-between border-b border-brand/10 px-5 py-4">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b-2 border-ink/10 bg-ink/[0.03] px-5 py-4 dark:border-white/10 dark:bg-white/[0.03]">
               <div className="flex items-center gap-2">
-                <UserPlus className="h-5 w-5 text-brand" />
-                <h3 className="font-display text-lg font-extrabold text-ink">Walk-in booking</h3>
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand text-white">
+                  <UserPlus className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-brand dark:text-brand-300">New booking</p>
+                  <h3 className="font-display text-base font-extrabold tracking-tight text-ink dark:text-white">Walk-in booking</h3>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-brand/15 text-ink hover:bg-brand/5"
+                className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-ink/10 text-ink/50 transition hover:border-ink/30 hover:text-ink dark:border-white/10 dark:text-white/50 dark:hover:text-white"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <form onSubmit={onSubmit} className="grid gap-3 p-5">
+            <form onSubmit={onSubmit} className="grid gap-3 overflow-y-auto p-5" style={{ maxHeight: "calc(100vh - 160px)" }}>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">Date</span>
+                  <span className={labelCls}>Date</span>
                   <input
                     type="date"
                     value={form.slot_date}
                     onChange={(e) => setForm({ ...form, slot_date: e.target.value })}
                     required
-                    className="w-full rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                    className={inputCls}
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">Time</span>
+                  <span className={labelCls}>Time</span>
                   <select
                     value={form.slot_time}
                     onChange={(e) => setForm({ ...form, slot_time: e.target.value })}
-                    className="w-full rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                    className={inputCls}
                   >
                     {TIMES.map((t) => (
                       <option key={t} value={t}>{t}</option>
@@ -135,11 +145,11 @@ export function WalkInModal({ open, onClose }: { open: boolean; onClose: () => v
 
               <div className="grid grid-cols-3 gap-3">
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">Court</span>
+                  <span className={labelCls}>Court</span>
                   <select
                     value={form.court_number}
                     onChange={(e) => setForm({ ...form, court_number: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                    className={inputCls}
                   >
                     <option value={1}>Court 1</option>
                     <option value={2}>Court 2</option>
@@ -147,11 +157,11 @@ export function WalkInModal({ open, onClose }: { open: boolean; onClose: () => v
                   </select>
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">Duration</span>
+                  <span className={labelCls}>Duration</span>
                   <select
                     value={form.duration_min}
                     onChange={(e) => setForm({ ...form, duration_min: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                    className={inputCls}
                   >
                     <option value={30}>30 min</option>
                     <option value={60}>60 min</option>
@@ -160,57 +170,57 @@ export function WalkInModal({ open, onClose }: { open: boolean; onClose: () => v
                   </select>
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">Amount (₹)</span>
+                  <span className={labelCls}>Amount (₹)</span>
                   <input
                     type="number"
                     min={0}
                     value={form.amount}
                     onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                    className={inputCls}
                   />
                 </label>
               </div>
 
               <label className="block">
-                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">Guest name</span>
+                <span className={labelCls}>Guest name</span>
                 <input
                   type="text"
                   required
                   value={form.guest_name}
                   onChange={(e) => setForm({ ...form, guest_name: e.target.value })}
-                  className="w-full rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                  className={inputCls}
                 />
               </label>
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">Phone</span>
+                  <span className={labelCls}>Phone</span>
                   <input
                     type="tel"
                     value={form.guest_phone}
                     onChange={(e) => setForm({ ...form, guest_phone: e.target.value })}
-                    className="w-full rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                    className={inputCls}
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">Email (optional)</span>
+                  <span className={labelCls}>Email (optional)</span>
                   <input
                     type="email"
                     value={form.guest_email}
                     onChange={(e) => setForm({ ...form, guest_email: e.target.value })}
-                    className="w-full rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                    className={inputCls}
                   />
                 </label>
               </div>
 
               <label className="block">
-                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slatey">Notes</span>
+                <span className={labelCls}>Notes</span>
                 <input
                   type="text"
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   placeholder="e.g. Cash payment, paid in advance"
-                  className="w-full rounded-xl border border-brand/15 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+                  className={inputCls}
                 />
               </label>
 
@@ -221,30 +231,30 @@ export function WalkInModal({ open, onClose }: { open: boolean; onClose: () => v
                   onChange={(e) => setForm({ ...form, notify_guest: e.target.checked })}
                   className="h-4 w-4 accent-brand"
                 />
-                <span className="text-xs font-semibold text-ink">
+                <span className="text-xs font-semibold text-ink dark:text-white">
                   Email confirmation + PDF invoice to guest{" "}
-                  <span className="text-slatey">(requires email above)</span>
+                  <span className="text-ink/50 dark:text-white/50">(requires email above)</span>
                 </span>
               </label>
 
               {error && (
-                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <div role="alert" className="rounded-xl border-2 border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
                   {error}
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-1">
+              <div className="mt-1 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-full border border-brand/15 px-4 py-2 text-sm font-bold text-ink hover:bg-brand/5"
+                  className="btn-outline px-4 py-2.5 text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 disabled:opacity-60"
+                  className="btn-primary px-5 py-2.5 text-xs disabled:opacity-60"
                 >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                   Create booking

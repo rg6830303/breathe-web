@@ -20,7 +20,9 @@ export const SCHEMA_TABLES: string[] = [
     password_hash TEXT NOT NULL,
     full_name TEXT NOT NULL,
     phone TEXT,
-    created_at INTEGER NOT NULL
+    created_at INTEGER NOT NULL,
+    google_id TEXT,
+    avatar_url TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS admins (
     id TEXT PRIMARY KEY,
@@ -146,6 +148,13 @@ export const SCHEMA_INDEXES: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_credit_ledger_user ON credit_ledger (user_id, created_at DESC)`,
   `CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses (expense_date DESC)`,
   `CREATE INDEX IF NOT EXISTS idx_tournaments_active ON tournaments (active, event_date DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_users_google ON users (google_id)`,
+  // Hard guarantee against double-booking: at most one CONFIRMED booking per
+  // court+date+time. Partial index so cancelled/no-show rows don't block
+  // re-booking the same slot. Concurrent payments that both pass the
+  // application-level availability check will now collide here, and the loser's
+  // INSERT throws (handled by the booking routes with a refund).
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_unique_confirmed_slot ON bookings (court_number, slot_date, slot_time) WHERE status = 'confirmed'`,
 ];
 
 /** Back-compat: combined list (tables + indexes) for any external reference. */
@@ -167,6 +176,9 @@ export const SCHEMA_ALTERS: string[] = [
   `ALTER TABLE bookings ADD COLUMN source TEXT NOT NULL DEFAULT 'online'`,
   `ALTER TABLE bookings ADD COLUMN notes TEXT`,
   `ALTER TABLE bookings ADD COLUMN cancelled_at INTEGER`,
+  // Google OAuth: link a Google account + cache its avatar onto legacy users.
+  `ALTER TABLE users ADD COLUMN google_id TEXT`,
+  `ALTER TABLE users ADD COLUMN avatar_url TEXT`,
 ];
 
 /** Run one statement, swallowing only the benign "already exists / duplicate"

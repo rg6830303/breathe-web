@@ -6,9 +6,9 @@ import { useDropzone } from "react-dropzone";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { motion } from "framer-motion";
-import { 
-  FileSpreadsheet, Upload, Download, Check, AlertCircle, 
-  Trash2, ArrowLeft, Loader2, Play, ChevronRight, AlertTriangle 
+import {
+  FileSpreadsheet, Upload, Download, Check, AlertCircle,
+  Trash2, ArrowLeft, Loader2, Play, ChevronRight, AlertTriangle
 } from "lucide-react";
 
 type ParsedRow = {
@@ -106,14 +106,14 @@ export default function ImportWizardPage() {
   // Validate a row client-side to assign badges
   const validateRowClient = (row: any): { isValid: boolean; error: string | null } => {
     const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
-    
+
     if (!row.date || String(row.date).trim().length === 0) return { isValid: false, error: "Missing Date." };
     if (!row.time || !timeRegex.test(String(row.time).trim().slice(0, 5))) return { isValid: false, error: "Invalid time format (HH:MM)." };
     if (!row.customer_name || String(row.customer_name).trim().length === 0) return { isValid: false, error: "Missing Customer Name." };
     if (!row.customer_phone || String(row.customer_phone).trim().length < 8) return { isValid: false, error: "Invalid Phone Number." };
     if (row.customer_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.customer_email)) return { isValid: false, error: "Invalid Email format." };
     if (isNaN(Number(row.amount)) || Number(row.amount) < 0) return { isValid: false, error: "Amount must be a positive number." };
-    
+
     return { isValid: true, error: null as string | null };
   };
 
@@ -166,7 +166,7 @@ export default function ImportWizardPage() {
         const rawDuration = findVal(["duration", "duration_min", "duration_minutes"]);
 
         const { date, err: dateErr } = normalizeDate(rawDate);
-        
+
         let timeFormatted = String(rawTime).trim();
         // If hour is a number like 9 or 18, pad it
         if (/^\d{1,2}$/.test(timeFormatted)) {
@@ -199,7 +199,7 @@ export default function ImportWizardPage() {
         const validation = validateRowClient(mappedRow);
         mappedRow.isValid = validation.isValid && !dateErr;
         mappedRow.validationError = dateErr ? "Invalid date format." : (validation.error as string | null);
-        
+
         // Auto-exclude invalid rows
         mappedRow.isExcluded = !mappedRow.isValid;
 
@@ -258,7 +258,7 @@ export default function ImportWizardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rows: toImport }),
       });
-      
+
       setProgress(80);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Import transaction failed.");
@@ -278,11 +278,11 @@ export default function ImportWizardPage() {
   // Generate template CSV download dynamically in the browser
   const downloadTemplate = () => {
     const headers = [
-      "date", "time", "duration_min", "customer_name", 
+      "date", "time", "duration_min", "customer_name",
       "customer_phone", "amount", "customer_email", "notes", "status"
     ];
     const sample = [
-      "2026-06-01", "18:00", "60", "Rahul Gupta", 
+      "2026-06-01", "18:00", "60", "Rahul Gupta",
       "+917439010356", "900", "rahul@breathepickleball.in", "Court booking", "confirmed"
     ];
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + sample.join(",");
@@ -297,10 +297,10 @@ export default function ImportWizardPage() {
 
   if (loadingAdmin || !admin) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#0B0F19] text-white">
+      <div className="flex min-h-screen items-center justify-center bg-ink text-white">
         <div className="text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#D4FC34]" />
-          <p className="mt-4 text-sm text-white/60">Verifying session credentials...</p>
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-lime" />
+          <p className="mt-4 text-sm text-white/60">Verifying session credentials…</p>
         </div>
       </div>
     );
@@ -311,94 +311,135 @@ export default function ImportWizardPage() {
   const includedCount = rows.filter((r) => !r.isExcluded).length;
 
   return (
-    <main className="min-h-screen bg-[#0B0F19] text-white py-8 px-4 sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-8 dark:bg-ink sm:px-6">
       <div className="mx-auto max-w-5xl">
-        {/* Header navigation */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => router.push("/admin")} 
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10 hover:bg-white/10"
+
+        {/* Page header */}
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.push("/admin")}
+              aria-label="Back to admin"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-ink/10 bg-white text-ink transition hover:border-brand hover:text-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white dark:hover:border-brand-300 dark:hover:text-brand-300"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
             <div>
-              <h1 className="font-display text-2xl font-extrabold tracking-wide text-white sm:text-3xl">Ingestion Engine</h1>
-              <p className="text-xs text-white/50">Batch import historical spreadsheet bookings directly into Turso database.</p>
+              <span className="eyebrow">
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                Import
+              </span>
+              <h1 className="heading-lg mt-0.5 text-ink dark:text-white">Ingestion Engine</h1>
+              <p className="mt-0.5 text-xs text-ink/50 dark:text-white/40">
+                Batch import historical spreadsheet bookings directly into Turso database.
+              </p>
             </div>
           </div>
-          <button 
+          <button
             onClick={downloadTemplate}
-            className="flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-2 text-xs font-bold text-[#D4FC34] hover:bg-white/10 transition"
+            className="btn-outline px-4 py-2 text-xs"
           >
             <Download className="h-4 w-4" /> Download Template
           </button>
         </div>
 
-        {/* Global Alert Messages */}
+        {/* Alert messages */}
         {error && (
-          <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
-            <AlertCircle className="h-5 w-5 shrink-0" />
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border-2 border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400" role="alert">
+            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" aria-hidden />
             <span>{error}</span>
           </div>
         )}
         {success && (
-          <div className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-400">
-            <Check className="h-5 w-5 shrink-0" />
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border-2 border-lime/40 bg-lime/10 p-4 text-sm text-lime-dark dark:border-lime/30 dark:bg-lime/[0.08]" role="status">
+            <Check className="h-5 w-5 shrink-0 mt-0.5" aria-hidden />
             <span>{success}</span>
           </div>
         )}
 
-        {/* Progress indicator */}
+        {/* Progress bar */}
         {importing && (
-          <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.02] p-4">
-            <div className="flex justify-between text-xs font-bold mb-2 uppercase tracking-wide">
-              <span>Importing rows...</span>
-              <span>{progress}%</span>
+          <div className="mb-6 card-sport p-4">
+            <div className="mb-2 flex items-center justify-between text-xs font-extrabold uppercase tracking-wide text-ink dark:text-white">
+              <span>Importing rows…</span>
+              <span className="text-brand">{progress}%</span>
             </div>
-            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-              <div className="h-full bg-[#D4FC34] transition-all duration-300" style={{ width: `${progress}%` }} />
+            <div className="h-2 w-full overflow-hidden rounded-full bg-ink/10 dark:bg-white/10">
+              <div
+                className="h-full rounded-full bg-lime transition-all duration-300"
+                style={{ width: `${progress}%` }}
+                role="progressbar"
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              />
             </div>
           </div>
         )}
 
-        {/* Step 1: Upload box */}
-        <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 mb-8">
-          <div 
-            {...getRootProps()} 
-            className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition ${
-              isDragActive ? "border-[#D4FC34] bg-[#D4FC34]/5" : "border-white/15 bg-white/[0.01] hover:border-white/30"
-            }`}
-          >
-            <input {...getInputProps()} />
-            <Upload className="mx-auto h-12 w-12 text-[#D4FC34] mb-3" />
-            <p className="font-bold text-sm">Drag and drop CSV or Excel files here, or click to browse</p>
-            <p className="text-[10px] text-white/40 mt-1 uppercase font-semibold">Supports .csv, .xlsx, .xls</p>
+        {/* Step 1: Drop zone */}
+        <section className="card-sport mb-6 p-0 overflow-hidden">
+          <div className="tape-stripe h-1.5 w-full" />
+          <div className="p-5">
+            <span className="eyebrow mb-3">Step 1</span>
+            <div
+              {...getRootProps()}
+              className={`cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition ${
+                isDragActive
+                  ? "border-lime bg-lime/5 dark:bg-lime/[0.07]"
+                  : "border-ink/15 bg-ink/[0.01] hover:border-brand/40 dark:border-white/15 dark:bg-white/[0.01] dark:hover:border-brand-300/40"
+              }`}
+            >
+              <input {...getInputProps()} />
+              <Upload
+                className={`mx-auto mb-3 h-12 w-12 transition ${isDragActive ? "text-lime-dark" : "text-brand"}`}
+                aria-hidden
+              />
+              <p className="font-extrabold text-sm text-ink dark:text-white">
+                Drag and drop CSV or Excel files here, or click to browse
+              </p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40 dark:text-white/40">
+                Supports .csv · .xlsx · .xls
+              </p>
+            </div>
           </div>
         </section>
 
-        {/* Step 2: Spreadsheet Preview Grid */}
+        {/* Step 2: Preview grid */}
         {rows.length > 0 && (
-          <motion.section 
+          <motion.section
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="card-sport p-0 overflow-hidden"
           >
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-white/5 pb-4 mb-4">
+            <div className="tape-stripe h-1.5 w-full" />
+            <div className="flex flex-col gap-4 border-b-2 border-ink/10 px-5 py-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="font-display text-base font-extrabold tracking-wide">Data Verification Grid</h3>
-                <div className="flex flex-wrap gap-3 mt-1 text-[11px] font-bold uppercase tracking-wider text-white/50">
-                  <span>Parsed: <strong className="text-white">{rows.length}</strong></span>
-                  <span className="text-emerald-400">Valid: {validCount}</span>
-                  <span className="text-red-400">Errors: {invalidCount}</span>
-                  <span className="text-[#D4FC34]">To Import: {includedCount}</span>
+                <span className="eyebrow">Step 2 — Verification</span>
+                <h3 className="mt-1 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">
+                  Data Verification Grid
+                </h3>
+                <div className="mt-1.5 flex flex-wrap gap-3">
+                  <span className="tag-sport">
+                    Parsed: <strong>{rows.length}</strong>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-lime/40 bg-lime/10 px-3 py-1 text-xs font-bold text-lime-dark">
+                    Valid: {validCount}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
+                    Errors: {invalidCount}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand/5 px-3 py-1 text-xs font-bold text-brand dark:border-brand-300/20 dark:bg-brand/10 dark:text-brand-300">
+                    To import: {includedCount}
+                  </span>
                 </div>
               </div>
 
               <button
                 onClick={commitImport}
                 disabled={importing || includedCount === 0}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#D4FC34] hover:bg-[#c2e82b] text-gray-900 px-5 py-2.5 font-bold text-xs shadow-soft transition disabled:opacity-60"
+                className="btn-accent px-5 py-2.5 text-xs disabled:opacity-60"
               >
                 {importing ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -409,27 +450,29 @@ export default function ImportWizardPage() {
               </button>
             </div>
 
-            {/* Scrollable table grid */}
-            <div className="overflow-x-auto border border-white/10 rounded-xl bg-[#0B0F19]">
+            {/* Table */}
+            <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] border-collapse text-left text-xs">
-                <thead className="bg-white/5 text-white/60 uppercase font-bold tracking-wider text-[10px] border-b border-white/10">
-                  <tr>
-                    <th className="p-3 text-center w-12">Import</th>
-                    <th className="p-3 text-center w-16">Status</th>
-                    <th className="p-3">Date</th>
-                    <th className="p-3">Time</th>
-                    <th className="p-3">Name</th>
-                    <th className="p-3">Phone</th>
-                    <th className="p-3 text-right">Amount</th>
-                    <th className="p-3">Notes</th>
+                <thead>
+                  <tr className="border-b-2 border-ink/10 dark:border-white/10">
+                    <th className="p-3 text-center w-12 text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Import</th>
+                    <th className="p-3 text-center w-16 text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Status</th>
+                    <th className="p-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Date</th>
+                    <th className="p-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Time</th>
+                    <th className="p-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Name</th>
+                    <th className="p-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Phone</th>
+                    <th className="p-3 text-right text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Amount</th>
+                    <th className="p-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Notes</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody>
                   {rows.slice(0, 100).map((r, idx) => (
-                    <tr 
-                      key={idx} 
-                      className={`hover:bg-white/[0.01] transition ${
-                        r.isExcluded ? "opacity-45 bg-red-950/5" : ""
+                    <tr
+                      key={idx}
+                      className={`border-b border-ink/5 transition-colors dark:border-white/5 ${
+                        r.isExcluded
+                          ? "opacity-40"
+                          : "hover:bg-brand/[0.03] dark:hover:bg-white/[0.03]"
                       }`}
                     >
                       {/* Checkbox */}
@@ -438,33 +481,36 @@ export default function ImportWizardPage() {
                           type="checkbox"
                           checked={!r.isExcluded}
                           onChange={() => toggleExclude(idx)}
-                          className="rounded border-white/10 bg-white/5 text-[#D4FC34] focus:ring-0 focus:ring-offset-0"
+                          aria-label={`Include row ${r.originalRowIndex}`}
+                          className="rounded border-ink/20 bg-white text-brand focus:ring-0 focus:ring-offset-0 dark:border-white/20 dark:bg-[#111c38]"
                         />
                       </td>
 
-                      {/* Verification badge */}
+                      {/* Validation badge */}
                       <td className="p-3 text-center">
                         {r.isValid ? (
-                          <span className="inline-block rounded bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400">
-                            Valid
+                          <span className="inline-flex items-center gap-1 rounded-full border border-lime/40 bg-lime/10 px-2 py-0.5 text-[9px] font-bold text-lime-dark">
+                            <Check className="h-3 w-3" aria-hidden /> Valid
                           </span>
                         ) : (
-                          <span 
+                          <span
                             title={r.validationError || "Invalid row details"}
-                            className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-[9px] font-bold text-red-400 cursor-help"
+                            className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[9px] font-bold text-red-700 cursor-help dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
                           >
-                            <AlertTriangle className="h-3 w-3 shrink-0" /> Error
+                            <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden /> Error
                           </span>
                         )}
                       </td>
 
-                      {/* Columns */}
-                      <td className="p-3 font-semibold text-white/90">{r.date || <span className="text-red-400 font-bold">??</span>}</td>
-                      <td className="p-3 text-white/80">{r.time}</td>
-                      <td className="p-3 font-bold text-white truncate max-w-[120px]">{r.customer_name}</td>
-                      <td className="p-3 text-white/80">{r.customer_phone}</td>
-                      <td className="p-3 text-right font-semibold text-[#D4FC34]">₹{r.amount}</td>
-                      <td className="p-3 text-white/45 truncate max-w-[200px]" title={r.notes || ""}>
+                      {/* Data columns */}
+                      <td className="p-3 font-semibold text-ink dark:text-white">
+                        {r.date || <span className="font-bold text-red-600 dark:text-red-400">??</span>}
+                      </td>
+                      <td className="p-3 text-ink/70 dark:text-white/70">{r.time}</td>
+                      <td className="p-3 max-w-[120px] truncate font-bold text-ink dark:text-white">{r.customer_name}</td>
+                      <td className="p-3 text-ink/70 dark:text-white/70">{r.customer_phone}</td>
+                      <td className="p-3 text-right font-extrabold text-brand dark:text-brand-300">₹{r.amount}</td>
+                      <td className="p-3 max-w-[200px] truncate text-ink/40 dark:text-white/40" title={r.notes || ""}>
                         {r.notes || "—"}
                       </td>
                     </tr>
@@ -474,12 +520,13 @@ export default function ImportWizardPage() {
             </div>
 
             {rows.length > 100 && (
-              <p className="text-[10px] text-white/35 text-center mt-3 font-semibold uppercase tracking-wider">
-                Showing first 100 rows preview (total {rows.length} rows parsed)
+              <p className="px-5 py-3 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-ink/40 dark:text-white/40">
+                Showing first 100 rows — {rows.length} total parsed
               </p>
             )}
           </motion.section>
         )}
+
       </div>
     </main>
   );

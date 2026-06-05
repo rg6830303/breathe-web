@@ -61,70 +61,97 @@ export function LiveAvailability() {
   }, []);
 
   return (
-    <div className="relative mx-auto max-w-md rounded-3xl border border-white/20 bg-white/10 p-5 shadow-glow backdrop-blur-md">
-      <div className="flex items-center justify-between">
-        <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-lime">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-lime opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-lime" />
-          </span>
-          Live availability
-        </span>
-        <span className="text-xs font-semibold text-white/70">Today · next 3h</span>
-      </div>
+    <div className="relative mx-auto max-w-md overflow-hidden rounded-3xl border-2 border-white/15 bg-ink/80">
+      {/* Tape stripe top */}
+      <div aria-hidden className="tape-stripe h-1 w-full" />
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-white/15 bg-white/5">
-        {/* Header */}
-        <div className="grid grid-cols-[72px_repeat(3,1fr)] border-b border-white/10 bg-white/5 text-[0.65rem] font-bold uppercase tracking-wide text-white/70">
-          <div className="px-3 py-2">Time</div>
-          {Array.from({ length: COURT_COUNT }, (_, i) => (
-            <div key={i} className="px-2 py-2 text-center">
-              Court {i + 1}
-            </div>
-          ))}
+      {/* Court-line texture */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.06]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+        }}
+      />
+
+      <div className="relative p-5">
+        {/* Header row */}
+        <div className="mb-4 flex items-center justify-between">
+          <span className="inline-flex items-center gap-2 text-[0.65rem] font-extrabold uppercase tracking-[0.22em] text-lime">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-lime opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-lime" />
+            </span>
+            Live availability
+          </span>
+          <span className="text-[0.65rem] font-bold uppercase tracking-wide text-white/50">Today · next 3h</span>
         </div>
 
-        {/* Rows */}
-        {rows.length === 0 ? (
-          // Server-render placeholder; client effect populates rows on mount.
-          Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="grid grid-cols-[72px_repeat(3,1fr)] border-b border-white/5">
-              <div className="px-3 py-3 text-xs font-semibold text-white/40">·</div>
-              {Array.from({ length: COURT_COUNT }, (_, c) => (
-                <div key={c} className="px-2 py-3 text-center">
-                  <span className="inline-block h-5 w-12 rounded bg-white/10" />
-                </div>
-              ))}
-            </div>
-          ))
-        ) : (
-          rows.map((row) => (
-            <div key={row.iso} className="grid grid-cols-[72px_repeat(3,1fr)] border-b border-white/5 last:border-b-0">
-              <div className="px-3 py-3 text-xs font-bold text-white">{row.label}</div>
-              {row.cells.map((status, c) => (
-                <div key={c} className="px-2 py-2 text-center">
-                  {status === "open" ? (
-                    <span className="inline-block rounded border border-slot-openBorder bg-slot-openBg px-2 py-0.5 text-xs font-bold text-slot-open">
-                      Open
-                    </span>
-                  ) : (
-                    <span className="inline-block rounded border border-white/15 bg-white/10 px-2 py-0.5 text-xs font-semibold text-white/40">
-                      Booked
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          ))
-        )}
-      </div>
+        {/* Grid */}
+        <div className="overflow-hidden rounded-2xl border border-white/10">
+          {/* Column headers */}
+          <div
+            className="grid border-b border-white/10 bg-white/5 text-[0.6rem] font-extrabold uppercase tracking-[0.15em] text-white/50"
+            style={{ gridTemplateColumns: "72px repeat(3, 1fr)" }}
+          >
+            <div className="px-3 py-2.5">Time</div>
+            {Array.from({ length: COURT_COUNT }, (_, i) => (
+              <div key={i} className="px-2 py-2.5 text-center">
+                C{i + 1}
+              </div>
+            ))}
+          </div>
 
-      <Link
-        href="/book"
-        className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-lime px-5 py-3 text-sm font-bold text-gray-900 transition hover:bg-lime-dark"
-      >
-        See all open slots <ArrowRight className="h-4 w-4" />
-      </Link>
+          {/* Rows */}
+          {rows.length === 0
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="grid border-b border-white/5 last:border-b-0"
+                  style={{ gridTemplateColumns: "72px repeat(3, 1fr)" }}
+                >
+                  <div className="px-3 py-3 text-xs font-semibold text-white/30">·</div>
+                  {Array.from({ length: COURT_COUNT }, (_, c) => (
+                    <div key={c} className="px-2 py-3 text-center">
+                      <span className="inline-block h-5 w-12 animate-pulse rounded bg-white/10" />
+                    </div>
+                  ))}
+                </div>
+              ))
+            : rows.map((row) => (
+                <div
+                  key={row.iso}
+                  className="grid border-b border-white/5 last:border-b-0"
+                  style={{ gridTemplateColumns: "72px repeat(3, 1fr)" }}
+                >
+                  <div className="px-3 py-3 text-xs font-extrabold text-white">{row.label}</div>
+                  {row.cells.map((status, c) => (
+                    <div key={c} className="px-2 py-2 text-center">
+                      {status === "open" ? (
+                        <span className="inline-block rounded-lg border-2 border-lime/50 bg-lime/20 px-2 py-1 text-[0.6rem] font-extrabold uppercase tracking-wide text-lime">
+                          Open
+                        </span>
+                      ) : (
+                        <span className="inline-block rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[0.6rem] font-bold uppercase tracking-wide text-white/30">
+                          Full
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+        </div>
+
+        {/* CTA */}
+        <Link
+          href="/book"
+          className="btn-accent mt-5 w-full justify-center"
+        >
+          See all open slots <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
     </div>
   );
 }

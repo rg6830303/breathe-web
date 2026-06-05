@@ -146,110 +146,146 @@ export default async function AdminCustomerPage({ params }: { params: Promise<{ 
   const { customer, bookings, stats } = data;
 
   return (
-    <main className="min-h-screen bg-brand-50/30 px-4 py-8 sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-8 dark:bg-ink sm:px-6">
       <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center gap-3">
-          <Link
-            href="/admin"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand/15 bg-white text-ink hover:bg-brand/5"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div className="flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">Customer</p>
-            <h1 className="font-display text-2xl font-extrabold text-ink sm:text-3xl">{customer.full_name}</h1>
+
+        {/* Back nav + title */}
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/admin"
+              aria-label="Back to admin"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-ink/10 bg-white text-ink transition hover:border-brand hover:text-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white dark:hover:border-brand-300 dark:hover:text-brand-300"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div>
+              <span className="eyebrow">Customer</span>
+              <h1 className="heading-lg mt-0.5 text-ink dark:text-white">{customer.full_name}</h1>
+            </div>
           </div>
           <EditCustomer id={customer.id} initial={{ full_name: customer.full_name, email: customer.email, phone: customer.phone }} />
         </div>
 
+        {/* Contact + Stats row */}
         <section className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-            <h2 className="font-display text-base font-extrabold text-ink">Contact</h2>
-            <dl className="mt-4 grid gap-3 text-sm">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-brand" />
-                <span className="text-slatey">Joined</span>
-                <span className="ml-auto font-semibold text-ink">
+          {/* Contact card */}
+          <div className="card-sport p-6">
+            <span className="eyebrow">Contact</span>
+            <h2 className="mt-1 mb-4 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">
+              Profile details
+            </h2>
+            <dl className="grid gap-3 text-sm">
+              <div className="flex items-center gap-2 border-b border-ink/5 pb-3 dark:border-white/5">
+                <User className="h-4 w-4 text-brand" aria-hidden />
+                <span className="text-ink/50 dark:text-white/50">Joined</span>
+                <span className="ml-auto font-bold text-ink dark:text-white">
                   {new Date(customer.created_at).toLocaleDateString("en-IN", { month: "short", year: "numeric", day: "numeric" })}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-brand" />
-                <span className="ml-auto font-semibold text-ink">{customer.email}</span>
+              <div className="flex items-center gap-2 border-b border-ink/5 pb-3 dark:border-white/5">
+                <Mail className="h-4 w-4 text-brand" aria-hidden />
+                <span className="text-ink/50 dark:text-white/50">Email</span>
+                <span className="ml-auto font-bold text-ink dark:text-white break-all">{customer.email}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-brand" />
-                <span className="ml-auto font-semibold text-ink">{customer.phone ?? "—"}</span>
+                <Phone className="h-4 w-4 text-brand" aria-hidden />
+                <span className="text-ink/50 dark:text-white/50">Phone</span>
+                <span className="ml-auto font-bold text-ink dark:text-white">{customer.phone ?? "—"}</span>
               </div>
             </dl>
           </div>
 
-          <div className="rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-            <h2 className="font-display text-base font-extrabold text-ink">Stats</h2>
-            <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-              <div>
-                <ListChecks className="mx-auto h-4 w-4 text-brand" />
-                <div className="mt-2 font-display text-xl font-extrabold text-ink">{stats.sessions}</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-slatey">Sessions</div>
+          {/* Stats card */}
+          <div className="card-sport p-6">
+            <span className="eyebrow">Activity</span>
+            <h2 className="mt-1 mb-4 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">
+              Performance stats
+            </h2>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-2xl border-2 border-ink/10 p-4 dark:border-white/10">
+                <ListChecks className="mx-auto h-4 w-4 text-brand" aria-hidden />
+                <div className="mt-2 font-display text-2xl font-extrabold tracking-tight text-ink dark:text-white">
+                  {stats.sessions}
+                </div>
+                <div className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.15em] text-ink/40 dark:text-white/40">
+                  Sessions
+                </div>
               </div>
-              <div>
-                <Clock className="mx-auto h-4 w-4 text-brand" />
-                <div className="mt-2 font-display text-xl font-extrabold text-ink">{stats.hours}</div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-slatey">Hours</div>
+              <div className="rounded-2xl border-2 border-ink/10 p-4 dark:border-white/10">
+                <Clock className="mx-auto h-4 w-4 text-brand" aria-hidden />
+                <div className="mt-2 font-display text-2xl font-extrabold tracking-tight text-ink dark:text-white">
+                  {stats.hours}
+                </div>
+                <div className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.15em] text-ink/40 dark:text-white/40">
+                  Hours
+                </div>
               </div>
-              <div>
-                <IndianRupee className="mx-auto h-4 w-4 text-brand" />
-                <div className="mt-2 font-display text-xl font-extrabold text-ink">
+              <div className="rounded-2xl border-2 border-brand/20 bg-brand/[0.04] p-4 dark:border-brand/30 dark:bg-brand/10">
+                <IndianRupee className="mx-auto h-4 w-4 text-brand" aria-hidden />
+                <div className="mt-2 font-display text-2xl font-extrabold tracking-tight text-brand">
                   {stats.spent.toLocaleString("en-IN")}
                 </div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-slatey">Spent</div>
+                <div className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.15em] text-brand/60">
+                  Spent
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="mt-8 rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-          <h2 className="font-display text-lg font-extrabold text-ink">
-            <CalendarDays className="mr-2 inline h-5 w-5 text-brand" />
-            All bookings
-          </h2>
-          {bookings.length === 0 ? (
-            <p className="mt-4 rounded-xl border border-dashed border-brand/20 bg-brand/[0.03] p-6 text-center text-sm text-slatey">
-              No bookings.
-            </p>
-          ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[640px] border-collapse text-sm">
-                <thead className="bg-brand/5 text-left text-xs uppercase tracking-wide text-slatey">
-                  <tr>
-                    <th className="p-3">Date</th>
-                    <th className="p-3">Time</th>
-                    <th className="p-3">Court</th>
-                    <th className="p-3">Duration</th>
-                    <th className="p-3">Amount</th>
-                    <th className="p-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookings.map((b) => (
-                    <tr key={b.id} className="border-t border-brand/10">
-                      <td className="p-3 text-ink">{formatDate(b.slot_date)}</td>
-                      <td className="p-3 text-slatey">{formatTime(b.slot_time)}</td>
-                      <td className="p-3 text-slatey">Court {b.court_number}</td>
-                      <td className="p-3 text-slatey">{b.duration_min} min</td>
-                      <td className="p-3 font-semibold text-ink">₹{b.total.toLocaleString("en-IN")}</td>
-                      <td className="p-3">
-                        <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${statusBadge(b.status)}`}>
-                          {b.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Bookings table */}
+        <section className="mt-6 card-sport p-0 overflow-hidden">
+          <div className="flex items-center gap-3 border-b-2 border-ink/10 px-6 py-4 dark:border-white/10">
+            <CalendarDays className="h-5 w-5 text-brand" aria-hidden />
+            <div>
+              <span className="eyebrow">History</span>
+              <h2 className="mt-0.5 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">
+                All bookings
+              </h2>
             </div>
-          )}
+          </div>
+
+          <div className="p-6">
+            {bookings.length === 0 ? (
+              <p className="rounded-2xl border-2 border-dashed border-ink/10 p-6 text-center text-sm text-ink/40 dark:border-white/10 dark:text-white/40">
+                No bookings on record.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-ink/10 dark:border-white/10">
+                      <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Date</th>
+                      <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Time</th>
+                      <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Court</th>
+                      <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Duration</th>
+                      <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Amount</th>
+                      <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookings.map((b) => (
+                      <tr key={b.id} className="border-b border-ink/5 transition-colors hover:bg-brand/[0.03] dark:border-white/5 dark:hover:bg-white/[0.03]">
+                        <td className="p-3 font-semibold text-ink dark:text-white">{formatDate(b.slot_date)}</td>
+                        <td className="p-3 text-ink/60 dark:text-white/60">{formatTime(b.slot_time)}</td>
+                        <td className="p-3 text-ink/60 dark:text-white/60">Court {b.court_number}</td>
+                        <td className="p-3 text-ink/60 dark:text-white/60">{b.duration_min} min</td>
+                        <td className="p-3 font-extrabold text-brand">₹{b.total.toLocaleString("en-IN")}</td>
+                        <td className="p-3">
+                          <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${statusBadge(b.status)}`}>
+                            {b.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </section>
+
       </div>
     </main>
   );

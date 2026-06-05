@@ -5,6 +5,8 @@ import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { getSlotPrice, calculateTotals } from "@/lib/pricing";
+import { refundPayment, razorpayConfigured } from "@/lib/razorpay";
+import { adjustCredit, BULK_PACKAGE } from "@/lib/credits";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -42,7 +44,6 @@ export async function POST(req: Request) {
 
     // Bulk-hours package purchase: grant prepaid credit instead of booking slots.
     if (body.purchase === "bulk-12h") {
-      const { adjustCredit, BULK_PACKAGE } = require("@/lib/credits");
       const balanceMin = await adjustCredit(session.id, BULK_PACKAGE.minutes, "Purchased 12h bulk pass");
       return NextResponse.json({ ok: true, purchased: "bulk-12h", balanceMin });
     }
@@ -66,6 +67,52 @@ export async function POST(req: Request) {
     const now = Date.now();
     const bookingIds: string[] = [];
     const slotCount = Math.max(slots.length, 1);
+
+    // Refund the whole captured payment (full refund). Used when we cannot
+    // honour the booking after the player has already paid.
+    const refundFull = async (reason: string): Promise<boolean> => {
+      if (!razorpayConfigured() || !paymentId) return false;
+      try {
+        const r = await refundPayment(paymentId, undefined, {
+          reason: reason.slice(0, 60),
+          order_id: orderId,
+        });
+        console.log("[verify-payment refunded]", r);
+        return true;
+      } catch (e) {
+        console.error("[verify-payment refund error]", e);
+        return false;
+      }
+    };
+
+    const clampCourt = (c: unknown) =>
+      Number.isFinite(Number(c)) ? Math.max(1, Math.min(9, Number(c))) : 1;
+
+    // All-or-nothing availability pre-check: if ANY requested slot was taken
+    // between order creation and payment confirmation, refund and book nothing
+    // (the partial unique index is the hard backstop for races past this point).
+    for (const s of slots) {
+      const court = clampCourt(s.court);
+      try {
+        const ex = await turso.execute({
+          sql: "SELECT id FROM bookings WHERE slot_date = ? AND slot_time = ? AND court_number = ? AND status = 'confirmed' LIMIT 1",
+          args: [s.date, s.time, court],
+        });
+        if (ex.rows.length) {
+          const refunded = await refundFull("slot taken before confirmation");
+          return NextResponse.json(
+            {
+              error:
+                "One or more of your slots was just taken. Your payment has been refunded — please pick another slot.",
+              refunded,
+            },
+            { status: 409 },
+          );
+        }
+      } catch (e) {
+        console.error("[verify-payment pre-check error]", e);
+      }
+    }
 
     for (const s of slots) {
       const price = getSlotPrice(s.time);
@@ -109,7 +156,28 @@ export async function POST(req: Request) {
         });
       } catch (insertErr) {
         console.error("[verify-payment db-insert error]", insertErr);
-        return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+        const msg = String((insertErr as Error)?.message ?? "").toLowerCase();
+        const isCollision = msg.includes("unique") || msg.includes("constraint");
+        // Roll back any sibling slots already inserted in this request so we
+        // never leave a partial booking, then refund the entire payment.
+        for (const bid of bookingIds.filter((b) => b !== id)) {
+          await turso
+            .execute({
+              sql: "UPDATE bookings SET status = 'cancelled', cancelled_at = ? WHERE id = ?",
+              args: [now, bid],
+            })
+            .catch(() => {});
+        }
+        const refunded = await refundFull(isCollision ? "slot collision" : "insert failed");
+        return NextResponse.json(
+          {
+            error: isCollision
+              ? "One or more of your slots was just taken. Your payment has been refunded — please pick another slot."
+              : "We couldn't confirm your booking. Your payment has been refunded — please try again.",
+            refunded,
+          },
+          { status: isCollision ? 409 : 500 },
+        );
       }
 
       try {

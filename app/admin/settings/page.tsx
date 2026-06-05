@@ -108,80 +108,100 @@ export default function AdminSettingsPage() {
   }
 
   const FIELD_KEYS = Object.keys(FIELD_LABELS);
+  const inputCls = "w-full rounded-xl border-2 border-ink/10 bg-white px-4 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/10 dark:border-white/10 dark:bg-[#111c38] dark:text-white";
+  const labelCls = "mb-1.5 block text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50";
 
   return (
-    <main className="min-h-screen bg-brand-50/30 px-4 py-8 sm:px-6">
+    <main className="min-h-screen-safe bg-brand-50/30 px-4 py-8 dark:bg-ink sm:px-6">
       <div className="mx-auto max-w-3xl">
         <div className="mb-6">
-          <AdminSubHeader title="Settings" subtitle="Venue configuration and admin account." icon={<SettingsIcon className="h-6 w-6 text-lime" />} />
+          <AdminSubHeader
+            title="Settings"
+            subtitle="Venue configuration and admin account."
+            icon={<SettingsIcon className="h-5 w-5 text-lime" />}
+          />
         </div>
 
         {loading ? (
-          <div className="rounded-3xl border border-brand/10 bg-white p-10 text-center text-sm text-slatey shadow-soft">
-            <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-brand" /> Loading settings…
+          <div className="flex items-center justify-center rounded-3xl border-2 border-ink/10 bg-white p-10 text-sm text-ink/40 dark:border-white/10 dark:bg-[#111c38] dark:text-white/40">
+            <Loader2 className="mr-2 h-5 w-5 animate-spin text-brand" /> Loading settings…
           </div>
         ) : (
           <>
-            <form onSubmit={saveConfig} className="rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-              <h2 className="font-display text-lg font-extrabold text-ink">Venue configuration</h2>
-              <p className="text-xs text-slatey">Used by the booking grid and pricing engine.</p>
+            {/* Venue config form */}
+            <form onSubmit={saveConfig} className="card-sport p-6">
+              <div className="mb-5 border-b-2 border-ink/10 pb-4 dark:border-white/10">
+                <span className="eyebrow">Venue</span>
+                <h2 className="mt-1 font-display text-lg font-extrabold tracking-tight text-ink dark:text-white">
+                  Venue configuration
+                </h2>
+                <p className="mt-0.5 text-xs text-ink/50 dark:text-white/50">
+                  Used by the booking grid and pricing engine.
+                </p>
+              </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 {FIELD_KEYS.map((key) => (
                   <label key={key} className="block">
-                    <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slatey">
-                      {FIELD_LABELS[key]}
-                    </span>
+                    <span className={labelCls}>{FIELD_LABELS[key]}</span>
                     <input
                       type={TIME_FIELDS.has(key) ? "time" : NUMERIC_FIELDS.has(key) ? "number" : "text"}
                       value={config[key] ?? ""}
                       onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
-                      className="w-full rounded-xl border border-brand/15 bg-white px-4 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+                      className={inputCls}
                     />
                   </label>
                 ))}
               </div>
 
               {error && (
-                <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <div role="alert" className="mt-4 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700">
                   {error}
                 </div>
               )}
               {success && (
-                <div className="mt-4 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                  <Check className="h-3 w-3" /> {success}
+                <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-lime/20 px-3 py-1 text-xs font-extrabold text-lime-dark">
+                  <Check className="h-3.5 w-3.5" /> {success}
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 disabled:opacity-60"
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save settings
-              </button>
+              <div className="mt-5 flex">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="btn-primary disabled:opacity-60"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save settings
+                </button>
+              </div>
             </form>
 
-            <form onSubmit={savePassword} className="mt-6 rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-              <h2 className="font-display text-lg font-extrabold text-ink">
-                <ShieldCheck className="mr-2 inline h-5 w-5 text-brand" /> Change admin password
-              </h2>
-              <p className="text-xs text-slatey">8+ characters. You&apos;ll stay signed in after the change.</p>
+            {/* Password form */}
+            <form onSubmit={savePassword} className="card-sport mt-5 p-6">
+              <div className="mb-5 border-b-2 border-ink/10 pb-4 dark:border-white/10">
+                <span className="eyebrow">Security</span>
+                <h2 className="mt-1 font-display text-lg font-extrabold tracking-tight text-ink dark:text-white">
+                  <ShieldCheck className="mr-2 inline h-5 w-5 text-brand" /> Change admin password
+                </h2>
+                <p className="mt-0.5 text-xs text-ink/50 dark:text-white/50">
+                  8+ characters. You&apos;ll stay signed in after the change.
+                </p>
+              </div>
 
-              <div className="mt-5 grid gap-3">
+              <div className="grid gap-4">
                 <label className="block">
-                  <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slatey">Current password</span>
+                  <span className={labelCls}>Current password</span>
                   <input
                     type="password"
                     value={pwForm.current}
                     onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })}
                     required
                     autoComplete="current-password"
-                    className="w-full rounded-xl border border-brand/15 bg-white px-4 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+                    className={inputCls}
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slatey">New password</span>
+                  <span className={labelCls}>New password</span>
                   <input
                     type="password"
                     value={pwForm.next}
@@ -189,11 +209,11 @@ export default function AdminSettingsPage() {
                     required
                     minLength={8}
                     autoComplete="new-password"
-                    className="w-full rounded-xl border border-brand/15 bg-white px-4 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+                    className={inputCls}
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slatey">Confirm new password</span>
+                  <span className={labelCls}>Confirm new password</span>
                   <input
                     type="password"
                     value={pwForm.confirm}
@@ -201,29 +221,31 @@ export default function AdminSettingsPage() {
                     required
                     minLength={8}
                     autoComplete="new-password"
-                    className="w-full rounded-xl border border-brand/15 bg-white px-4 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+                    className={inputCls}
                   />
                 </label>
               </div>
 
               {pwError && (
-                <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <div role="alert" className="mt-4 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700">
                   {pwError}
                 </div>
               )}
               {pwSuccess && (
-                <div className="mt-4 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                  <Check className="h-3 w-3" /> Password updated.
+                <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-lime/20 px-3 py-1 text-xs font-extrabold text-lime-dark">
+                  <Check className="h-3.5 w-3.5" /> Password updated.
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={pwSaving}
-                className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white shadow-soft transition hover:bg-ink/85 disabled:opacity-60"
-              >
-                {pwSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Update password
-              </button>
+              <div className="mt-5 flex">
+                <button
+                  type="submit"
+                  disabled={pwSaving}
+                  className="btn-dark disabled:opacity-60"
+                >
+                  {pwSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Update password
+                </button>
+              </div>
             </form>
           </>
         )}

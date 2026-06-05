@@ -121,20 +121,23 @@ export default function AdminNoticesPage() {
     setShowForm(true);
   }
 
+  const inputCls = "w-full rounded-xl border-2 border-ink/10 bg-white px-4 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/10 dark:border-white/10 dark:bg-[#111c38] dark:text-white";
+  const labelCls = "mb-1.5 block text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50";
+
   return (
-    <main className="min-h-screen bg-brand-50/30 px-4 py-8 sm:px-6">
+    <main className="min-h-screen-safe bg-brand-50/30 px-4 py-8 dark:bg-ink sm:px-6">
       <div className="mx-auto max-w-4xl">
         <div className="mb-6">
           <AdminSubHeader
             title="Notice board"
             subtitle="Banner messages shown on the homepage and dashboard."
-            icon={<Megaphone className="h-6 w-6 text-lime" />}
+            icon={<Megaphone className="h-5 w-5 text-lime" />}
             actions={
               !showForm ? (
                 <button
                   type="button"
                   onClick={() => setShowForm(true)}
-                  className="inline-flex items-center gap-2 rounded-full bg-lime px-4 py-2 text-sm font-bold text-gray-900 shadow-soft transition hover:bg-lime-dark"
+                  className="btn-accent px-4 py-2 text-sm"
                 >
                   <Plus className="h-4 w-4" /> New notice
                 </button>
@@ -144,111 +147,123 @@ export default function AdminNoticesPage() {
         </div>
 
         {error && (
-          <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div role="alert" className="mb-5 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700">
             {error}
           </div>
         )}
 
+        {/* Create / edit form */}
         {showForm && (
-          <form onSubmit={onSubmit} className="mb-6 grid gap-3 rounded-3xl border border-brand/10 bg-white p-6 shadow-soft">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg font-extrabold text-ink">
-                {editing ? "Edit notice" : "Create notice"}
-              </h2>
+          <form onSubmit={onSubmit} className="card-sport mb-6 p-6">
+            <div className="mb-4 flex items-center justify-between border-b-2 border-ink/10 pb-4 dark:border-white/10">
+              <div>
+                <span className="eyebrow">{editing ? "Edit" : "Create"}</span>
+                <h2 className="mt-1 font-display text-lg font-extrabold tracking-tight text-ink dark:text-white">
+                  {editing ? "Edit notice" : "Create notice"}
+                </h2>
+              </div>
               <button
                 type="button"
                 onClick={resetForm}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-brand/15 text-ink hover:bg-brand/5"
+                className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-ink/10 text-ink/50 hover:border-ink/30 hover:text-ink dark:border-white/10 dark:text-white/50 dark:hover:text-white"
                 aria-label="Close"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
-            <label className="block">
-              <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slatey">Title</span>
-              <input
-                type="text"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                required
-                maxLength={160}
-                className="w-full rounded-xl border border-brand/15 bg-white px-4 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slatey">Body</span>
-              <textarea
-                value={form.body}
-                onChange={(e) => setForm({ ...form, body: e.target.value })}
-                rows={3}
-                maxLength={2000}
-                className="w-full rounded-xl border border-brand/15 bg-white px-4 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
-              />
-            </label>
-            <div className="grid grid-cols-2 gap-3">
+
+            <div className="grid gap-4">
               <label className="block">
-                <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slatey">Category</span>
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value as typeof form.category })}
-                  className="w-full rounded-xl border border-brand/15 bg-white px-4 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
-                >
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-              </label>
-              <label className="flex items-center gap-2 pt-6">
+                <span className={labelCls}>Title</span>
                 <input
-                  type="checkbox"
-                  checked={form.active}
-                  onChange={(e) => setForm({ ...form, active: e.target.checked })}
-                  className="h-4 w-4 rounded border-brand/30 accent-brand"
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  required
+                  maxLength={160}
+                  className={inputCls}
                 />
-                <span className="text-sm font-semibold text-ink">Active (shown publicly)</span>
               </label>
+              <label className="block">
+                <span className={labelCls}>Body</span>
+                <textarea
+                  value={form.body}
+                  onChange={(e) => setForm({ ...form, body: e.target.value })}
+                  rows={3}
+                  maxLength={2000}
+                  className={inputCls}
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <label className="block">
+                  <span className={labelCls}>Category</span>
+                  <select
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value as typeof form.category })}
+                    className={inputCls}
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border-2 border-ink/10 px-3 py-2 transition hover:border-brand/30 dark:border-white/10" style={{ marginTop: "1.625rem" }}>
+                  <input
+                    type="checkbox"
+                    checked={form.active}
+                    onChange={(e) => setForm({ ...form, active: e.target.checked })}
+                    className="h-4 w-4 rounded border-ink/20 accent-brand"
+                  />
+                  <span className="text-sm font-semibold text-ink dark:text-white">Active (shown publicly)</span>
+                </label>
+              </div>
             </div>
-            <button
-              type="submit"
-              disabled={saving}
-              className="mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-glow transition hover:bg-brand-600 disabled:opacity-60"
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              {editing ? "Save changes" : "Publish notice"}
-            </button>
+
+            <div className="mt-5 flex">
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn-primary disabled:opacity-60"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                {editing ? "Save changes" : "Publish notice"}
+              </button>
+            </div>
           </form>
         )}
 
         {loading ? (
-          <div className="rounded-3xl border border-brand/10 bg-white p-10 text-center text-sm text-slatey shadow-soft">
-            <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-brand" /> Loading notices…
+          <div className="flex items-center justify-center rounded-3xl border-2 border-ink/10 bg-white p-10 text-sm text-ink/40 dark:border-white/10 dark:bg-[#111c38] dark:text-white/40">
+            <Loader2 className="mr-2 h-5 w-5 animate-spin text-brand" /> Loading notices…
           </div>
         ) : notices.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-brand/20 bg-brand/[0.03] p-10 text-center text-sm text-slatey">
-            <Megaphone className="mx-auto mb-2 h-6 w-6 text-slatey/70" />
-            No notices yet. Create your first one to broadcast on the public site.
+          <div className="rounded-3xl border-2 border-dashed border-ink/10 p-10 text-center dark:border-white/10">
+            <Megaphone className="mx-auto mb-3 h-8 w-8 text-ink/30 dark:text-white/30" />
+            <p className="text-sm font-semibold text-ink/50 dark:text-white/50">
+              No notices yet. Create your first one to broadcast on the public site.
+            </p>
           </div>
         ) : (
           <div className="grid gap-3">
             {notices.map((n) => (
-              <div key={n.id} className="rounded-2xl border border-brand/10 bg-white p-5 shadow-soft">
+              <div key={n.id} className="card-sport p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-display text-lg font-extrabold text-ink">{n.title}</h3>
-                      <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand">
-                        {n.category}
-                      </span>
+                      <h3 className="font-display text-base font-extrabold tracking-tight text-ink dark:text-white">{n.title}</h3>
+                      <span className="tag-sport capitalize">{n.category}</span>
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                          n.active ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${
+                          n.active
+                            ? "bg-lime/20 text-lime-dark"
+                            : "bg-ink/10 text-ink/50 dark:bg-white/10 dark:text-white/50"
                         }`}
                       >
                         {n.active ? "Active" : "Hidden"}
                       </span>
                     </div>
-                    {n.body && <p className="mt-2 text-sm text-slatey whitespace-pre-wrap">{n.body}</p>}
-                    <p className="mt-2 text-[10px] text-slatey">
+                    {n.body && <p className="mt-2 text-sm text-ink/60 dark:text-white/60 whitespace-pre-wrap">{n.body}</p>}
+                    <p className="mt-2 text-[10px] font-semibold text-ink/40 dark:text-white/40">
                       Updated {new Date(n.updated_at).toLocaleString("en-IN")}
                     </p>
                   </div>
@@ -256,14 +271,14 @@ export default function AdminNoticesPage() {
                     <button
                       type="button"
                       onClick={() => onToggle(n)}
-                      className="rounded-lg border border-brand/15 px-2.5 py-1 text-[11px] font-bold text-brand hover:bg-brand/5"
+                      className="btn-outline px-2.5 py-1.5 text-xs"
                     >
                       {n.active ? "Hide" : "Show"}
                     </button>
                     <button
                       type="button"
                       onClick={() => startEdit(n)}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-brand/15 text-ink hover:bg-brand/5"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-ink/10 text-ink/60 transition hover:border-brand/30 hover:text-brand dark:border-white/10 dark:text-white/60 dark:hover:text-brand-300"
                       aria-label="Edit"
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -271,7 +286,7 @@ export default function AdminNoticesPage() {
                     <button
                       type="button"
                       onClick={() => onDelete(n.id)}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-red-200 text-red-600 transition hover:bg-red-50"
                       aria-label="Delete"
                     >
                       <Trash2 className="h-3.5 w-3.5" />

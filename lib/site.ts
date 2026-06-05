@@ -25,7 +25,7 @@ export const site = {
     "Panchawati Complex, Plot No. 2, near Shyam Baba Mandir, Mali Bagan, Biman Nagar, Kaikhali, Kolkata 700052",
   /** Short address for the moving header / ticker — no pincode or sub-locality. */
   headerAddress: "Panchwati Complex, Kaikhali",
-  hoursShort: "Open daily · 6 AM – 11 PM",
+  hoursShort: "Open daily · 5 AM – 11 PM",
   courts: 3,
   instagram: "https://www.instagram.com/breathepickleball/",
   facebook: "https://www.facebook.com/people/Breathe-Pickleball/61568186487606/",
