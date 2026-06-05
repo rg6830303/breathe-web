@@ -16,7 +16,7 @@ export const runtime = "nodejs";
 // cost of a single rupee. Signature verification, booking confirmation, credit
 // granting, emails and dashboard updates all run exactly as in production.
 // ───────────────────────────────────────────────────────────────────────────
-const TEST_ONE_RUPEE = true;
+const TEST_ONE_RUPEE = false;
 const TEST_AMOUNT_PAISE = 100; // ₹1
 const orderAmount = (paise: number) => (TEST_ONE_RUPEE ? TEST_AMOUNT_PAISE : paise);
 

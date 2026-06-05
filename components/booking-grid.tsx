@@ -10,6 +10,12 @@ import { priceForRange } from "@/lib/slots";
 
 type Ext = { before: boolean; after: boolean };
 
+// ── TEMPORARY: ₹1 hosted payment-link test mode ──────────────────────────────
+// Set TEST_PAYMENT_LINK = "" to restore the normal in-app Razorpay checkout.
+// When set, "Confirm & Pay" opens this ₹1 link and records the booking so the
+// full user→admin pipeline can be tested for a rupee, regardless of cart value.
+const TEST_PAYMENT_LINK = "https://rzp.io/rzp/fPpPufB";
+
 type Slot = { court: number; time: string; status: "open" | "booked" | "blocked"; price: number };
 type Account = { id: string; email: string; name: string; role: "user" | "admin" } | null;
 type Addon = { id: string; label: string; price: number; qty: number; on: boolean };
@@ -241,6 +247,27 @@ export function BookingGrid() {
         return { date, court: s.court, time: ef.startTime, durationMin: ef.durationMin };
       });
       const addonsPayload = addons.filter((a) => a.on).map(({ id, label, price, qty }) => ({ id, label, price, qty }));
+
+      // TEMP ₹1 test: open the hosted payment link in a new tab, then record the
+      // booking (test bypass) so it confirms on the dashboard + admin views.
+      if (TEST_PAYMENT_LINK) {
+        window.open(TEST_PAYMENT_LINK, "_blank", "noopener,noreferrer");
+        const verifyRes = await fetch("/api/bookings/verify-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ test: true, slots: slotsPayload, addons: addonsPayload }),
+        });
+        const verify = await verifyRes.json();
+        if (!verifyRes.ok) throw new Error(verify.error ?? "Could not confirm booking");
+        setEmailed(verify.emailed !== false);
+        setConfirmed(true);
+        setSelected([]);
+        setExt({});
+        fetch(`/api/slots?date=${date}`).then((r) => r.json()).then((d) => setSlots(d.slots ?? []));
+        setPaying(false);
+        setTimeout(() => router.push("/dashboard"), 2600);
+        return;
+      }
 
       const orderRes = await fetch("/api/bookings/create-order", {
         method: "POST",
