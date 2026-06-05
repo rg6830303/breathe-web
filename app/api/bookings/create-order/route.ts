@@ -9,6 +9,17 @@ import { BULK_PACKAGE } from "@/lib/credits";
 
 export const runtime = "nodejs";
 
+// ───────────────────────────────────────────────────────────────────────────
+// TEMPORARY ₹1 TEST MODE — set back to false to RESTORE normal pricing.
+// When true, every Razorpay order (slot bookings AND the bulk pass) is created
+// for ₹1 so the full booking/credit flow can be exercised end-to-end for the
+// cost of a single rupee. Signature verification, booking confirmation, credit
+// granting, emails and dashboard updates all run exactly as in production.
+// ───────────────────────────────────────────────────────────────────────────
+const TEST_ONE_RUPEE = true;
+const TEST_AMOUNT_PAISE = 100; // ₹1
+const orderAmount = (paise: number) => (TEST_ONE_RUPEE ? TEST_AMOUNT_PAISE : paise);
+
 type SlotInput = { date: string; time: string; court: number; durationMin?: number };
 const dur = (s: SlotInput) => Math.max(30, Number(s.durationMin) || 60);
 type AddonInput = { id: string; label: string; price: number; qty?: number };
@@ -36,7 +47,7 @@ export async function POST(req: Request) {
       try {
         const rzp = new Razorpay({ key_id: keyIdEarly, key_secret: keySecretEarly });
         const order = await rzp.orders.create({
-          amount: Math.round(BULK_PACKAGE.price * 100),
+          amount: orderAmount(Math.round(BULK_PACKAGE.price * 100)),
           currency: "INR",
           receipt: uuid(),
           notes: { user_id: session.id, purchase: "bulk-12h" },
@@ -125,7 +136,7 @@ export async function POST(req: Request) {
     try {
       const rzp = new Razorpay({ key_id: keyId, key_secret: keySecret });
       order = await rzp.orders.create({
-        amount: Math.round(totals.total * 100),
+        amount: orderAmount(Math.round(totals.total * 100)),
         currency: "INR",
         receipt: uuid(),
         notes: { user_id: session.id, slots: String(slots.length) },
