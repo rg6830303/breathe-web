@@ -14,7 +14,7 @@ type Ext = { before: boolean; after: boolean };
 // Set TEST_PAYMENT_LINK = "" to restore the normal in-app Razorpay checkout.
 // When set, "Confirm & Pay" opens this ₹1 link and records the booking so the
 // full user→admin pipeline can be tested for a rupee, regardless of cart value.
-const TEST_PAYMENT_LINK = "https://rzp.io/rzp/fPpPufB";
+const TEST_PAYMENT_LINK = "";
 
 type Slot = { court: number; time: string; status: "open" | "booked" | "blocked"; price: number };
 type Account = { id: string; email: string; name: string; role: "user" | "admin" } | null;

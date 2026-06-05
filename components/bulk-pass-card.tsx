@@ -9,7 +9,7 @@ type Account = { id: string; email: string; name: string; role: "user" | "admin"
 
 // ── TEMPORARY: ₹1 hosted payment-link test mode ──────────────────────────────
 // Set TEST_PAYMENT_LINK = "" to restore the normal in-app Razorpay checkout.
-const TEST_PAYMENT_LINK = "https://rzp.io/rzp/fPpPufB";
+const TEST_PAYMENT_LINK = "";
 
 function loadRazorpay(): Promise<boolean> {
   return new Promise((resolve) => {

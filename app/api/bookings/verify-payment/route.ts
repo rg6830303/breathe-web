@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     // and record the booking/credit exactly as a real payment would — letting us
     // exercise the full user→admin pipeline for ₹1.
     // ─────────────────────────────────────────────────────────────────────────
-    const TEST_PAYMENT_LINK = true;
+    const TEST_PAYMENT_LINK = false;
     const isTest = TEST_PAYMENT_LINK && body.test === true;
 
     if (!isTest) {
