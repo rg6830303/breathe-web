@@ -11,7 +11,7 @@ import { PageHero } from "@/components/ui/page-hero";
 export const metadata: Metadata = {
   title: "Book a Pickleball Court in Kaikhali",
   description:
-    "Check live court availability and book your pickleball slot at Breathe Pickleball, Kaikhali in seconds. Three pro courts, equipment included, open daily 6 AM – 11 PM.",
+    "Check live court availability and book your pickleball slot at Breathe Pickleball, Kaikhali in seconds. Three pro courts, equipment included, open daily 5 AM – 11 PM.",
   alternates: { canonical: "/book" },
   openGraph: {
     title: "Book a Court | Breathe Pickleball, Kaikhali",

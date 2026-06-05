@@ -10,8 +10,8 @@ const COURTS = [1, 2, 3] as const;
 
 function generateTimes(): string[] {
   const times: string[] = [];
-  // 1-hour slots: 06:00 → 22:00 start (last slot 22:00–23:00, the close time).
-  for (let m = 6 * 60; m <= 22 * 60; m += 60) {
+  // 1-hour slots: 05:00 → 22:00 start (last slot 22:00–23:00, the close time).
+  for (let m = 5 * 60; m <= 22 * 60; m += 60) {
     const h = Math.floor(m / 60);
     const mm = m % 60;
     times.push(`${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`);

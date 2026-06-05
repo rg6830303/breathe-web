@@ -135,7 +135,7 @@ async function aggregate(from: string, to: string) {
 
   const days = daysBetween(from, to);
   const totalCourts = 3;
-  const slotsPerDay = 17; // 06:00 to 23:00 hourly slots
+  const slotsPerDay = 18; // 05:00 to 23:00 hourly slots
   const occupancy = (bookings / (totalCourts * slotsPerDay * days)) * 100;
 
   return {
