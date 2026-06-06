@@ -23,8 +23,8 @@ export function PortalHero({
   children?: React.ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden bg-ink text-white">
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-brand-800 via-ink to-ink" />
+    <section className="relative overflow-hidden bg-brand-800 text-white dark:bg-ink">
+      <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-brand-600 via-brand-800 to-brand-900 dark:from-brand-800 dark:via-ink dark:to-ink" />
       <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-[0.1]" stroke="white" />
       <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
 

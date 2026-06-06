@@ -6,8 +6,9 @@ import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   UploadCloud, Image as ImageIcon, X, Trash2, Check,
-  Loader2, ArrowLeft, RefreshCw, AlertTriangle, Eye, EyeOff, GripVertical, Pencil,
+  Loader2, RefreshCw, AlertTriangle, Eye, EyeOff, GripVertical, Pencil,
 } from "lucide-react";
+import { AdminSubHeader } from "@/components/admin/admin-sub-header";
 
 type GalleryImage = {
   id: string;
@@ -226,94 +227,79 @@ export default function AdminGalleryPage() {
 
   if (loadingAdmin || !admin) {
     return (
-      <div className="flex h-screen items-center justify-center bg-ink">
+      <div className="app-surface flex min-h-screen-safe items-center justify-center bg-brand-50/30 dark:bg-ink">
         <div className="text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-lime" />
-          <p className="mt-4 text-sm text-white/60">Verifying session credentials...</p>
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand" />
+          <p className="mt-4 text-sm text-ink/50 dark:text-white/60">Verifying session credentials…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen-safe bg-ink px-4 py-8 text-white sm:px-6">
-      {/* Tape stripe top */}
-      <div aria-hidden className="tape-stripe fixed left-0 top-0 h-1 w-full opacity-80" />
-
-      <div className="mx-auto max-w-5xl">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+    <main className="app-surface min-h-screen-safe bg-brand-50/30 px-4 py-8 dark:bg-ink sm:px-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <AdminSubHeader
+          title="Gallery manager"
+          subtitle="Drag to reorder · click pencil to edit a caption · toggle the eye to hide/show on the public site."
+          icon={<ImageIcon className="h-5 w-5 text-lime" />}
+          actions={
             <button
-              onClick={() => router.push("/admin")}
-              className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-white/15 text-white/70 transition hover:border-lime hover:text-lime"
-              aria-label="Back to admin"
+              onClick={loadImages}
+              className="inline-flex items-center gap-1.5 rounded-full border-2 border-white/20 px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-wide text-white transition hover:border-lime hover:text-lime"
+              aria-label="Refresh gallery"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <RefreshCw className={`h-3.5 w-3.5 ${loadingImages ? "animate-spin" : ""}`} /> Refresh
             </button>
-            <div>
-              <span className="eyebrow text-lime">Media</span>
-              <h1 className="mt-1 font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-                Gallery Manager
-              </h1>
-              <p className="text-xs text-white/40">
-                Drag to reorder · Click pencil to edit caption · Toggle eye to hide/show on public site.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={loadImages}
-            className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-white/15 text-white/70 transition hover:border-lime hover:text-lime"
-            aria-label="Refresh gallery"
-          >
-            <RefreshCw className={`h-4 w-4 ${loadingImages ? "animate-spin" : ""}`} />
-          </button>
-        </div>
+          }
+        />
 
         {/* Alerts */}
         {error && (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border-2 border-red-500/20 bg-red-500/10 p-4 text-sm font-semibold text-red-400">
+          <div className="flex items-start gap-3 rounded-2xl border-2 border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
             <AlertTriangle className="h-5 w-5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
         {success && (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border-2 border-lime/30 bg-lime/10 p-4 text-sm font-semibold text-lime-dark">
+          <div className="flex items-start gap-3 rounded-2xl border-2 border-lime/40 bg-lime/10 p-4 text-sm font-semibold text-lime-dark">
             <Check className="h-5 w-5 shrink-0" />
             <span>{success}</span>
           </div>
         )}
 
         {/* Upload zone */}
-        <section className="mb-8 overflow-hidden rounded-3xl border-2 border-white/10 bg-white/[0.03]">
-          <div className="border-b-2 border-white/10 px-5 py-4">
-            <span className="eyebrow text-lime">Upload</span>
-            <h3 className="mt-1 font-display text-base font-extrabold tracking-tight text-white">Upload new photos</h3>
+        <section className="card-sport overflow-hidden p-0">
+          <div className="border-b-2 border-ink/10 px-5 py-4 dark:border-white/10">
+            <span className="eyebrow">Upload</span>
+            <h3 className="mt-1 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">Upload new photos</h3>
           </div>
           <div className="p-5">
             <div
               {...getRootProps()}
               className={`cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition ${
-                isDragActive ? "border-lime bg-lime/5" : "border-white/15 bg-white/[0.01] hover:border-white/30"
+                isDragActive
+                  ? "border-lime bg-lime/5 dark:bg-lime/[0.07]"
+                  : "border-ink/15 bg-ink/[0.01] hover:border-brand/40 dark:border-white/15 dark:bg-white/[0.01] dark:hover:border-brand-300/40"
               }`}
             >
               <input {...getInputProps()} />
-              <UploadCloud className="mx-auto mb-3 h-12 w-12 text-lime" />
-              <p className="font-bold text-sm text-white">Drag and drop images here, or click to browse</p>
-              <p className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/40">
+              <UploadCloud className="mx-auto mb-3 h-12 w-12 text-brand" />
+              <p className="text-sm font-bold text-ink dark:text-white">Drag and drop images here, or click to browse</p>
+              <p className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/40 dark:text-white/40">
                 JPG, PNG, WEBP · Max 5MB per file
               </p>
             </div>
 
             {previews.length > 0 && (
               <div className="mt-6">
-                <div className="mb-3 flex items-center justify-between border-b-2 border-white/10 pb-2">
-                  <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-white/50">
+                <div className="mb-3 flex items-center justify-between border-b-2 border-ink/10 pb-2 dark:border-white/10">
+                  <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">
                     {previews.length} file(s) in queue
                   </span>
                   <button
                     onClick={() => setPreviews([])}
-                    className="text-xs font-bold text-red-400 hover:underline"
+                    className="text-xs font-bold text-red-600 hover:underline dark:text-red-400"
                     disabled={uploading}
                   >
                     Clear queue
@@ -321,29 +307,29 @@ export default function AdminGalleryPage() {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {previews.map((p, idx) => (
-                    <div key={idx} className="relative flex gap-3 rounded-2xl border-2 border-white/10 bg-white/[0.03] p-3">
+                    <div key={idx} className="relative flex gap-3 rounded-2xl border-2 border-ink/10 bg-ink/[0.02] p-3 dark:border-white/10 dark:bg-white/[0.03]">
                       <button
                         onClick={() => removePreview(idx)}
                         disabled={uploading}
-                        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 hover:bg-black/80"
+                        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
                         aria-label="Remove preview"
                       >
                         <X className="h-3 w-3" />
                       </button>
-                      <div className="relative aspect-square w-20 shrink-0 overflow-hidden rounded-xl border-2 border-white/10">
+                      <div className="relative aspect-square w-20 shrink-0 overflow-hidden rounded-xl border-2 border-ink/10 dark:border-white/10">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={p.previewUrl} alt="Preview" className="h-full w-full object-cover" />
                       </div>
                       <div className="min-w-0 flex-1 pr-6">
-                        <p className="truncate text-[10px] font-bold uppercase text-white/40">{p.file.name}</p>
-                        <p className="mt-0.5 text-[10px] font-extrabold text-lime">{p.sizeStr}</p>
+                        <p className="truncate text-[10px] font-bold uppercase text-ink/40 dark:text-white/40">{p.file.name}</p>
+                        <p className="mt-0.5 text-[10px] font-extrabold text-brand dark:text-brand-300">{p.sizeStr}</p>
                         <input
                           type="text"
                           placeholder="Caption (optional)"
                           value={p.caption}
                           onChange={(e) => updatePreviewCaption(idx, e.target.value)}
                           disabled={uploading}
-                          className="mt-2 w-full rounded-xl border-2 border-white/10 bg-white/5 px-2 py-1 text-xs text-white placeholder-white/30 outline-none focus:border-lime"
+                          className="mt-2 w-full rounded-xl border-2 border-ink/10 bg-white px-2 py-1 text-xs text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white"
                         />
                       </div>
                     </div>
@@ -352,10 +338,10 @@ export default function AdminGalleryPage() {
                 <button
                   onClick={handleUpload}
                   disabled={uploading}
-                  className="btn-accent mt-5 w-full justify-center disabled:opacity-60"
+                  className="btn-primary mt-5 w-full justify-center disabled:opacity-60"
                 >
                   {uploading ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> Uploading to Vercel Blob...</>
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Uploading to Vercel Blob…</>
                   ) : (
                     <><Check className="h-4 w-4" /> Start uploading</>
                   )}
@@ -366,21 +352,21 @@ export default function AdminGalleryPage() {
         </section>
 
         {/* Gallery library */}
-        <section className="overflow-hidden rounded-3xl border-2 border-white/10 bg-white/[0.02]">
-          <div className="border-b-2 border-white/10 px-5 py-4">
-            <span className="eyebrow text-lime">Library</span>
-            <h3 className="mt-1 font-display text-base font-extrabold tracking-tight text-white">Gallery library</h3>
+        <section className="card-sport overflow-hidden p-0">
+          <div className="border-b-2 border-ink/10 px-5 py-4 dark:border-white/10">
+            <span className="eyebrow">Library</span>
+            <h3 className="mt-1 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">Gallery library</h3>
           </div>
           <div className="p-5">
             {loadingImages ? (
-              <div className="py-12 text-center text-white/50">
-                <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-lime" />
-                <span className="text-sm">Querying database records...</span>
+              <div className="py-12 text-center text-ink/50 dark:text-white/50">
+                <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-brand" />
+                <span className="text-sm">Querying database records…</span>
               </div>
             ) : images.length === 0 ? (
-              <div className="rounded-2xl border-2 border-dashed border-white/10 py-12 text-center">
-                <ImageIcon className="mx-auto mb-3 h-10 w-10 text-white/20" />
-                <span className="text-sm text-white/40">No photos in the gallery yet.</span>
+              <div className="rounded-2xl border-2 border-dashed border-ink/10 py-12 text-center dark:border-white/10">
+                <ImageIcon className="mx-auto mb-3 h-10 w-10 text-ink/20 dark:text-white/20" />
+                <span className="text-sm text-ink/40 dark:text-white/40">No photos in the gallery yet.</span>
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
@@ -391,14 +377,14 @@ export default function AdminGalleryPage() {
                     onDragStart={() => onDragStart(img.id)}
                     onDragOver={(e) => onDragOver(e, img.id)}
                     onDragEnd={onDragEnd}
-                    className={`group relative cursor-move overflow-hidden rounded-2xl border-2 border-white/10 bg-ink ${
+                    className={`group relative cursor-move overflow-hidden rounded-2xl border-2 border-ink/10 bg-white dark:border-white/10 dark:bg-[#111c38] ${
                       img.active === 0 ? "opacity-50" : ""
                     }`}
                   >
-                    <div className="relative aspect-[4/3] w-full border-b-2 border-white/10 bg-black/45">
+                    <div className="relative aspect-[4/3] w-full border-b-2 border-ink/10 bg-ink/5 dark:border-white/10 dark:bg-black/45">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={img.blobUrl} alt={img.caption || ""} className="h-full w-full object-cover" />
-                      <div className="absolute left-2 top-2 rounded-lg bg-black/60 p-1 text-white/50">
+                      <div className="absolute left-2 top-2 rounded-lg bg-black/60 p-1 text-white/70">
                         <GripVertical className="h-3.5 w-3.5" />
                       </div>
                       <div className="absolute right-2 top-2 flex gap-1">
@@ -440,30 +426,30 @@ export default function AdminGalleryPage() {
                             value={editCaption}
                             onChange={(e) => setEditCaption(e.target.value)}
                             autoFocus
-                            className="flex-1 rounded-xl border-2 border-white/10 bg-white/5 px-2 py-1 text-xs text-white outline-none focus:border-lime"
+                            className="flex-1 rounded-xl border-2 border-ink/10 bg-white px-2 py-1 text-xs text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#0d1426] dark:text-white"
                           />
                           <button
                             type="button"
                             onClick={() => saveCaption(img.id)}
                             disabled={savingCaption}
-                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-lime text-ink disabled:opacity-60"
+                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand text-white disabled:opacity-60"
                           >
                             {savingCaption ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                           </button>
                           <button
                             type="button"
                             onClick={() => { setEditingId(null); setEditCaption(""); }}
-                            className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-white/10 bg-white/5 text-white"
+                            className="flex h-8 w-8 items-center justify-center rounded-xl border-2 border-ink/10 text-ink/60 dark:border-white/10 dark:text-white/60"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       ) : (
-                        <p className="line-clamp-2 text-xs leading-relaxed text-white/70">
-                          {img.caption || <span className="italic text-white/30">No caption</span>}
+                        <p className="line-clamp-2 text-xs leading-relaxed text-ink/70 dark:text-white/70">
+                          {img.caption || <span className="italic text-ink/30 dark:text-white/30">No caption</span>}
                         </p>
                       )}
-                      <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-wide text-white/30">
+                      <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-wide text-ink/30 dark:text-white/30">
                         Added {new Date(img.createdAt).toLocaleDateString("en-IN")}
                       </p>
                     </div>
@@ -484,13 +470,13 @@ export default function AdminGalleryPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ type: "spring", stiffness: 320, damping: 28 }}
-              className="w-full max-w-sm overflow-hidden rounded-3xl border-2 border-white/10 bg-[#0d1426] p-6 text-center text-white"
+              className="w-full max-w-sm overflow-hidden rounded-3xl border-2 border-ink/10 bg-white p-6 text-center text-ink dark:border-white/10 dark:bg-[#0d1426] dark:text-white"
             >
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-red-500/30 bg-red-500/10">
-                <Trash2 className="h-7 w-7 text-red-400" />
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
+                <Trash2 className="h-7 w-7 text-red-600 dark:text-red-400" />
               </div>
               <h4 className="font-display text-lg font-extrabold tracking-tight">Delete photo?</h4>
-              <p className="mt-1.5 text-xs text-white/50">
+              <p className="mt-1.5 text-xs text-ink/50 dark:text-white/50">
                 This permanently removes the image from Vercel Blob storage.
               </p>
               <div className="mt-6 flex gap-2">

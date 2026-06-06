@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, Clock, IndianRupee, ListChecks, Mail, Phone, User } from "lucide-react";
+import { CalendarDays, Clock, IndianRupee, ListChecks, Mail, Phone, User, UserCircle } from "lucide-react";
 import { getAdminSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { EditCustomer } from "./edit-customer";
+import { AdminSubHeader } from "@/components/admin/admin-sub-header";
 
 export const dynamic = "force-dynamic";
 
@@ -146,26 +146,17 @@ export default async function AdminCustomerPage({ params }: { params: Promise<{ 
   const { customer, bookings, stats } = data;
 
   return (
-    <main className="min-h-screen bg-white px-4 py-8 dark:bg-ink sm:px-6">
-      <div className="mx-auto max-w-4xl">
+    <main className="app-surface min-h-screen bg-brand-50/30 px-4 py-8 dark:bg-ink sm:px-6">
+      <div className="mx-auto max-w-4xl space-y-6">
 
-        {/* Back nav + title */}
-        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/admin"
-              aria-label="Back to admin"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-ink/10 bg-white text-ink transition hover:border-brand hover:text-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white dark:hover:border-brand-300 dark:hover:text-brand-300"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <div>
-              <span className="eyebrow">Customer</span>
-              <h1 className="heading-lg mt-0.5 text-ink dark:text-white">{customer.full_name}</h1>
-            </div>
-          </div>
-          <EditCustomer id={customer.id} initial={{ full_name: customer.full_name, email: customer.email, phone: customer.phone }} />
-        </div>
+        <AdminSubHeader
+          title={customer.full_name}
+          subtitle="Customer profile, lifetime stats, and booking history."
+          icon={<UserCircle className="h-5 w-5 text-lime" />}
+        />
+
+        {/* Account actions */}
+        <EditCustomer id={customer.id} initial={{ full_name: customer.full_name, email: customer.email, phone: customer.phone }} />
 
         {/* Contact + Stats row */}
         <section className="grid gap-4 md:grid-cols-2">
@@ -235,7 +226,7 @@ export default async function AdminCustomerPage({ params }: { params: Promise<{ 
         </section>
 
         {/* Bookings table */}
-        <section className="mt-6 card-sport p-0 overflow-hidden">
+        <section className="card-sport p-0 overflow-hidden">
           <div className="flex items-center gap-3 border-b-2 border-ink/10 px-6 py-4 dark:border-white/10">
             <CalendarDays className="h-5 w-5 text-brand" aria-hidden />
             <div>

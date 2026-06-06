@@ -50,10 +50,10 @@ export function TestimonialsCarousel({ testimonials }: Props) {
             >
               {/* Stars */}
               <div className="flex gap-0.5 text-lime text-base">{"★".repeat(5)}</div>
-              <p className="text-white/80 italic text-sm leading-relaxed dark:text-white/75">
+              <p className="text-ink/80 italic text-sm leading-relaxed dark:text-white/75">
                 &ldquo;{testimonials[index].quote}&rdquo;
               </p>
-              <div className="flex items-center gap-3 border-t border-white/10 pt-4">
+              <div className="flex items-center gap-3 border-t border-ink/8 pt-4 dark:border-white/10">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lime font-extrabold text-ink text-sm">
                   {initialsFor(testimonials[index].name)}
                 </div>

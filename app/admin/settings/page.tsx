@@ -112,15 +112,13 @@ export default function AdminSettingsPage() {
   const labelCls = "mb-1.5 block text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50";
 
   return (
-    <main className="min-h-screen-safe bg-brand-50/30 px-4 py-8 dark:bg-ink sm:px-6">
-      <div className="mx-auto max-w-3xl">
-        <div className="mb-6">
-          <AdminSubHeader
-            title="Settings"
-            subtitle="Venue configuration and admin account."
-            icon={<SettingsIcon className="h-5 w-5 text-lime" />}
-          />
-        </div>
+    <main className="app-surface min-h-screen-safe bg-brand-50/30 px-4 py-8 dark:bg-ink sm:px-6">
+      <div className="mx-auto max-w-3xl space-y-6">
+        <AdminSubHeader
+          title="Settings"
+          subtitle="Venue configuration and admin account."
+          icon={<SettingsIcon className="h-5 w-5 text-lime" />}
+        />
 
         {loading ? (
           <div className="flex items-center justify-center rounded-3xl border-2 border-ink/10 bg-white p-10 text-sm text-ink/40 dark:border-white/10 dark:bg-[#111c38] dark:text-white/40">
@@ -177,7 +175,7 @@ export default function AdminSettingsPage() {
             </form>
 
             {/* Password form */}
-            <form onSubmit={savePassword} className="card-sport mt-5 p-6">
+            <form onSubmit={savePassword} className="card-sport p-6">
               <div className="mb-5 border-b-2 border-ink/10 pb-4 dark:border-white/10">
                 <span className="eyebrow">Security</span>
                 <h2 className="mt-1 font-display text-lg font-extrabold tracking-tight text-ink dark:text-white">

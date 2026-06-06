@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { ensureSchema } from "@/lib/db/ensure";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { turso } from "@/lib/turso";
@@ -11,7 +10,10 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    await ensureSchema();
+    // NOTE: login deliberately does NOT call ensureSchema() — it only reads the
+    // `users` table (which must already exist for anyone to log in), and the
+    // schema bootstrap added ~40 sequential DB round-trips to every cold-start
+    // login. signup / bookings / admin routes still ensure the schema.
     const ip = getClientIp(req);
     const rl = await checkRateLimit(`auth-login:${ip}`, 6, 15 * 60 * 1000);
     if (!rl.ok) {

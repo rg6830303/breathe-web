@@ -125,36 +125,34 @@ export default function AdminNoticesPage() {
   const labelCls = "mb-1.5 block text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50";
 
   return (
-    <main className="min-h-screen-safe bg-brand-50/30 px-4 py-8 dark:bg-ink sm:px-6">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-6">
-          <AdminSubHeader
-            title="Notice board"
-            subtitle="Banner messages shown on the homepage and dashboard."
-            icon={<Megaphone className="h-5 w-5 text-lime" />}
-            actions={
-              !showForm ? (
-                <button
-                  type="button"
-                  onClick={() => setShowForm(true)}
-                  className="btn-accent px-4 py-2 text-sm"
-                >
-                  <Plus className="h-4 w-4" /> New notice
-                </button>
-              ) : undefined
-            }
-          />
-        </div>
+    <main className="app-surface min-h-screen-safe bg-brand-50/30 px-4 py-8 dark:bg-ink sm:px-6">
+      <div className="mx-auto max-w-4xl space-y-6">
+        <AdminSubHeader
+          title="Notice board"
+          subtitle="Banner messages shown on the homepage and dashboard."
+          icon={<Megaphone className="h-5 w-5 text-lime" />}
+          actions={
+            !showForm ? (
+              <button
+                type="button"
+                onClick={() => setShowForm(true)}
+                className="btn-accent px-4 py-2 text-sm"
+              >
+                <Plus className="h-4 w-4" /> New notice
+              </button>
+            ) : undefined
+          }
+        />
 
         {error && (
-          <div role="alert" className="mb-5 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700">
+          <div role="alert" className="rounded-xl border-2 border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700">
             {error}
           </div>
         )}
 
         {/* Create / edit form */}
         {showForm && (
-          <form onSubmit={onSubmit} className="card-sport mb-6 p-6">
+          <form onSubmit={onSubmit} className="card-sport p-6">
             <div className="mb-4 flex items-center justify-between border-b-2 border-ink/10 pb-4 dark:border-white/10">
               <div>
                 <span className="eyebrow">{editing ? "Edit" : "Create"}</span>
@@ -194,7 +192,7 @@ export default function AdminNoticesPage() {
                   className={inputCls}
                 />
               </label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
                 <label className="block">
                   <span className={labelCls}>Category</span>
                   <select
@@ -207,7 +205,7 @@ export default function AdminNoticesPage() {
                     <option value="monthly">Monthly</option>
                   </select>
                 </label>
-                <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border-2 border-ink/10 px-3 py-2 transition hover:border-brand/30 dark:border-white/10" style={{ marginTop: "1.625rem" }}>
+                <label className="flex h-[42px] cursor-pointer items-center gap-2.5 rounded-xl border-2 border-ink/10 px-3 transition hover:border-brand/30 dark:border-white/10">
                   <input
                     type="checkbox"
                     checked={form.active}

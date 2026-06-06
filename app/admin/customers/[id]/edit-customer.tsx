@@ -79,29 +79,32 @@ export function EditCustomer({
 
   if (!open) {
     return (
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="btn-outline px-3 py-2 text-xs"
-        >
-          <Pencil className="h-3.5 w-3.5" /> Edit profile
-        </button>
-        <button
-          type="button"
-          onClick={grantPass}
-          className="btn-accent px-3 py-2 text-xs"
-        >
-          <Clock className="h-3.5 w-3.5" /> Grant 12h pass
-        </button>
-        <button
-          type="button"
-          onClick={remove}
-          disabled={deleting}
-          className="inline-flex items-center gap-1.5 rounded-full border-2 border-red-200 bg-white px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-red-600 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950/20"
-        >
-          {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Delete
-        </button>
+      <div className="card-sport flex flex-wrap items-center justify-between gap-3 p-4">
+        <span className="eyebrow">Account actions</span>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="btn-outline px-3 py-2 text-xs"
+          >
+            <Pencil className="h-3.5 w-3.5" /> Edit profile
+          </button>
+          <button
+            type="button"
+            onClick={grantPass}
+            className="btn-accent px-3 py-2 text-xs"
+          >
+            <Clock className="h-3.5 w-3.5" /> Grant 12h pass
+          </button>
+          <button
+            type="button"
+            onClick={remove}
+            disabled={deleting}
+            className="inline-flex items-center gap-1.5 rounded-full border-2 border-red-200 bg-white px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-red-600 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950/20"
+          >
+            {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Delete
+          </button>
+        </div>
       </div>
     );
   }

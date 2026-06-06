@@ -8,8 +8,9 @@ import * as XLSX from "xlsx";
 import { motion } from "framer-motion";
 import {
   FileSpreadsheet, Upload, Download, Check, AlertCircle,
-  Trash2, ArrowLeft, Loader2, Play, ChevronRight, AlertTriangle
+  Loader2, Play, AlertTriangle
 } from "lucide-react";
+import { AdminSubHeader } from "@/components/admin/admin-sub-header";
 
 type ParsedRow = {
   date: string;
@@ -311,47 +312,32 @@ export default function ImportWizardPage() {
   const includedCount = rows.filter((r) => !r.isExcluded).length;
 
   return (
-    <main className="min-h-screen bg-white px-4 py-8 dark:bg-ink sm:px-6">
-      <div className="mx-auto max-w-5xl">
+    <main className="app-surface min-h-screen bg-brand-50/30 px-4 py-8 dark:bg-ink sm:px-6">
+      <div className="mx-auto max-w-5xl space-y-6">
 
-        {/* Page header */}
-        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <AdminSubHeader
+          title="Booking import"
+          subtitle="Batch import historical spreadsheet bookings directly into the Turso database."
+          icon={<FileSpreadsheet className="h-5 w-5 text-lime" />}
+          actions={
             <button
-              onClick={() => router.push("/admin")}
-              aria-label="Back to admin"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-ink/10 bg-white text-ink transition hover:border-brand hover:text-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white dark:hover:border-brand-300 dark:hover:text-brand-300"
+              onClick={downloadTemplate}
+              className="inline-flex items-center gap-1.5 rounded-full border-2 border-white/20 px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-wide text-white transition hover:border-lime hover:text-lime"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <Download className="h-3.5 w-3.5" /> Download template
             </button>
-            <div>
-              <span className="eyebrow">
-                <FileSpreadsheet className="h-3.5 w-3.5" />
-                Import
-              </span>
-              <h1 className="heading-lg mt-0.5 text-ink dark:text-white">Ingestion Engine</h1>
-              <p className="mt-0.5 text-xs text-ink/50 dark:text-white/40">
-                Batch import historical spreadsheet bookings directly into Turso database.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={downloadTemplate}
-            className="btn-outline px-4 py-2 text-xs"
-          >
-            <Download className="h-4 w-4" /> Download Template
-          </button>
-        </div>
+          }
+        />
 
         {/* Alert messages */}
         {error && (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border-2 border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400" role="alert">
+          <div className="flex items-start gap-3 rounded-2xl border-2 border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400" role="alert">
             <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" aria-hidden />
             <span>{error}</span>
           </div>
         )}
         {success && (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border-2 border-lime/40 bg-lime/10 p-4 text-sm text-lime-dark dark:border-lime/30 dark:bg-lime/[0.08]" role="status">
+          <div className="flex items-start gap-3 rounded-2xl border-2 border-lime/40 bg-lime/10 p-4 text-sm text-lime-dark dark:border-lime/30 dark:bg-lime/[0.08]" role="status">
             <Check className="h-5 w-5 shrink-0 mt-0.5" aria-hidden />
             <span>{success}</span>
           </div>
@@ -359,7 +345,7 @@ export default function ImportWizardPage() {
 
         {/* Progress bar */}
         {importing && (
-          <div className="mb-6 card-sport p-4">
+          <div className="card-sport p-4">
             <div className="mb-2 flex items-center justify-between text-xs font-extrabold uppercase tracking-wide text-ink dark:text-white">
               <span>Importing rows…</span>
               <span className="text-brand">{progress}%</span>
@@ -378,7 +364,7 @@ export default function ImportWizardPage() {
         )}
 
         {/* Step 1: Drop zone */}
-        <section className="card-sport mb-6 p-0 overflow-hidden">
+        <section className="card-sport p-0 overflow-hidden">
           <div className="tape-stripe h-1.5 w-full" />
           <div className="p-5">
             <span className="eyebrow mb-3">Step 1</span>

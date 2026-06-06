@@ -85,8 +85,8 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
 
   return (
     <>
-      {/* ── HERO — solid ink, court lines, PaddleScene ── */}
-      <section className="relative min-h-[88svh] overflow-hidden bg-ink text-white">
+      {/* ── HERO — royal-blue brand banner (light) / ink (dark) ── */}
+      <section className="relative min-h-[88svh] overflow-hidden bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 text-white dark:from-ink dark:via-ink dark:to-ink">
         {/* Court-tape accent stripe */}
         <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
 
@@ -212,18 +212,18 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
         </Container>
       </section>
 
-      {/* ── FEATURES — dark ink section ── */}
-      <section className="bg-ink px-4 py-20 text-white sm:px-6 lg:px-8">
+      {/* ── FEATURES — light section / ink (dark) ── */}
+      <section className="bg-white px-4 py-20 text-ink dark:bg-ink dark:text-white sm:px-6 lg:px-8">
         <Container className="!px-0">
           {/* Section header */}
           <ScrollReveal direction="up">
             <div className="mb-12 text-center">
-              <span className="eyebrow text-lime">Why Breathe</span>
-              <h2 className="heading-lg mt-4 text-white">
+              <span className="eyebrow text-brand dark:text-lime">Why Breathe</span>
+              <h2 className="heading-lg mt-4 text-ink dark:text-white">
                 Everything a great game needs,{" "}
                 <span className="mark-lime">in one place</span>
               </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-base text-white/65">
+              <p className="mx-auto mt-4 max-w-2xl text-base text-slatey dark:text-white/65">
                 From the surface under your feet to the snacks after match point, every detail is built for players.
               </p>
             </div>
@@ -302,8 +302,8 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
         </Container>
       </section>
 
-      {/* ── SPLIT PROMO — alternating ink/lime ── */}
-      <section className="bg-ink px-4 py-20 sm:px-6 lg:px-8">
+      {/* ── SPLIT PROMO — light / ink (dark) ── */}
+      <section className="bg-white px-4 py-20 dark:bg-ink sm:px-6 lg:px-8">
         <Container className="!px-0 grid gap-5 lg:grid-cols-2">
           {/* Court booking card — light */}
           <ScrollReveal direction="left" className="h-full">
@@ -370,13 +370,13 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
       {/* ── NOTICE BOARD — light section ── */}
       <NoticeBoard notices={notices} />
 
-      {/* ── TESTIMONIALS — dark ink section ── */}
-      <section className="bg-ink px-4 py-20 sm:px-6 lg:px-8">
+      {/* ── TESTIMONIALS — light / ink (dark) ── */}
+      <section className="bg-white px-4 py-20 dark:bg-ink sm:px-6 lg:px-8">
         <Container className="!px-0">
           <ScrollReveal direction="up">
             <div className="mb-2 text-center">
-              <span className="eyebrow text-lime">From our community</span>
-              <h2 className="heading-lg mt-4 text-white">
+              <span className="eyebrow text-brand dark:text-lime">From our community</span>
+              <h2 className="heading-lg mt-4 text-ink dark:text-white">
                 Loved by players{" "}
                 <span className="mark-lime">across Kolkata</span>
               </h2>

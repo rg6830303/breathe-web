@@ -96,16 +96,16 @@ export default function ContactPage() {
           </Container>
         </section>
 
-        {/* ── ADDRESS + MAP — dark ink section ── */}
-        <section className="bg-ink px-4 py-16 sm:px-6 lg:px-8">
+        {/* ── ADDRESS + MAP — light / ink (dark) ── */}
+        <section className="bg-white px-4 py-16 dark:bg-ink sm:px-6 lg:px-8">
           <Container className="!px-0">
             <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
               {/* Info panel */}
               <ScrollReveal direction="left" className="h-full">
-                <div className="rounded-3xl border-2 border-white/10 p-8 h-full flex flex-col justify-between">
+                <div className="card-sport p-8 h-full flex flex-col justify-between">
                   <div>
-                    <span className="eyebrow text-lime">Find us</span>
-                    <h2 className="heading-lg mt-4 text-white" style={{ fontSize: "clamp(1.6rem,3vw,2.2rem)" }}>
+                    <span className="eyebrow text-brand dark:text-lime">Find us</span>
+                    <h2 className="heading-lg mt-4 text-ink dark:text-white" style={{ fontSize: "clamp(1.6rem,3vw,2.2rem)" }}>
                       Address &{" "}
                       <span className="mark-lime">hours</span>
                     </h2>
@@ -116,8 +116,8 @@ export default function ContactPage() {
                           <MapPin className="h-5 w-5 text-lime" />
                         </div>
                         <div>
-                          <div className="font-extrabold uppercase tracking-wide text-white/80 text-xs">Address</div>
-                          <p className="mt-1 text-xs text-white/55 leading-relaxed">{site.address}</p>
+                          <div className="font-extrabold uppercase tracking-wide text-ink/70 dark:text-white/80 text-xs">Address</div>
+                          <p className="mt-1 text-xs text-slatey dark:text-white/55 leading-relaxed">{site.address}</p>
                         </div>
                       </div>
 
@@ -126,8 +126,8 @@ export default function ContactPage() {
                           <Clock className="h-5 w-5 text-lime" />
                         </div>
                         <div>
-                          <div className="font-extrabold uppercase tracking-wide text-white/80 text-xs">Opening hours</div>
-                          <p className="mt-1 text-xs text-white/55 leading-relaxed">{site.hoursShort}</p>
+                          <div className="font-extrabold uppercase tracking-wide text-ink/70 dark:text-white/80 text-xs">Opening hours</div>
+                          <p className="mt-1 text-xs text-slatey dark:text-white/55 leading-relaxed">{site.hoursShort}</p>
                         </div>
                       </div>
 
@@ -136,10 +136,10 @@ export default function ContactPage() {
                           <Phone className="h-5 w-5 text-lime" />
                         </div>
                         <div>
-                          <div className="font-extrabold uppercase tracking-wide text-white/80 text-xs">Phone</div>
+                          <div className="font-extrabold uppercase tracking-wide text-ink/70 dark:text-white/80 text-xs">Phone</div>
                           <a
                             href={site.phoneHref}
-                            className="mt-1 block text-xs font-bold text-lime hover:underline"
+                            className="mt-1 block text-xs font-bold text-brand dark:text-lime hover:underline"
                           >
                             {site.phoneDisplay}
                           </a>
@@ -149,7 +149,7 @@ export default function ContactPage() {
                   </div>
 
                   {/* Social handles */}
-                  <div className="mt-8 flex items-center gap-3 border-t border-white/10 pt-6">
+                  <div className="mt-8 flex items-center gap-3 border-t border-ink/10 dark:border-white/10 pt-6">
                     <motion.a
                       whileHover={{ y: -3, scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -157,7 +157,7 @@ export default function ContactPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Instagram"
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/15 text-white transition hover:border-lime hover:text-lime"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-ink/15 text-ink dark:border-white/15 dark:text-white transition hover:border-lime hover:text-lime"
                     >
                       <Instagram className="h-4 w-4" />
                     </motion.a>
@@ -168,7 +168,7 @@ export default function ContactPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Facebook"
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/15 text-white transition hover:border-lime hover:text-lime"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-ink/15 text-ink dark:border-white/15 dark:text-white transition hover:border-lime hover:text-lime"
                     >
                       <Facebook className="h-4 w-4" />
                     </motion.a>
@@ -178,7 +178,7 @@ export default function ContactPage() {
 
               {/* Map */}
               <ScrollReveal direction="right" className="h-full">
-                <div className="overflow-hidden rounded-3xl border-2 border-white/10 h-full min-h-[380px] relative">
+                <div className="overflow-hidden rounded-3xl border-2 border-ink/10 dark:border-white/10 h-full min-h-[380px] relative">
                   <iframe
                     title="Breathe Pickleball location"
                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3682.0!2d88.4347!3d22.6548!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2sBreathe+Pickleball!5e0!3m2!1sen!2sin!4v1234"
@@ -242,8 +242,8 @@ export default function ContactPage() {
           </Container>
         </section>
 
-        {/* ── WHATSAPP COMMUNITY — dark ink section ── */}
-        <section className="bg-ink px-4 pb-20 pt-8 sm:px-6 lg:px-8">
+        {/* ── WHATSAPP COMMUNITY — light / ink (dark) ── */}
+        <section className="bg-white px-4 pb-20 pt-8 dark:bg-ink sm:px-6 lg:px-8">
           <Container className="!px-0">
             <ScrollReveal direction="up">
               <div className="relative overflow-hidden rounded-3xl bg-lime p-8 text-ink sm:p-10">

@@ -175,8 +175,9 @@ export function BookingGrid() {
       setConfirmed(true);
       setSelected([]);
       setExt({});
-      fetch(`/api/slots?date=${date}`).then((r) => r.json()).then((d) => setSlots(d.slots ?? []));
-      setTimeout(() => router.push("/dashboard"), 1800);
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 1200);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not book with credit.");
     } finally {
@@ -316,8 +317,12 @@ export function BookingGrid() {
             setConfirmed(true);
             setSelected([]);
             setExt({});
-            fetch(`/api/slots?date=${date}`).then((r) => r.json()).then((d) => setSlots(d.slots ?? []));
-            setTimeout(() => router.push("/dashboard"), 2600);
+            // Hard-navigate to the portal so the just-confirmed booking renders
+            // immediately (bypasses the App Router client cache). Brief pause so
+            // the "Booking confirmed!" state is visible first.
+            setTimeout(() => {
+              window.location.href = "/dashboard";
+            }, 1200);
           } catch (e) {
             setError(e instanceof Error ? e.message : "Verification failed");
           } finally {

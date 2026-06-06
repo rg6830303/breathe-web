@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
-  ArrowLeft,
   Check,
   Loader2,
   Mail,
   RefreshCw,
   Send,
   X,
+  Activity,
 } from "lucide-react";
+import { AdminSubHeader } from "@/components/admin/admin-sub-header";
 
 type HealthResp = {
   config: {
@@ -113,38 +113,26 @@ export default function DiagnosticsPage() {
     v?.ok === true;
 
   return (
-    <main className="min-h-screen-safe bg-brand-50/30 px-4 py-8 dark:bg-ink sm:px-6">
-      <div className="mx-auto max-w-3xl">
-        {/* Header */}
-        <div className="mb-6 flex items-center gap-3">
-          <Link
-            href="/admin"
-            className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-ink/10 bg-white text-ink transition hover:border-brand/30 hover:text-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white"
-            aria-label="Back to admin"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div className="flex-1">
-            <span className="eyebrow">System</span>
-            <h1 className="mt-1 font-display text-2xl font-extrabold tracking-tight text-ink dark:text-white sm:text-3xl">
-              Email diagnostics
-            </h1>
-            <p className="mt-0.5 text-xs text-ink/50 dark:text-white/50">
-              Live status of the Gmail SMTP transport used for password resets, booking confirmations, and admin notifications.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={load}
-            className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-ink/10 bg-white text-ink transition hover:border-brand/30 hover:text-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white"
-            aria-label="Reload"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
-        </div>
+    <main className="app-surface min-h-screen-safe bg-brand-50/30 px-4 py-8 dark:bg-ink sm:px-6">
+      <div className="mx-auto max-w-3xl space-y-6">
+        <AdminSubHeader
+          title="Email diagnostics"
+          subtitle="Live status of the Gmail SMTP transport used for password resets, booking confirmations, and admin notifications."
+          icon={<Activity className="h-5 w-5 text-lime" />}
+          actions={
+            <button
+              type="button"
+              onClick={load}
+              className="inline-flex items-center gap-1.5 rounded-full border-2 border-white/20 px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-wide text-white transition hover:border-lime hover:text-lime"
+              aria-label="Reload"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
+            </button>
+          }
+        />
 
         {authError && (
-          <div className="mb-5 flex items-start gap-2 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          <div className="flex items-start gap-2 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {authError}
           </div>
         )}
@@ -154,10 +142,10 @@ export default function DiagnosticsPage() {
             <Loader2 className="mr-2 h-5 w-5 animate-spin text-brand" /> Querying SMTP…
           </div>
         ) : health ? (
-          <>
+          <div className="space-y-6">
             {/* Status banner */}
             <div
-              className={`mb-5 overflow-hidden rounded-3xl border-2 p-5 ${
+              className={`overflow-hidden rounded-3xl border-2 p-5 ${
                 allGood
                   ? "border-lime/40 bg-lime/10"
                   : "border-amber-300 bg-amber-50 dark:border-amber-600/30 dark:bg-amber-950/20"
@@ -175,7 +163,7 @@ export default function DiagnosticsPage() {
             </div>
 
             {/* Config */}
-            <section className="card-sport mb-5 p-5">
+            <section className="card-sport p-5">
               <span className="eyebrow">Environment</span>
               <h2 className="mt-1 mb-4 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">
                 Configuration
@@ -206,7 +194,7 @@ export default function DiagnosticsPage() {
             </section>
 
             {/* SMTP verify */}
-            <section className="card-sport mb-5 p-5">
+            <section className="card-sport p-5">
               <span className="eyebrow">Connection</span>
               <h2 className="mt-1 mb-4 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">
                 SMTP verify
@@ -222,7 +210,7 @@ export default function DiagnosticsPage() {
             </section>
 
             {/* Test send */}
-            <section className="card-sport mb-5 p-5">
+            <section className="card-sport p-5">
               <span className="eyebrow">Test delivery</span>
               <h2 className="mt-1 mb-4 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">
                 Send a test email
@@ -302,7 +290,7 @@ export default function DiagnosticsPage() {
                 </li>
               </ul>
             </section>
-          </>
+          </div>
         ) : null}
       </div>
     </main>

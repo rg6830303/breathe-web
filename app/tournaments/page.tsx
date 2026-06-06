@@ -75,13 +75,13 @@ export default function TournamentsPage() {
           </div>
         </div>
 
-        {/* ── TOURNAMENT FORMATS — dark ink section ── */}
-        <section className="bg-ink px-4 py-20 text-white sm:px-6 lg:px-8">
+        {/* ── TOURNAMENT FORMATS — light / ink (dark) ── */}
+        <section className="bg-white px-4 py-20 text-ink dark:bg-ink dark:text-white sm:px-6 lg:px-8">
           <Container className="!px-0">
             <ScrollReveal direction="up">
               <div className="mb-12 text-center">
-                <span className="eyebrow text-lime">Event formats</span>
-                <h2 className="heading-lg mt-4 text-white">
+                <span className="eyebrow text-brand dark:text-lime">Event formats</span>
+                <h2 className="heading-lg mt-4 text-ink dark:text-white">
                   A bracket for{" "}
                   <span className="mark-lime">every kind</span> of player
                 </h2>
