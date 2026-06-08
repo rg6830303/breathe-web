@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth";
 import { sendPushToAll, pushConfigured } from "@/lib/push";
+import { recordNotification } from "@/lib/notify-store";
 
 export const runtime = "nodejs";
 
@@ -30,6 +31,10 @@ export async function POST(req: NextRequest) {
     }
 
     const sent = await sendPushToAll({ title, body: message, url, tag: "broadcast" }, audience);
+    // Record it in the in-app inbox for everyone who'll see the bell. Admins
+    // always get the broadcast in their feed; players get it unless "users"-only
+    // is implied (it's a general announcement, so record to the user feed too).
+    await recordNotification({ role: "admin", title, body: message, url });
     return NextResponse.json({ ok: true, sent });
   } catch (err) {
     console.error("[push/notify error]", err);

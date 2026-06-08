@@ -3,6 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { BookingInvoice } from "@/lib/pdf/BookingInvoice";
 import { sendMail } from "@/lib/mailer";
 import { sendPushToUser, sendPushToAdmins } from "@/lib/push";
+import { recordNotification } from "@/lib/notify-store";
 
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT = process.env.TELEGRAM_ADMIN_CHAT_ID;
@@ -176,23 +177,22 @@ export async function notifyBookingConfirmed(b: {
         .catch((e) => console.error("[telegram send exception]", e));
     }
 
-    // 4. Web-push to the player's installed PWA + every admin device.
+    // 4. Web-push + persistent inbox: the player's PWA + every admin device.
     try {
       const courtText = b.courtNumber ? ` · Court ${b.courtNumber}` : "";
+      const userBody = `${dateStr} · ${slotRange}${courtText}`;
+      const adminBody = `${b.userName} — ${dateStr} ${slotRange}${courtText} · ₹${total.toLocaleString("en-IN")}`;
       if (b.userId) {
         await sendPushToUser(b.userId, {
           title: "Booking confirmed 🎾",
-          body: `${dateStr} · ${slotRange}${courtText}`,
+          body: userBody,
           url: `/dashboard?booking=${b.id}`,
           tag: `booking-${b.id}`,
         }).catch(() => {});
+        await recordNotification({ userId: b.userId, role: "user", title: "Booking confirmed 🎾", body: userBody, url: `/dashboard?booking=${b.id}` });
       }
-      await sendPushToAdmins({
-        title: "New booking",
-        body: `${b.userName} — ${dateStr} ${slotRange}${courtText} · ₹${total.toLocaleString("en-IN")}`,
-        url: "/admin",
-        tag: `admin-booking-${b.id}`,
-      }).catch(() => {});
+      await sendPushToAdmins({ title: "New booking", body: adminBody, url: "/admin", tag: `admin-booking-${b.id}` }).catch(() => {});
+      await recordNotification({ role: "admin", title: "New booking", body: adminBody, url: "/admin" });
     } catch (pushErr) {
       console.error("[push dispatch error]", pushErr);
     }
@@ -207,12 +207,14 @@ export async function notifyBookingConfirmed(b: {
 /** Booking-cancelled email to the player + a heads-up to the admin inbox. */
 export async function notifyBookingCancelled(b: {
   id: string;
+  userId?: string;
   userEmail: string;
   userName: string;
   slotDate: string;
   slotTime: string;
   courtNumber?: number;
   amount?: number;
+  refunded?: boolean;
 }): Promise<{ emailed: boolean }> {
   try {
     const dateStr = new Date(b.slotDate).toLocaleDateString("en-IN", {
@@ -256,6 +258,22 @@ export async function notifyBookingCancelled(b: {
         text: `${b.userName} (${b.userEmail}) cancelled their booking on ${dateStr} at ${format12h(b.slotTime)}${court}. Ref ${shortRef}.`,
       }).catch((e) => console.error("[cancel admin email error]", e));
     }
+
+    // Web-push + inbox for the cancellation (player) and a heads-up to admins.
+    try {
+      const refundLine = b.refunded ? " · refund processed" : b.amount ? " · refund being processed" : "";
+      const userBody = `${dateStr} at ${format12h(b.slotTime)}${court} was cancelled${refundLine}.`;
+      if (b.userId) {
+        await sendPushToUser(b.userId, { title: "Booking cancelled", body: userBody, url: "/dashboard", tag: `cancel-${b.id}` }).catch(() => {});
+        await recordNotification({ userId: b.userId, role: "user", title: "Booking cancelled", body: userBody, url: "/dashboard" });
+      }
+      const adminBody = `${b.userName} cancelled ${dateStr} ${format12h(b.slotTime)}${court}${refundLine}.`;
+      await sendPushToAdmins({ title: "Booking cancelled", body: adminBody, url: "/admin", tag: `admin-cancel-${b.id}` }).catch(() => {});
+      await recordNotification({ role: "admin", title: "Booking cancelled", body: adminBody, url: "/admin" });
+    } catch (pushErr) {
+      console.error("[cancel push dispatch error]", pushErr);
+    }
+
     return { emailed: result.ok };
   } catch (err) {
     console.error("[notifyBookingCancelled error]", err);

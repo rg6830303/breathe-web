@@ -110,12 +110,14 @@ export async function POST(req: Request) {
     const { waitUntil } = require("@vercel/functions");
     const run = notifyBookingCancelled({
       id,
+      userId: session.id,
       userEmail: row.guest_email ? String(row.guest_email) : session.email,
       userName: row.guest_name ? String(row.guest_name) : session.name,
       slotDate,
       slotTime,
       courtNumber: row.court_number ? Number(row.court_number) : undefined,
       amount: row.amount_paid ? Number(row.amount_paid) : undefined,
+      refunded: refund.ok,
     }).catch((e: unknown) => console.error("[cancel notify error]", e));
     if (waitUntil) waitUntil(run);
   } catch (e) {

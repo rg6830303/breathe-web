@@ -13,6 +13,7 @@ import { GameStats } from "./game-stats";
 import { StatTiles } from "./stat-tile";
 import { ProfileForm } from "./profile-form";
 import { PushToggle } from "@/components/push-toggle";
+import { NotificationBell } from "@/components/notification-bell";
 import { CancelBookingButton } from "./cancel-button";
 import { NextSessionCard } from "./next-session-card";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
@@ -244,9 +245,12 @@ export default async function DashboardPage() {
           }
           right={
             <div className="flex flex-col items-start gap-3 md:items-end">
-              <span className="tag-sport border-white/20 bg-white/10 text-white">
-                <FavIcon className="h-3.5 w-3.5" /> {favBand.label}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="tag-sport border-white/20 bg-white/10 text-white">
+                  <FavIcon className="h-3.5 w-3.5" /> {favBand.label}
+                </span>
+                <NotificationBell onDark />
+              </div>
               <Link href="/book" className="btn-accent">
                 Book another slot <ArrowRight className="h-4 w-4" />
               </Link>

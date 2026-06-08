@@ -10,6 +10,7 @@ import { EmailPanel } from "@/components/admin/email-panel";
 import { WalkInModal } from "@/components/admin/walk-in-modal";
 import { BulkBlockModal } from "@/components/admin/bulk-block-modal";
 import { AddUserModal } from "@/components/admin/add-user-modal";
+import { NotificationBell } from "@/components/notification-bell";
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   ArrowRight,
@@ -114,6 +115,9 @@ export function AdminConsole() {
       <div className="card-sport overflow-hidden rounded-2xl p-0">
         {/* Top action bar */}
         <div className="flex flex-wrap items-center justify-end gap-2 border-b-2 border-ink/10 bg-ink/[0.03] px-4 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
+          <div className="mr-auto">
+            <NotificationBell />
+          </div>
           <button
             type="button"
             onClick={() => setWalkInOpen(true)}
