@@ -120,6 +120,7 @@ export async function POST(req: Request) {
       for (const bs of bookedSlots) {
         const run = notifyBookingConfirmed({
           id: bs.id,
+          userId: session.id,
           userEmail,
           userName,
           userPhone: userPhone || undefined,

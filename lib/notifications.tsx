@@ -2,6 +2,7 @@ import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { BookingInvoice } from "@/lib/pdf/BookingInvoice";
 import { sendMail } from "@/lib/mailer";
+import { sendPushToUser, sendPushToAdmins } from "@/lib/push";
 
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT = process.env.TELEGRAM_ADMIN_CHAT_ID;
@@ -11,6 +12,7 @@ const VENUE_ADDRESS = "Panchawati Complex, Plot 2, Biman Nagar, Kaikhali, Kolkat
 
 export async function notifyBookingConfirmed(b: {
   id: string;
+  userId?: string;
   userEmail: string;
   userName: string;
   userPhone?: string;
@@ -172,6 +174,27 @@ export async function notifyBookingConfirmed(b: {
           }
         })
         .catch((e) => console.error("[telegram send exception]", e));
+    }
+
+    // 4. Web-push to the player's installed PWA + every admin device.
+    try {
+      const courtText = b.courtNumber ? ` · Court ${b.courtNumber}` : "";
+      if (b.userId) {
+        await sendPushToUser(b.userId, {
+          title: "Booking confirmed 🎾",
+          body: `${dateStr} · ${slotRange}${courtText}`,
+          url: `/dashboard?booking=${b.id}`,
+          tag: `booking-${b.id}`,
+        }).catch(() => {});
+      }
+      await sendPushToAdmins({
+        title: "New booking",
+        body: `${b.userName} — ${dateStr} ${slotRange}${courtText} · ₹${total.toLocaleString("en-IN")}`,
+        url: "/admin",
+        tag: `admin-booking-${b.id}`,
+      }).catch(() => {});
+    } catch (pushErr) {
+      console.error("[push dispatch error]", pushErr);
     }
 
     return { emailed };

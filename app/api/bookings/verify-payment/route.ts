@@ -251,6 +251,7 @@ export async function POST(req: Request) {
             : 1;
           return {
             id: bookingIds[i],
+            userId: session.id,
             userEmail,
             userName,
             userPhone: userPhone || undefined,

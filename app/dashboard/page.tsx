@@ -12,6 +12,7 @@ import { ActivityHeatmap } from "./activity-heatmap";
 import { GameStats } from "./game-stats";
 import { StatTiles } from "./stat-tile";
 import { ProfileForm } from "./profile-form";
+import { PushToggle } from "@/components/push-toggle";
 import { CancelBookingButton } from "./cancel-button";
 import { NextSessionCard } from "./next-session-card";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
@@ -457,9 +458,12 @@ export default async function DashboardPage() {
             </section>
 
             {/* Profile sidebar */}
-            <aside>
+            <aside className="space-y-5">
               <ScrollReveal direction="right">
                 <ProfileForm initialName={fullName} initialPhone={phone} email={email} />
+              </ScrollReveal>
+              <ScrollReveal direction="right" delay={0.05}>
+                <PushToggle />
               </ScrollReveal>
             </aside>
           </div>
