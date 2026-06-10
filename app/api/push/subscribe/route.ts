@@ -2,12 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { turso } from "@/lib/turso";
 import { getSession, getAdminSession } from "@/lib/auth";
 import { ensurePushTable } from "@/lib/push";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = await checkRateLimit(`push-sub:${getClientIp(req)}`, 30, 60 * 1000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: `Too many attempts. Try again in ${rl.retryAfterSec}s.` },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+      );
+    }
     await ensurePushTable();
 
     const body = await req.json().catch(() => ({}));

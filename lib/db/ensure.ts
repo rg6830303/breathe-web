@@ -195,51 +195,35 @@ async function runResilient(sql: string): Promise<void> {
   }
 }
 
-/** Parse "ALTER TABLE <t> ADD COLUMN <col> …" → { table, col }. */
-function parseAlter(sql: string): { table: string; col: string } | null {
-  const m = sql.match(/ALTER TABLE (\w+) ADD COLUMN (\w+)/i);
-  return m ? { table: m[1], col: m[2] } : null;
-}
+/** Make DDL portable across SQLite (Turso) and Postgres (Supabase). Epoch-ms
+ *  timestamps and money columns overflow Postgres INT4, so widen every INTEGER
+ *  to BIGINT — valid in both engines (SQLite gives it INTEGER affinity). */
+const portable = (sql: string): string => sql.replace(/\bINTEGER\b/g, "BIGINT");
 
 export async function applySchema(): Promise<void> {
-  // 1. Tables — pure `IF NOT EXISTS`, so a single batched transaction is safe
-  //    and replaces ~12 sequential network round-trips with one. Fall back to
-  //    per-statement only if the batch fails for an unexpected reason.
+  const tables = SCHEMA_TABLES.map(portable);
+  const alters = SCHEMA_ALTERS.map(portable);
+  const indexes = SCHEMA_INDEXES.map(portable);
+
+  // 1. Tables — pure `IF NOT EXISTS`; one batched round-trip, per-statement fallback.
   try {
-    await turso.batch(SCHEMA_TABLES, "write");
+    await turso.batch(tables, "write");
   } catch (e) {
     console.error("[applySchema tables batch failed — falling back]", e);
-    for (const sql of SCHEMA_TABLES) await runResilient(sql);
+    for (const sql of tables) await runResilient(sql);
   }
 
-  // 2. Column back-fills for legacy tables. Instead of firing 12 ALTERs that
-  //    each throw a guaranteed "duplicate column" on an already-migrated DB
-  //    (12 wasted round-trips on every cold start), read the current columns
-  //    once per table via PRAGMA and only run the ALTERs that are missing.
-  const tables = Array.from(
-    new Set(SCHEMA_ALTERS.map((s) => parseAlter(s)?.table).filter(Boolean) as string[]),
-  );
-  const existing: Record<string, Set<string> | null> = {};
-  for (const t of tables) {
-    try {
-      const info = await turso.execute(`PRAGMA table_info(${t})`);
-      existing[t] = new Set(info.rows.map((r) => String(r.name)));
-    } catch {
-      existing[t] = null; // unknown → fall through and attempt the ALTER
-    }
-  }
-  for (const sql of SCHEMA_ALTERS) {
-    const p = parseAlter(sql);
-    if (p && existing[p.table]?.has(p.col)) continue; // column already present
-    await runResilient(sql);
-  }
+  // 2. Column back-fills for legacy tables. runResilient swallows the benign
+  //    "duplicate column" (SQLite) / "already exists" (Postgres) errors, so this
+  //    is safe + idempotent on both engines.
+  for (const sql of alters) await runResilient(sql);
 
   // 3. Indexes last (their columns now exist) — also pure `IF NOT EXISTS`.
   try {
-    await turso.batch(SCHEMA_INDEXES, "write");
+    await turso.batch(indexes, "write");
   } catch (e) {
     console.error("[applySchema indexes batch failed — falling back]", e);
-    for (const sql of SCHEMA_INDEXES) await runResilient(sql);
+    for (const sql of indexes) await runResilient(sql);
   }
 }
 

@@ -53,4 +53,9 @@ export function getSupabase() {
 }
 
 export const supabase = getSupabase();
-export const hasSupabase = Boolean(url && key);
+
+// When POSTGRES_URL is set, Supabase Postgres IS the primary database (via the
+// lib/turso shim), so the legacy supabase-js REST mirror is redundant — disable
+// it to avoid double-writes/conflicts. It stays available only as the Turso-era
+// fallback mirror when running on libsql.
+export const hasSupabase = Boolean(url && key) && !process.env.POSTGRES_URL;

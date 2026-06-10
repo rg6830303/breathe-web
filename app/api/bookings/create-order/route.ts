@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { turso } from "@/lib/turso";
 import { calculateTotals } from "@/lib/pricing";
 import { priceForRange, rangesOverlap, isWithinHours } from "@/lib/slots";
@@ -28,6 +29,15 @@ export async function POST(req: Request) {
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Rate limit order creation (payment-gateway calls cost money / are abusable).
+    const rl = await checkRateLimit(`create-order:${getClientIp(req)}`, 20, 60 * 1000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: `Too many attempts. Try again in ${rl.retryAfterSec}s.` },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+      );
+    }
 
     const body = await req.json().catch(() => ({}));
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];

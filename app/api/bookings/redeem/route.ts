@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { ensureSchema } from "@/lib/db/ensure";
 import { turso } from "@/lib/turso";
 import { getCreditBalance, adjustCredit, SLOT_MINUTES } from "@/lib/credits";
@@ -22,6 +23,14 @@ export async function POST(req: Request) {
     await ensureSchema();
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const rl = await checkRateLimit(`redeem:${getClientIp(req)}`, 20, 60 * 1000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: `Too many attempts. Try again in ${rl.retryAfterSec}s.` },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+      );
+    }
 
     const body = await req.json().catch(() => ({}));
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
