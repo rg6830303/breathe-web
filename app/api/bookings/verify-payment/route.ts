@@ -29,36 +29,18 @@ export async function POST(req: Request) {
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
     const addons: AddonInput[] = Array.isArray(body.addons) ? body.addons : [];
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // TEMPORARY ₹1 PAYMENT-LINK TEST MODE — set TEST_PAYMENT_LINK = false to
-    // RESTORE the normal signature-verified flow. A hosted Razorpay payment link
-    // (rzp.io/...) can't call back into this route with an order/signature, so in
-    // test mode we trust the client's `test` flag, skip signature verification,
-    // and record the booking/credit exactly as a real payment would — letting us
-    // exercise the full user→admin pipeline for ₹1.
-    // ─────────────────────────────────────────────────────────────────────────
-    const TEST_PAYMENT_LINK = false;
-    const isTest = TEST_PAYMENT_LINK && body.test === true;
-
-    if (!isTest) {
-      if (!orderId || !paymentId || !signature) {
-        return NextResponse.json({ error: "Missing payment fields." }, { status: 400 });
-      }
-
-      const secret = process.env.RAZORPAY_KEY_SECRET;
-      if (!secret) return NextResponse.json({ error: "Razorpay not configured." }, { status: 500 });
-
-      const expected = crypto
-        .createHmac("sha256", secret)
-        .update(`${orderId}|${paymentId}`)
-        .digest("hex");
-      if (expected !== signature) {
-        return NextResponse.json({ error: "Invalid payment signature." }, { status: 401 });
-      }
-    } else {
-      // Placeholder identifiers recorded against the test booking.
-      orderId = orderId || `testlink-${Date.now()}`;
-      paymentId = paymentId || "testlink-1rs";
+    // Verify the Razorpay payment signature (HMAC of order_id|payment_id).
+    if (!orderId || !paymentId || !signature) {
+      return NextResponse.json({ error: "Missing payment fields." }, { status: 400 });
+    }
+    const secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!secret) return NextResponse.json({ error: "Razorpay not configured." }, { status: 500 });
+    const expected = crypto
+      .createHmac("sha256", secret)
+      .update(`${orderId}|${paymentId}`)
+      .digest("hex");
+    if (expected !== signature) {
+      return NextResponse.json({ error: "Invalid payment signature." }, { status: 401 });
     }
 
     // Bulk-hours package purchase: grant prepaid credit instead of booking slots.
