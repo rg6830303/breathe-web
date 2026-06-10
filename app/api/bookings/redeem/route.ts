@@ -35,6 +35,9 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => ({}));
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
+    const sport = ["pickleball", "cricket", "badminton"].includes(String(body.sport))
+      ? String(body.sport)
+      : "pickleball";
     const parsed = bookingRequestSchema.safeParse({ slots, addons: [] });
     if (!parsed.success) {
       return NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 });
@@ -93,9 +96,9 @@ export async function POST(req: Request) {
           sql: `INSERT INTO bookings (
             id, user_id, slot_date, slot_time, duration_min, court_number,
             guest_name, guest_phone, guest_email,
-            subtotal, gst, total, amount_paid, status, source, notes, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 'confirmed', 'online', ?, ?)`,
-          args: [id, session.id, s.date, s.time, duration, court, userName, userPhone, userEmail, notes, now],
+            subtotal, gst, total, amount_paid, status, source, sport, notes, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 'confirmed', 'online', ?, ?, ?)`,
+          args: [id, session.id, s.date, s.time, duration, court, userName, userPhone, userEmail, sport, notes, now],
         });
         bookingIds.push(id);
         bookedSlots.push({ id, date: s.date, time: s.time, court, durationMin: duration });
@@ -110,7 +113,7 @@ export async function POST(req: Request) {
         const { supabase, hasSupabase } = require("@/lib/supabase");
         if (hasSupabase) {
           await supabase.from("bookings").insert({
-            id, user_id: session.id, slot_date: s.date, slot_time: s.time, duration_min: duration,
+            id, user_id: session.id, slot_date: s.date, slot_time: s.time, duration_min: duration, sport,
             court_number: court, guest_name: userName, guest_phone: userPhone, guest_email: userEmail,
             subtotal: 0, gst: 0, total: 0, amount_paid: 0, status: "confirmed", source: "online", notes, created_at: now,
           });

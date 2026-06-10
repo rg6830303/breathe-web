@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
                      b.court_number,
                      b.slot_date, b.slot_time, b.duration_min,
                      b.subtotal, b.gst, b.total, b.amount_paid,
-                     b.status, b.source, b.notes, b.created_at
+                     b.status, b.source, b.sport, b.notes, b.created_at
               FROM bookings b
               LEFT JOIN users u ON u.id = b.user_id
               ${where}
@@ -72,6 +72,7 @@ export async function GET(req: NextRequest) {
       total_amount: Number(row.amount_paid) || Number(row.total) || 0,
       status: String(row.status),
       source: String(row.source ?? "online"),
+      sport: row.sport ? String(row.sport) : "pickleball",
       notes: row.notes ? String(row.notes) : null,
       created_at: String(row.created_at),
     }));

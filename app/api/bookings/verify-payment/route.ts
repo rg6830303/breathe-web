@@ -28,6 +28,9 @@ export async function POST(req: Request) {
     const signature = String(body.signature ?? "");
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
     const addons: AddonInput[] = Array.isArray(body.addons) ? body.addons : [];
+    const sport = ["pickleball", "cricket", "badminton"].includes(String(body.sport))
+      ? String(body.sport)
+      : "pickleball";
 
     // Verify the Razorpay payment signature (HMAC of order_id|payment_id).
     if (!orderId || !paymentId || !signature) {
@@ -140,8 +143,8 @@ export async function POST(req: Request) {
             id, user_id, slot_date, slot_time, duration_min, court_number,
             guest_name, guest_phone, guest_email,
             subtotal, gst, total, amount_paid,
-            status, source, notes, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'online', ?, ?)`,
+            status, source, sport, notes, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'online', ?, ?, ?)`,
           args: [
             id,
             session.id,
@@ -156,6 +159,7 @@ export async function POST(req: Request) {
             Math.round(totals.taxes),
             Math.round(totals.total),
             Math.round(totals.total),
+            sport,
             JSON.stringify(notesObj),
             now,
           ],
@@ -205,6 +209,7 @@ export async function POST(req: Request) {
             amount_paid: Math.round(totals.total),
             status: "confirmed",
             source: "online",
+            sport,
             notes: JSON.stringify(notesObj),
             created_at: now,
           });

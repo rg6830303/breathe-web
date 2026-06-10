@@ -54,6 +54,7 @@ type Booking = {
   price: number;
   total_amount: number;
   status: string;
+  sport?: string;
   created_at: string;
 };
 type AdminUser = {
@@ -286,6 +287,25 @@ function BookingsTab() {
 
   useEffect(reload, [date]);
 
+  // Auto-refresh so new bookings (online or walk-in) appear without a manual
+  // reload — quietly re-fetch every 25s without flipping the loading state.
+  useEffect(() => {
+    const quiet = () => {
+      const url = date ? `/api/admin/bookings?date=${date}` : "/api/admin/bookings";
+      fetch(url)
+        .then((r) => r.json())
+        .then((data) => setBookings(data.bookings ?? []))
+        .catch(() => {});
+    };
+    const id = setInterval(quiet, 25000);
+    const onFocus = () => quiet();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [date]);
+
   async function cancel(id: string) {
     if (!confirm("Cancel this booking? The slot will reopen.")) return;
     setBusy(id);
@@ -342,11 +362,12 @@ function BookingsTab() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse text-sm">
+          <table className="w-full min-w-[940px] border-collapse text-sm">
             <thead>
               <tr className="border-b-2 border-ink/10 dark:border-white/10">
                 <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">User</th>
                 <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Court</th>
+                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Sport</th>
                 <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Date</th>
                 <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Time</th>
                 <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Amount</th>
@@ -363,6 +384,7 @@ function BookingsTab() {
                     <div className="text-[11px] text-ink/50 dark:text-white/50">{b.user_email}</div>
                   </td>
                   <td className="p-3 font-semibold text-ink dark:text-white">Court {b.court_number}</td>
+                  <td className="p-3 capitalize text-ink dark:text-white">{b.sport ?? "pickleball"}</td>
                   <td className="p-3 text-ink dark:text-white">{b.slot_date}</td>
                   <td className="p-3 text-ink dark:text-white">{b.slot_time}</td>
                   <td className="p-3 font-extrabold text-ink dark:text-white">{money(b.total_amount)}</td>

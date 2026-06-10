@@ -29,8 +29,18 @@ type Row = {
   duration_min: number;
   total_amount: number;
   status: string;
+  sport: string;
   created_at: string;
 };
+
+const SPORT_LABEL: Record<string, string> = {
+  pickleball: "🎾 Pickleball",
+  cricket: "🏏 Cricket",
+  badminton: "🏸 Badminton",
+};
+function sportLabel(s: string) {
+  return SPORT_LABEL[s] ?? "🎾 Pickleball";
+}
 
 type Profile = {
   full_name: string;
@@ -60,16 +70,20 @@ async function getProfile(userId: string): Promise<Profile | null> {
 }
 
 async function getBookings(userId: string): Promise<Row[]> {
+  const query = (withSport: boolean) =>
+    `SELECT id, court_number, slot_date, slot_time, duration_min,
+            amount_paid as total_amount, status, ${withSport ? "sport," : ""} created_at
+     FROM bookings WHERE user_id = ?
+     ORDER BY slot_date DESC, slot_time DESC LIMIT 500`;
   try {
-    const result = await turso.execute({
-      sql: `SELECT id, court_number, slot_date, slot_time, duration_min,
-                   amount_paid as total_amount, status, created_at
-            FROM bookings
-            WHERE user_id = ?
-            ORDER BY slot_date DESC, slot_time DESC
-            LIMIT 500`,
-      args: [userId],
-    });
+    let result;
+    try {
+      result = await turso.execute({ sql: query(true), args: [userId] });
+    } catch {
+      // `sport` column may not be migrated onto the live DB yet — fall back so
+      // the dashboard never shows an empty list during that brief window.
+      result = await turso.execute({ sql: query(false), args: [userId] });
+    }
     return result.rows.map((r) => ({
       id: String(r.id),
       court_number: Number(r.court_number) || 1,
@@ -78,6 +92,7 @@ async function getBookings(userId: string): Promise<Row[]> {
       duration_min: Number(r.duration_min) || 60,
       total_amount: Number(r.total_amount),
       status: String(r.status),
+      sport: r.sport ? String(r.sport) : "pickleball",
       created_at: String(r.created_at),
     }));
   } catch (err) {
@@ -392,6 +407,9 @@ export default async function DashboardPage() {
                                   </div>
                                   <div className="text-sm text-slatey dark:text-white/50">
                                     {format12h(b.slot_time)} – {format12h(endTime(b.slot_time, b.duration_min))}
+                                  </div>
+                                  <div className="mt-0.5 text-xs font-bold text-slatey dark:text-white/45">
+                                    {sportLabel(b.sport)} · Court {b.court_number}
                                   </div>
                                 </div>
                               </div>

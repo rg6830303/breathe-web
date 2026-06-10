@@ -46,6 +46,7 @@ export const SCHEMA_TABLES: string[] = [
     amount_paid INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'confirmed' CHECK (status IN ('confirmed','cancelled','no_show')),
     source TEXT NOT NULL DEFAULT 'online' CHECK (source IN ('online','import','walk_in')),
+    sport TEXT NOT NULL DEFAULT 'pickleball',
     notes TEXT,
     cancelled_at INTEGER,
     created_at INTEGER NOT NULL
@@ -176,6 +177,7 @@ export const SCHEMA_ALTERS: string[] = [
   `ALTER TABLE bookings ADD COLUMN source TEXT NOT NULL DEFAULT 'online'`,
   `ALTER TABLE bookings ADD COLUMN notes TEXT`,
   `ALTER TABLE bookings ADD COLUMN cancelled_at INTEGER`,
+  `ALTER TABLE bookings ADD COLUMN sport TEXT NOT NULL DEFAULT 'pickleball'`,
   // Google OAuth: link a Google account + cache its avatar onto legacy users.
   `ALTER TABLE users ADD COLUMN google_id TEXT`,
   `ALTER TABLE users ADD COLUMN avatar_url TEXT`,
