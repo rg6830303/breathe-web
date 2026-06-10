@@ -1,48 +1,27 @@
-import { createClient, type Client } from "@libsql/client";
 import postgres from "postgres";
 
 /**
- * Database access layer with a portable SQL interface.
- *
- * Backend selection (reversible — flip with one env var):
- *   - If POSTGRES_URL (Supabase) is set  → Postgres backend (production target).
- *   - Otherwise                          → Turso/libsql backend (legacy).
+ * Database access layer (Supabase Postgres).
  *
  * The whole app calls `turso.execute({ sql, args })` with `?` placeholders and
- * SQLite-flavoured SQL. In Postgres mode we translate that on the fly
- * (`?`→`$n`, `INSERT OR IGNORE`→`ON CONFLICT DO NOTHING`, `strftime('%w',…)`→
- * `EXTRACT(DOW …)`) so not a single route has to change. The schema uses types
- * valid in both engines (TEXT, BIGINT, INTEGER).
+ * SQLite-flavoured SQL (kept for historical reasons). In Postgres mode we
+ * translate that on the fly (`?`→`$n`, `INSERT OR IGNORE`→`ON CONFLICT DO
+ * NOTHING`, `strftime('%w',…)`→`EXTRACT(DOW …)`). The schema uses types valid in
+ * Postgres (TEXT, BIGINT, INTEGER). Turso/libsql has been fully removed.
+ *
+ * POSTGRES_URL must be the Supabase *Transaction pooler* string
+ * (…pooler.supabase.com:6543) for serverless — not the direct :5432 connection.
  */
 const PG_URL = process.env.POSTGRES_URL || process.env.DATABASE_URL || "";
-export const USE_PG = !!PG_URL;
+export const USE_PG = true;
 
-// ---------------------------------------------------------------- Turso (libsql)
-let libsql: Client | null = null;
-function getLibsql(): Client {
-  if (libsql) return libsql;
-  const url = process.env.TURSO_DATABASE_URL;
-  const authToken = process.env.TURSO_AUTH_TOKEN;
-  if (!url) throw new Error("TURSO_DATABASE_URL is not set");
-  libsql = createClient({ url, authToken });
-  return libsql;
-}
-
-// ----------------------------------------------------------------- Postgres (pg)
 type Pg = ReturnType<typeof postgres>;
 let pg: Pg | null = null;
 function getPg(): Pg {
   if (pg) return pg;
-  // Serverless-tuned pool for the Supabase transaction pooler (pgbouncer):
-  //  - prepare:false  → required (transaction mode can't keep prepared stmts)
-  //  - max:1          → one connection per function instance; the pooler does the
-  //                     real multiplexing. Avoids opening several cross-region
-  //                     connections per cold start (the main cause of slow logins).
-  //  - connect_timeout:10 → fail fast instead of hanging for minutes if a
-  //                     connection stalls.
-  //  - idle_timeout/max_lifetime → recycle connections promptly on serverless.
-  // IMPORTANT: POSTGRES_URL must be the *Transaction pooler* string
-  // (…pooler.supabase.com:6543), not the direct 5432 connection.
+  if (!PG_URL) throw new Error("POSTGRES_URL is not set");
+  // Serverless-tuned pool: one connection per instance (the pooler multiplexes),
+  // no prepared statements (required for pgbouncer transaction mode), fail fast.
   pg = postgres(PG_URL, {
     prepare: false,
     ssl: "require",
@@ -59,13 +38,9 @@ export function toPg(sql: string): string {
   let s = sql;
   const hadOrIgnore = /INSERT\s+OR\s+IGNORE/i.test(s);
   s = s.replace(/INSERT\s+OR\s+IGNORE\s+INTO/gi, "INSERT INTO");
-  // strftime('%w', col) → day-of-week 0..6
   s = s.replace(/strftime\(\s*'%w'\s*,\s*([^)]+?)\)/gi, "EXTRACT(DOW FROM ($1)::date)");
-  // Positional placeholders: ? → $1, $2, ...
   let i = 0;
   s = s.replace(/\?/g, () => `$${++i}`);
-  // Re-add the IGNORE semantics if the query didn't already declare a conflict
-  // clause (our INSERT OR IGNORE statements don't).
   if (hadOrIgnore && !/ON\s+CONFLICT/i.test(s)) {
     s = s.replace(/\s*;?\s*$/, "") + " ON CONFLICT DO NOTHING";
   }
@@ -87,10 +62,9 @@ async function pgExecute(arg: InStmt) {
   };
 }
 
-async function pgBatch(statements: Parameters<Client["batch"]>[0]) {
+async function pgBatch(statements: Array<string | { sql: string; args?: unknown[] }>) {
   const client = getPg();
-  const list = statements as unknown as Array<string | { sql: string; args?: unknown[] }>;
-  for (const st of list) {
+  for (const st of statements) {
     const text = typeof st === "string" ? st : st.sql;
     const args = typeof st === "string" ? [] : (st.args ?? []);
     await client.unsafe(toPg(text), args as never[]);
@@ -99,16 +73,16 @@ async function pgBatch(statements: Parameters<Client["batch"]>[0]) {
 }
 
 export const turso = {
-  execute: ((arg: InStmt) =>
-    USE_PG ? pgExecute(arg) : getLibsql().execute(arg as never)) as unknown as Client["execute"],
-  batch: ((statements: Parameters<Client["batch"]>[0], mode?: Parameters<Client["batch"]>[1]) =>
-    USE_PG ? pgBatch(statements) : getLibsql().batch(statements, mode)) as unknown as Client["batch"],
+  execute: (arg: InStmt) => pgExecute(arg),
+  // Second arg (libsql transaction mode) is accepted for call-site compatibility
+  // and ignored — pgBatch runs the statements sequentially.
+  batch: (statements: Array<string | { sql: string; args?: unknown[] }>, _mode?: string) => pgBatch(statements),
 };
 
 /**
  * Idempotently ensure the first-class `blocked_slots` table exists. Called by
- * the admin block/unblock endpoints. BIGINT/TEXT types are valid in both
- * engines. NULL slot_time = whole day; NULL court_number = all courts.
+ * the admin block/unblock endpoints. NULL slot_time = whole day; NULL
+ * court_number = all courts.
  */
 let blockedSlotsEnsured = false;
 export async function ensureBlockedSlotsTable(): Promise<void> {

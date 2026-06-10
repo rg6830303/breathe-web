@@ -155,7 +155,7 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
               <motion.div whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
                 <Link
                   href="/gallery"
-                  className="btn-outline w-full sm:w-auto"
+                  className="btn-outline w-full border-white/40 text-white hover:border-white hover:text-white dark:border-white/40 dark:text-white dark:hover:border-white dark:hover:text-white sm:w-auto"
                 >
                   View the Courts
                 </Link>
