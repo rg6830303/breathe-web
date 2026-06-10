@@ -22,6 +22,15 @@
 
 * {
   box-sizing: border-box;
+  /* Kill the browser tap-highlight flash — some Android browsers flash a
+     yellow/orange box on the tapped element during navigation. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Keyboard focus stays visible and on-brand (never a stray yellow box). */
+:focus-visible {
+  outline: 2px solid #2f5bff;
+  outline-offset: 2px;
 }
 
 /* Avoid 300ms tap delay + double-tap zoom on interactive elements. */

@@ -26,9 +26,9 @@ export function Logo({
         <Image
           src="/breathe-logo-nav.png"
           alt="Breathe Pickleball"
-          width={160}
-          height={52}
-          className={`h-10 w-auto object-contain ${
+          width={220}
+          height={100}
+          className={`h-11 w-auto object-contain ${
             variant === "dark"
               ? "rounded-xl shadow-sm"
               : "brightness-[1.05]"
