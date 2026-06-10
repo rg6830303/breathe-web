@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { turso } from "@/lib/turso";
 import { calculateTotals } from "@/lib/pricing";
 import { priceForRange, rangesOverlap, isWithinHours } from "@/lib/slots";
+import { bookingRequestSchema, formatZodError } from "@/lib/validation";
 import { BULK_PACKAGE } from "@/lib/credits";
 
 export const runtime = "nodejs";
@@ -75,14 +76,12 @@ export async function POST(req: Request) {
       }
     }
 
-    if (slots.length === 0) {
-      return NextResponse.json({ error: "Select at least one slot." }, { status: 400 });
+    // Schema validation (type/length/range/enum) before any DB or payment work.
+    const parsed = bookingRequestSchema.safeParse({ slots, addons });
+    if (!parsed.success) {
+      return NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 });
     }
-
     for (const s of slots) {
-      if (!s.date || !s.time || ![1, 2, 3].includes(s.court)) {
-        return NextResponse.json({ error: "Invalid slot." }, { status: 400 });
-      }
       if (!isWithinHours(s.time, dur(s))) {
         return NextResponse.json({ error: "That time is outside opening hours." }, { status: 400 });
       }
