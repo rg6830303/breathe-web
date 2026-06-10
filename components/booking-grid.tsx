@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { CalendarDays, Check, Gift, Loader2, Lock, LogIn, Plus, ReceiptText } from "lucide-react";
 import { calculateTotals, getSlotPrice } from "@/lib/pricing";
 import { priceForRange } from "@/lib/slots";
+import { saveCart } from "@/lib/cart";
 
 type Ext = { before: boolean; after: boolean };
 
@@ -149,6 +150,23 @@ export function BookingGrid() {
 
   const slotsNeededMin = selected.reduce((sum, s) => sum + effective(s).durationMin, 0);
   const hasEnoughCredit = creditMin >= slotsNeededMin && selected.length > 0;
+
+  // Build the cart from the current selection (incl. extensions + sport) and go
+  // to the dedicated cart → payment → confirmation flow.
+  function proceedToCart() {
+    if (selected.length === 0) return;
+    const items = selected.map((s) => {
+      const ef = effective(s);
+      return {
+        court: s.court,
+        time: ef.startTime,
+        durationMin: ef.durationMin,
+        price: priceForRange(ef.startTime, ef.durationMin),
+      };
+    });
+    saveCart({ date, sport, items });
+    router.push("/cart");
+  }
 
   async function bookWithCredit() {
     if (!hasEnoughCredit) return;
@@ -657,48 +675,18 @@ export function BookingGrid() {
           </div>
         )}
 
-        {/* CTA — when the player has enough prepaid bulk credit, offer BOTH a
-            credit redemption AND a normal payment so they choose per booking. */}
-        {hasEnoughCredit ? (
-          <div className="mt-4 space-y-2">
-            <button
-              type="button"
-              onClick={bookWithCredit}
-              disabled={paying}
-              className="btn-accent w-full justify-center"
-            >
-              {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Use prepaid hours · {selected.length} slot{selected.length > 1 ? "s" : ""}
-            </button>
-            <button
-              type="button"
-              onClick={payNow}
-              disabled={paying}
-              className="btn-outline w-full justify-center"
-            >
-              Pay ₹{totals.total} instead
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={payNow}
-            disabled={selected.length === 0 || paying}
-            className="btn-primary mt-4 w-full justify-center disabled:cursor-not-allowed disabled:bg-ink/30 disabled:shadow-none dark:disabled:bg-white/20"
-          >
-            {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {selected.length === 0
-              ? "Select a slot to continue"
-              : !account || account.role !== "user"
-                ? "Log in to Confirm & Pay"
-                : `Confirm & Pay ₹${totals.total}`}
-          </button>
-        )}
+        {/* CTA → review the cart before payment */}
+        <button
+          type="button"
+          onClick={proceedToCart}
+          disabled={selected.length === 0}
+          className="btn-primary mt-4 w-full justify-center disabled:cursor-not-allowed disabled:bg-ink/30 disabled:shadow-none dark:disabled:bg-white/20"
+        >
+          {selected.length === 0 ? "Select a slot to continue" : `Proceed to cart · ₹${totals.total}`}
+        </button>
 
         <p className="mt-3 text-[0.68rem] leading-5 text-slatey dark:text-white/40">
-          {hasEnoughCredit
-            ? "Use your prepaid bulk-hours balance, or pay for just this booking — your choice."
-            : "Secure payment by Razorpay. Slots are confirmed instantly once payment succeeds."}
+          Review your slots in the cart, then pay securely by Razorpay or with prepaid bulk hours.
         </p>
       </aside>
 
@@ -716,36 +704,13 @@ export function BookingGrid() {
               </div>
               <div className="font-display text-2xl font-extrabold text-ink dark:text-white">₹{totals.total}</div>
             </div>
-            {hasEnoughCredit ? (
-              <div className="flex max-w-[62%] flex-1 flex-col gap-1.5">
-                <button
-                  type="button"
-                  onClick={bookWithCredit}
-                  disabled={paying}
-                  className="btn-accent w-full justify-center py-2 text-xs disabled:opacity-60"
-                >
-                  {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Use prepaid hours
-                </button>
-                <button
-                  type="button"
-                  onClick={payNow}
-                  disabled={paying}
-                  className="btn-outline w-full justify-center py-2 text-xs disabled:opacity-60"
-                >
-                  Pay ₹{totals.total}
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={payNow}
-                disabled={paying}
-                className="btn-primary max-w-[60%] flex-1 justify-center disabled:opacity-60"
-              >
-                {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {!account || account.role !== "user" ? "Log in to Pay" : "Confirm & Pay"}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={proceedToCart}
+              className="btn-primary max-w-[60%] flex-1 justify-center disabled:opacity-60"
+            >
+              Go to cart
+            </button>
           </div>
         </motion.div>
       )}
