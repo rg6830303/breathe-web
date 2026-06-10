@@ -63,6 +63,17 @@ async function main() {
   console.log("→ Ensuring Supabase schema…");
   for (const ddl of TABLES) await sql.unsafe(ddl);
 
+  // SECURITY: enable Row Level Security on every table with NO policies. The app
+  // connects as the table owner (POSTGRES_URL) which bypasses RLS, so it keeps
+  // working — but Supabase's public REST API (anon key, which ships to browsers)
+  // is then denied all access, so secrets like users.password_hash can never be
+  // read over PostgREST.
+  console.log("→ Locking down tables with RLS (deny public REST)…");
+  for (const ddl of TABLES) {
+    const t = ddl.match(/CREATE TABLE IF NOT EXISTS (\w+)/i)[1];
+    await sql.unsafe(`ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY`).catch(() => {});
+  }
+
   // Discover the tables present in Turso.
   const tRes = await turso.execute(
     "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_litestream%'",
