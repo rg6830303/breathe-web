@@ -6,6 +6,7 @@ import { ensureSchema } from "@/lib/db/ensure";
 import { turso } from "@/lib/turso";
 import { getCreditBalance, adjustCredit, SLOT_MINUTES } from "@/lib/credits";
 import { rangesOverlap, isWithinHours } from "@/lib/slots";
+import { bookingRequestSchema, formatZodError } from "@/lib/validation";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -34,7 +35,10 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => ({}));
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
-    if (slots.length === 0) return NextResponse.json({ error: "No slots selected." }, { status: 400 });
+    const parsed = bookingRequestSchema.safeParse({ slots, addons: [] });
+    if (!parsed.success) {
+      return NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 });
+    }
 
     for (const s of slots) {
       if (!isWithinHours(s.time, slotDur(s))) {

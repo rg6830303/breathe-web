@@ -33,14 +33,23 @@ type Pg = ReturnType<typeof postgres>;
 let pg: Pg | null = null;
 function getPg(): Pg {
   if (pg) return pg;
-  // Supabase pooled connections (pgbouncer, transaction mode) don't support
-  // prepared statements, so prepare:false is required on serverless.
+  // Serverless-tuned pool for the Supabase transaction pooler (pgbouncer):
+  //  - prepare:false  → required (transaction mode can't keep prepared stmts)
+  //  - max:1          → one connection per function instance; the pooler does the
+  //                     real multiplexing. Avoids opening several cross-region
+  //                     connections per cold start (the main cause of slow logins).
+  //  - connect_timeout:10 → fail fast instead of hanging for minutes if a
+  //                     connection stalls.
+  //  - idle_timeout/max_lifetime → recycle connections promptly on serverless.
+  // IMPORTANT: POSTGRES_URL must be the *Transaction pooler* string
+  // (…pooler.supabase.com:6543), not the direct 5432 connection.
   pg = postgres(PG_URL, {
     prepare: false,
     ssl: "require",
-    max: 5,
+    max: 1,
     idle_timeout: 20,
-    connect_timeout: 15,
+    max_lifetime: 60 * 10,
+    connect_timeout: 10,
   });
   return pg;
 }

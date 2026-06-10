@@ -255,7 +255,9 @@ export function BookingGrid() {
       if (!loaded) throw new Error("Could not load Razorpay checkout.");
 
       // Razorpay global injected by checkout.js
-      const Razorpay = (window as unknown as { Razorpay: new (opts: unknown) => { open: () => void } }).Razorpay;
+      const Razorpay = (window as unknown as {
+        Razorpay: new (opts: unknown) => { open: () => void; on: (evt: string, cb: (resp: { error?: { description?: string } }) => void) => void };
+      }).Razorpay;
       const rzp = new Razorpay({
         key: order.keyId,
         amount: order.amount,
@@ -299,6 +301,16 @@ export function BookingGrid() {
         modal: {
           ondismiss: () => setPaying(false),
         },
+      });
+      // Explicit failure handling — no booking is created, show a clear message.
+      rzp.on("payment.failed", (resp) => {
+        setPaying(false);
+        setConfirmed(false);
+        setError(
+          resp?.error?.description
+            ? `Payment failed: ${resp.error.description}. You have not been charged — please try again.`
+            : "Payment failed or was cancelled. You have not been charged — please try again.",
+        );
       });
       rzp.open();
     } catch (e) {

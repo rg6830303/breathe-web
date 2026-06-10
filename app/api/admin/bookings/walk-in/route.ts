@@ -121,12 +121,11 @@ export async function POST(req: Request) {
     console.error("[walk-in supabase sync error]", sbErr);
   }
 
-  // Optional: send confirmation + admin notification using the standard
-  // notifications pipeline if a guest email is on file and notify_guest = true.
-  if (data.notify_guest && data.guest_email) {
-    try {
+  try {
+    const { waitUntil } = require("@vercel/functions");
+    if (data.notify_guest && data.guest_email) {
+      // Full pipeline: emails the guest + emails/pushes admins + records inbox.
       const { notifyBookingConfirmed } = require("@/lib/notifications");
-      const { waitUntil } = require("@vercel/functions");
       const p = notifyBookingConfirmed({
         id,
         userEmail: data.guest_email,
@@ -142,9 +141,20 @@ export async function POST(req: Request) {
       });
       if (waitUntil) waitUntil(p);
       else await p;
-    } catch (notifErr) {
-      console.error("[walk-in notify error]", notifErr);
+    } else {
+      // No guest email — still alert admin devices + inbox about the walk-in.
+      const { sendPushToAdmins } = require("@/lib/push");
+      const { recordNotification } = require("@/lib/notify-store");
+      const body = `${data.guest_name} — ${data.slot_date} ${data.slot_time} · Court ${data.court_number} · ₹${Math.round(totals.total)}`;
+      const run = Promise.all([
+        sendPushToAdmins({ title: "Walk-in booking added", body, url: "/admin", tag: `walkin-${id}` }),
+        recordNotification({ role: "admin", title: "Walk-in booking added", body, url: "/admin" }),
+      ]).catch((e) => console.error("[walk-in admin notify error]", e));
+      if (waitUntil) waitUntil(run);
+      else await run;
     }
+  } catch (notifErr) {
+    console.error("[walk-in notify error]", notifErr);
   }
 
   return NextResponse.json({ ok: true, id });
