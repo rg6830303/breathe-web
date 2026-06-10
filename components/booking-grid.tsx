@@ -10,12 +10,6 @@ import { priceForRange } from "@/lib/slots";
 
 type Ext = { before: boolean; after: boolean };
 
-// ── TEMPORARY: ₹1 hosted payment-link test mode ──────────────────────────────
-// Set TEST_PAYMENT_LINK = "" to restore the normal in-app Razorpay checkout.
-// When set, "Confirm & Pay" opens this ₹1 link and records the booking so the
-// full user→admin pipeline can be tested for a rupee, regardless of cart value.
-const TEST_PAYMENT_LINK = "";
-
 type Slot = { court: number; time: string; status: "open" | "booked" | "blocked"; price: number };
 type Account = { id: string; email: string; name: string; role: "user" | "admin" } | null;
 type Addon = { id: string; label: string; price: number; qty: number; on: boolean };
@@ -248,33 +242,6 @@ export function BookingGrid() {
         return { date, court: s.court, time: ef.startTime, durationMin: ef.durationMin };
       });
       const addonsPayload = addons.filter((a) => a.on).map(({ id, label, price, qty }) => ({ id, label, price, qty }));
-
-      // TEMP ₹1 test: open the hosted payment link in a new tab for the rupee
-      // payment, record the booking (test bypass) so it confirms on the
-      // dashboard + admin, then HARD-redirect this tab to the portal so the
-      // fresh booking is guaranteed to render (bypasses the client router cache).
-      if (TEST_PAYMENT_LINK) {
-        // Opened inside the click gesture so it isn't pop-up-blocked.
-        const payTab = window.open(TEST_PAYMENT_LINK, "_blank", "noopener,noreferrer");
-        const verifyRes = await fetch("/api/bookings/verify-payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ test: true, slots: slotsPayload, addons: addonsPayload }),
-        });
-        const verify = await verifyRes.json();
-        if (!verifyRes.ok) {
-          if (payTab) payTab.close();
-          throw new Error(verify.error ?? "Could not confirm booking");
-        }
-        setEmailed(verify.emailed !== false);
-        setConfirmed(true);
-        setSelected([]);
-        setExt({});
-        setTimeout(() => {
-          window.location.href = "/dashboard";
-        }, 1500);
-        return;
-      }
 
       const orderRes = await fetch("/api/bookings/create-order", {
         method: "POST",
@@ -608,17 +575,28 @@ export function BookingGrid() {
           </div>
         )}
 
-        {/* CTA button */}
+        {/* CTA — when the player has enough prepaid bulk credit, offer BOTH a
+            credit redemption AND a normal payment so they choose per booking. */}
         {hasEnoughCredit ? (
-          <button
-            type="button"
-            onClick={bookWithCredit}
-            disabled={paying}
-            className="btn-accent mt-4 w-full justify-center"
-          >
-            {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Book {selected.length} slot{selected.length > 1 ? "s" : ""} with prepaid hours
-          </button>
+          <div className="mt-4 space-y-2">
+            <button
+              type="button"
+              onClick={bookWithCredit}
+              disabled={paying}
+              className="btn-accent w-full justify-center"
+            >
+              {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Use prepaid hours · {selected.length} slot{selected.length > 1 ? "s" : ""}
+            </button>
+            <button
+              type="button"
+              onClick={payNow}
+              disabled={paying}
+              className="btn-outline w-full justify-center"
+            >
+              Pay ₹{totals.total} instead
+            </button>
+          </div>
         ) : (
           <button
             type="button"
@@ -637,7 +615,7 @@ export function BookingGrid() {
 
         <p className="mt-3 text-[0.68rem] leading-5 text-slatey dark:text-white/40">
           {hasEnoughCredit
-            ? "Booked instantly from your prepaid bulk-hours balance — no payment needed."
+            ? "Use your prepaid bulk-hours balance, or pay for just this booking — your choice."
             : "Secure payment by Razorpay. Slots are confirmed instantly once payment succeeds."}
         </p>
       </aside>
@@ -656,15 +634,36 @@ export function BookingGrid() {
               </div>
               <div className="font-display text-2xl font-extrabold text-ink dark:text-white">₹{totals.total}</div>
             </div>
-            <button
-              type="button"
-              onClick={payNow}
-              disabled={paying}
-              className="btn-primary max-w-[60%] flex-1 justify-center disabled:opacity-60"
-            >
-              {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {!account || account.role !== "user" ? "Log in to Pay" : "Confirm & Pay"}
-            </button>
+            {hasEnoughCredit ? (
+              <div className="flex max-w-[62%] flex-1 flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={bookWithCredit}
+                  disabled={paying}
+                  className="btn-accent w-full justify-center py-2 text-xs disabled:opacity-60"
+                >
+                  {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Use prepaid hours
+                </button>
+                <button
+                  type="button"
+                  onClick={payNow}
+                  disabled={paying}
+                  className="btn-outline w-full justify-center py-2 text-xs disabled:opacity-60"
+                >
+                  Pay ₹{totals.total}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={payNow}
+                disabled={paying}
+                className="btn-primary max-w-[60%] flex-1 justify-center disabled:opacity-60"
+              >
+                {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {!account || account.role !== "user" ? "Log in to Pay" : "Confirm & Pay"}
+              </button>
+            )}
           </div>
         </motion.div>
       )}

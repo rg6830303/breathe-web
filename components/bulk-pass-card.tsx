@@ -7,10 +7,6 @@ import { useToast } from "@/components/ui/toast";
 
 type Account = { id: string; email: string; name: string; role: "user" | "admin" } | null;
 
-// ── TEMPORARY: ₹1 hosted payment-link test mode ──────────────────────────────
-// Set TEST_PAYMENT_LINK = "" to restore the normal in-app Razorpay checkout.
-const TEST_PAYMENT_LINK = "";
-
 function loadRazorpay(): Promise<boolean> {
   return new Promise((resolve) => {
     if (typeof window === "undefined") return resolve(false);
@@ -44,23 +40,6 @@ export function BulkPassCard() {
     }
     setBusy(true);
     try {
-      // TEMP ₹1 test: open the hosted payment link, then grant the bulk credit
-      // (test bypass) so the prepaid balance updates as in a real purchase.
-      if (TEST_PAYMENT_LINK) {
-        window.open(TEST_PAYMENT_LINK, "_blank", "noopener,noreferrer");
-        const vr = await fetch("/api/bookings/verify-payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ test: true, purchase: "bulk-12h" }),
-        });
-        const v = await vr.json();
-        if (!vr.ok) throw new Error(v.error ?? "Could not add credit");
-        setBalanceMin(Number(v.balanceMin) || 0);
-        toast.show("12 hours added! Book any open slot instantly — no payment needed.", "success");
-        setBusy(false);
-        return;
-      }
-
       const orderRes = await fetch("/api/bookings/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
