@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CalendarDays, Check, Gift, Loader2, Lock, LogIn, Plus, ReceiptText } from "lucide-react";
-import { calculateTotals } from "@/lib/pricing";
+import { calculateTotals, getSlotPrice } from "@/lib/pricing";
 import { priceForRange } from "@/lib/slots";
 
 type Ext = { before: boolean; after: boolean };
@@ -97,6 +97,9 @@ export function BookingGrid() {
   const [confirmed, setConfirmed] = useState(false);
   const [emailed, setEmailed] = useState(true);
   const [creditMin, setCreditMin] = useState(0);
+  // Sport the court is being booked for (pickleball default; club also offers
+  // cricket and badminton on the same courts).
+  const [sport, setSport] = useState<"pickleball" | "cricket" | "badminton">("pickleball");
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -156,6 +159,7 @@ export function BookingGrid() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sport,
           slots: selected.map((s) => {
             const ef = effective(s);
             return { date, court: s.court, time: ef.startTime, durationMin: ef.durationMin };
@@ -192,6 +196,31 @@ export function BookingGrid() {
   }
 
   useEffect(refreshSlots, [date]);
+
+  // Live availability: quietly re-fetch slots (without disturbing the user's
+  // current selection) every 25s and whenever the tab regains focus, so a slot
+  // booked by someone else shows as taken almost immediately.
+  useEffect(() => {
+    let active = true;
+    const quiet = () => {
+      fetch(`/api/slots?date=${date}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (active && Array.isArray(d.slots)) setSlots(d.slots);
+        })
+        .catch(() => {});
+    };
+    const id = setInterval(quiet, 25000);
+    const onVis = () => document.visibilityState === "visible" && quiet();
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", quiet);
+    return () => {
+      active = false;
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", quiet);
+    };
+  }, [date]);
 
   const minDate = todayIST();
 
@@ -246,7 +275,7 @@ export function BookingGrid() {
       const orderRes = await fetch("/api/bookings/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slots: slotsPayload, addons: addonsPayload }),
+        body: JSON.stringify({ slots: slotsPayload, addons: addonsPayload, sport }),
       });
       const order = await orderRes.json();
       if (!orderRes.ok) throw new Error(order.error ?? "Could not create order");
@@ -278,6 +307,7 @@ export function BookingGrid() {
                 signature: response.razorpay_signature,
                 slots: slotsPayload,
                 addons: addonsPayload,
+                sport,
               }),
             });
             const verify = await verifyRes.json();
@@ -378,6 +408,37 @@ export function BookingGrid() {
             <span className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded bg-ink/30 dark:bg-white/20" /> Blocked
             </span>
+          </div>
+        </div>
+
+        {/* Sport picker — the club's courts host pickleball, cricket & badminton */}
+        <div className="flex flex-col gap-2 border-b border-ink/5 bg-ink/[0.02] px-5 py-3 dark:border-white/5 dark:bg-white/[0.02] sm:flex-row sm:items-center sm:gap-3">
+          <span className="text-[0.65rem] font-extrabold uppercase tracking-[0.15em] text-slatey dark:text-white/50">
+            Playing
+          </span>
+          <div className="flex gap-2">
+            {([
+              { key: "pickleball", label: "🎾 Pickleball" },
+              { key: "cricket", label: "🏏 Cricket" },
+              { key: "badminton", label: "🏸 Badminton" },
+            ] as const).map((s) => {
+              const isActive = sport === s.key;
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => setSport(s.key)}
+                  aria-pressed={isActive}
+                  className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-extrabold transition ${
+                    isActive
+                      ? "bg-brand text-white"
+                      : "border-2 border-ink/10 bg-white text-ink/60 hover:border-brand/40 hover:text-brand dark:border-white/10 dark:bg-white/5 dark:text-white/50 dark:hover:border-brand-300/40 dark:hover:text-brand-300"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -525,13 +586,22 @@ export function BookingGrid() {
                 {(beforeAvail || afterAvail || ef.before || ef.after) && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {(beforeAvail || ef.before) && (
-                      <ExtChip on={ef.before} onClick={() => toggleExt(s, "before")} label="30 min before" />
+                      <ExtChip
+                        on={ef.before}
+                        onClick={() => toggleExt(s, "before")}
+                        label={`+₹${Math.round(getSlotPrice(addMinutes(s.time, -30)) / 2)} · 30 min before`}
+                      />
                     )}
                     {(afterAvail || ef.after) && (
-                      <ExtChip on={ef.after} onClick={() => toggleExt(s, "after")} label="30 min after" />
+                      <ExtChip
+                        on={ef.after}
+                        onClick={() => toggleExt(s, "after")}
+                        label={`+₹${Math.round(getSlotPrice(addMinutes(s.time, 60)) / 2)} · 30 min after`}
+                      />
                     )}
                   </div>
                 )}
+                <p className="mt-1.5 text-[0.65rem] text-slatey dark:text-white/40">Extensions are charged at half the hourly rate.</p>
               </motion.div>
             );
           })}
