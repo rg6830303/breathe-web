@@ -19,7 +19,9 @@ export const metadata: Metadata = {
   },
 };
 
-export const revalidate = 60; // short cache so new uploads show up fast
+// Render on-demand so the build never opens a DB connection while prerendering
+// (see app/page.tsx) — gallery reads images from the DB at request time.
+export const dynamic = "force-dynamic";
 
 async function getGalleryImages(): Promise<InstaPost[] | null> {
   try {
