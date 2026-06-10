@@ -26,7 +26,12 @@ function getDayLabel(date: Date) {
 }
 
 function formatDate(d: Date) {
-  return d.toISOString().slice(0, 10);
+  // LOCAL date (YYYY-MM-DD) — NOT toISOString(), which converts to UTC and, for
+  // IST users, shifts every column back a day (making Today/Tomorrow read as past).
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function getWeekDates(offset = 0) {
