@@ -176,9 +176,13 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
                 },
                 { value: "All", label: "Skill levels" },
               ].map(({ value, label }) => (
-                <div key={label} className="rounded-2xl border-2 border-white/10 bg-white/5 px-3 py-4 text-center">
-                  <div className="font-display text-2xl font-extrabold text-lime sm:text-3xl">{value}</div>
-                  <div className="mt-1 text-[0.6rem] font-extrabold uppercase tracking-wider text-white/50 sm:text-xs">{label}</div>
+                <div key={label} className="flex flex-col items-center rounded-2xl border-2 border-white/10 bg-white/5 px-2 py-4 text-center">
+                  <div className="flex h-9 items-center justify-center font-display text-xl font-extrabold leading-none text-lime sm:h-10 sm:text-2xl">
+                    {value}
+                  </div>
+                  <div className="mt-1.5 flex min-h-[2.1em] items-center text-[0.6rem] font-extrabold uppercase leading-tight tracking-wider text-white/50">
+                    {label}
+                  </div>
                 </div>
               ))}
             </motion.div>
