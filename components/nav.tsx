@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowRight, LayoutDashboard, LogOut, MapPin, Menu, Phone, Shield, User, X } from "lucide-react";
 import { Logo } from "@/components/logo";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { navLinks, site } from "@/lib/site";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -156,8 +155,6 @@ export function Nav() {
             >
               Book a Slot <ArrowRight className="h-4 w-4" />
             </Link>
-
-            <ThemeToggle />
 
             {/* Mobile hamburger */}
             <button

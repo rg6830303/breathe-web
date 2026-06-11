@@ -75,6 +75,64 @@ function money(n: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
 }
 
+/* ---- Shared console styles (dark-first, consistent across every tab) ---- */
+const TH =
+  "px-3 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50";
+const TH_RIGHT =
+  "px-3 py-3 text-right text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50";
+const TR_HOVER =
+  "border-b border-ink/5 transition-colors hover:bg-brand/[0.03] dark:border-white/5 dark:hover:bg-white/[0.03]";
+const INPUT =
+  "rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-brand dark:border-white/10 dark:bg-[#0b1530] dark:text-white";
+const DANGER_BTN =
+  "inline-flex items-center gap-1 rounded-lg border-2 border-red-200 px-2.5 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10";
+
+function StatusPill({ status }: { status: string }) {
+  const tone =
+    status === "confirmed" || status === "open" || status === "active"
+      ? "bg-lime/20 text-lime-dark dark:bg-lime/15 dark:text-lime"
+      : status === "cancelled"
+        ? "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"
+        : "bg-ink/5 text-ink/60 dark:bg-white/10 dark:text-white/60";
+  return (
+    <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${tone}`}>
+      {status}
+    </span>
+  );
+}
+
+/** Uniform header for every tab panel: eyebrow + title + subtitle left, controls right. */
+function PanelHeader({
+  eyebrow,
+  title,
+  subtitle,
+  children,
+}: {
+  eyebrow: string;
+  title: React.ReactNode;
+  subtitle?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b-2 border-ink/10 pb-4 dark:border-white/10">
+      <div>
+        <span className="eyebrow">{eyebrow}</span>
+        <h3 className="mt-1 font-display text-lg font-extrabold tracking-tight text-ink dark:text-white">{title}</h3>
+        {subtitle && <p className="mt-0.5 text-xs text-ink/50 dark:text-white/50">{subtitle}</p>}
+      </div>
+      {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
+    </div>
+  );
+}
+
+function EmptyState({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border-2 border-dashed border-ink/10 p-8 text-center text-sm text-ink/40 dark:border-white/10 dark:text-white/40">
+      {children}
+    </div>
+  );
+}
+
 function todayIST() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Kolkata",

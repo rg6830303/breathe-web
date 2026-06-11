@@ -42,9 +42,11 @@ export default function BookingConfirmedPage() {
               session now shows in your dashboard. See you on the court! 🎾
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <Link href="/dashboard" className="btn-primary w-full justify-center sm:w-auto">
+              {/* Hard navigation so the dashboard server-renders fresh and the new
+                  booking is guaranteed to appear immediately. */}
+              <a href="/dashboard" className="btn-primary w-full justify-center sm:w-auto">
                 <CalendarDays className="h-4 w-4" /> View my bookings
-              </Link>
+              </a>
               <Link href="/book" className="btn-outline w-full justify-center sm:w-auto">
                 Book another <ArrowRight className="h-4 w-4" />
               </Link>

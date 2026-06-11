@@ -3,7 +3,6 @@ import { Bricolage_Grotesque, Plus_Jakarta_Sans, Instrument_Serif } from "next/f
 import "./globals.css";
 import { Providers } from "@/app/providers";
 import { ScrollPaddle } from "@/components/motion/scroll-paddle";
-import { themeNoFlashScript } from "@/components/theme-provider";
 import { site, SITE_URL } from "@/lib/site";
 
 const display = Bricolage_Grotesque({
@@ -149,10 +148,14 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} ${serif.variable}`}>
+    // DARK-ONLY: the `dark` class is permanent so every dark: variant always
+    // applies — the app ships a single dark theme (no toggle, no flash).
+    <html
+      lang="en"
+      className={`dark ${display.variable} ${body.variable} ${serif.variable}`}
+      style={{ colorScheme: "dark" }}
+    >
       <head>
-        {/* Set theme class before paint to avoid a flash of the wrong theme. */}
-        <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
         <script
           type="application/ld+json"
           // JSON.stringify produces clean, escaped output — safe to inject.
@@ -167,7 +170,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="bg-white font-sans antialiased transition-colors duration-300 dark:bg-ink dark:text-white/90">
+      <body className="bg-ink font-sans text-white/90 antialiased">
         <Providers>{children}</Providers>
         <ScrollPaddle />
       </body>
