@@ -665,3 +665,55 @@ p, li {
     animation: none !important;
   }
 }
+
+/* ============================================================
+   ANIMATED COURT SCENE — two players rallying (home hero).
+   A "motion-video" look built from SVG + CSS transforms. All
+   decorative, GPU-transform only, frozen for reduced-motion.
+   ============================================================ */
+/* Ball rallies across the net in an arc, left player -> right player -> back. */
+@keyframes rally-ball {
+  0%   { transform: translate(0, 0) scale(1); }
+  12%  { transform: translate(120px, -70px) scale(0.86); }
+  25%  { transform: translate(240px, 0) scale(1); }       /* right player */
+  37%  { transform: translate(120px, -78px) scale(0.84); }
+  50%  { transform: translate(0, 0) scale(1); }           /* left player */
+  62%  { transform: translate(120px, -64px) scale(0.88); }
+  75%  { transform: translate(240px, 4px) scale(1); }
+  87%  { transform: translate(120px, -72px) scale(0.85); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+.scene-ball { animation: rally-ball 4.4s cubic-bezier(0.4, 0, 0.6, 1) infinite; transform-origin: center; will-change: transform; }
+
+/* Left player: steps in to hit on the down-beats, recovers between. */
+@keyframes player-left {
+  0%, 50%, 100% { transform: translateX(0) skewX(0deg); }
+  46% { transform: translateX(10px) skewX(-4deg); }   /* lunge to hit */
+  60% { transform: translateX(-6px) skewX(2deg); }    /* recover */
+}
+.scene-player-left { animation: player-left 4.4s ease-in-out infinite; transform-origin: bottom center; will-change: transform; }
+
+/* Right player: mirror timing — hits on the off-beats. */
+@keyframes player-right {
+  0%, 25%, 75%, 100% { transform: translateX(0) skewX(0deg); }
+  21% { transform: translateX(-10px) skewX(4deg); }
+  35% { transform: translateX(6px) skewX(-2deg); }
+}
+.scene-player-right { animation: player-right 4.4s ease-in-out infinite; transform-origin: bottom center; will-change: transform; }
+
+/* Paddle arms swing on the hit. */
+@keyframes swing-left  { 0%,40%,100%{transform:rotate(-14deg);} 48%{transform:rotate(26deg);} }
+@keyframes swing-right { 0%,16%,76%,100%{transform:rotate(14deg);} 24%{transform:rotate(-26deg);} }
+.scene-arm-left  { animation: swing-left 4.4s ease-in-out infinite;  transform-origin: 50% 20%; }
+.scene-arm-right { animation: swing-right 4.4s ease-in-out infinite; transform-origin: 50% 20%; }
+
+/* Ball ground shadow pulses with the rally height. */
+@keyframes rally-shadow {
+  0%,25%,50%,75%,100% { transform: translateX(0) scale(1); opacity:.5; }
+  12%,37%,62%,87% { transform: translateX(120px) scale(.5); opacity:.18; }
+}
+.scene-ball-shadow { animation: rally-shadow 4.4s cubic-bezier(0.4,0,0.6,1) infinite; will-change: transform,opacity; }
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-ball,.scene-player-left,.scene-player-right,.scene-arm-left,.scene-arm-right,.scene-ball-shadow { animation: none !important; }
+}

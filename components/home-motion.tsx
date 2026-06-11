@@ -23,7 +23,7 @@ import { StatCounter } from "@/components/motion/stat-counter";
 import { TiltCard } from "@/components/motion/tilt-card";
 import { TestimonialsCarousel } from "@/components/testimonials-carousel";
 import { PaddleScene } from "@/components/ui/paddle-scene";
-import { ArenaBackdrop } from "@/components/ui/arena-backdrop";
+import { CourtScene } from "@/components/ui/court-scene";
 import type { Notice } from "@/lib/types";
 
 const features = [
@@ -86,10 +86,10 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
 
   return (
     <>
-      {/* ── HERO — 3D pickleball arena (dark-only) ── */}
+      {/* ── HERO — animated pickleball court scene (dark-only) ── */}
       <section className="relative min-h-[88svh] overflow-hidden bg-ink text-white">
-        {/* Animated 3D arena backdrop */}
-        <ArenaBackdrop />
+        {/* Animated court: two players rallying, ball + paddles in motion */}
+        <CourtScene />
 
         {/* Court-tape accent stripe */}
         <div aria-hidden className="tape-stripe absolute left-0 top-0 z-10 h-1.5 w-full opacity-90" />
