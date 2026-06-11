@@ -23,6 +23,7 @@ import { StatCounter } from "@/components/motion/stat-counter";
 import { TiltCard } from "@/components/motion/tilt-card";
 import { TestimonialsCarousel } from "@/components/testimonials-carousel";
 import { PaddleScene } from "@/components/ui/paddle-scene";
+import { ArenaBackdrop } from "@/components/ui/arena-backdrop";
 import type { Notice } from "@/lib/types";
 
 const features = [
@@ -85,13 +86,13 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
 
   return (
     <>
-      {/* ── HERO — royal-blue brand banner (light) / ink (dark) ── */}
-      <section className="relative min-h-[88svh] overflow-hidden bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 text-white dark:from-ink dark:via-ink dark:to-ink">
-        {/* Court-tape accent stripe */}
-        <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
+      {/* ── HERO — 3D pickleball arena (dark-only) ── */}
+      <section className="relative min-h-[88svh] overflow-hidden bg-ink text-white">
+        {/* Animated 3D arena backdrop */}
+        <ArenaBackdrop />
 
-        {/* Court grid */}
-        <CourtLinesSVG />
+        {/* Court-tape accent stripe */}
+        <div aria-hidden className="tape-stripe absolute left-0 top-0 z-10 h-1.5 w-full opacity-90" />
 
         {/* Lime corner wash */}
         <div aria-hidden className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-lime/10 blur-3xl" />

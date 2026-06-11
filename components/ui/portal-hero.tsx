@@ -1,8 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CourtPatternBg } from "@/components/ui/court-pattern-bg";
 import { PaddleScene } from "@/components/ui/paddle-scene";
+import { ArenaBackdrop } from "@/components/ui/arena-backdrop";
 
 /**
  * Portal header for the player dashboard and admin console. Bold ink/brand
@@ -23,13 +23,12 @@ export function PortalHero({
   children?: React.ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden bg-brand-800 text-white dark:bg-ink">
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-brand-600 via-brand-800 to-brand-900 dark:from-brand-800 dark:via-ink dark:to-ink" />
-      <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-[0.1]" stroke="white" />
-      <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
+    <section className="relative overflow-hidden bg-ink text-white">
+      <ArenaBackdrop />
+      <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90 z-10" />
 
       {/* Signature paddle accent */}
-      <div className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 opacity-90 xl:block">
+      <div className="pointer-events-none absolute right-4 top-1/2 z-[1] hidden -translate-y-1/2 opacity-90 xl:block">
         <PaddleScene size={240} />
       </div>
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CourtPatternBg } from "@/components/ui/court-pattern-bg";
 import { PaddleScene } from "@/components/ui/paddle-scene";
+import { ArenaBackdrop } from "@/components/ui/arena-backdrop";
 
 type Props = {
   label: string;
@@ -34,15 +34,13 @@ export function PageHero({ label, title, subtitle, bgClassName, children }: Prop
   };
 
   return (
-    <section className={`relative overflow-hidden bg-brand-800 text-white dark:bg-ink ${bgClassName ?? ""}`}>
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-brand-600 via-brand-800 to-brand-900 dark:from-brand-800 dark:via-ink dark:to-ink" />
-      <CourtPatternBg className="absolute inset-0 h-full w-full object-cover opacity-[0.1]" stroke="white" />
+    <section className={`relative overflow-hidden bg-ink text-white ${bgClassName ?? ""}`}>
+      <ArenaBackdrop />
       {/* Court-tape accent stripe */}
-      <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
-      <div aria-hidden className="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rotate-12 rounded-[2.5rem] bg-lime/10" />
+      <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90 z-10" />
 
       {/* Signature paddle, right side on large screens */}
-      <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 opacity-90 lg:block xl:right-12">
+      <div className="pointer-events-none absolute right-2 top-1/2 z-[1] hidden -translate-y-1/2 opacity-90 lg:block xl:right-12">
         <PaddleScene size={340} />
       </div>
 
