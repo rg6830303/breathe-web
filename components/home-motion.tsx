@@ -15,7 +15,6 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { LiveAvailability } from "@/components/live-availability";
 import { NoticeBoard } from "@/components/notice-board";
 import { Container } from "@/components/ui";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
@@ -97,10 +96,7 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
         {/* Lime corner wash */}
         <div aria-hidden className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-lime/10 blur-3xl" />
 
-        {/* PaddleScene — visible md+ */}
-        <div className="pointer-events-none absolute right-0 top-1/2 hidden -translate-y-1/2 opacity-95 lg:block xl:right-8">
-          <PaddleScene size={360} />
-        </div>
+
         {/* PaddleScene mini — mobile accent */}
         <div className="pointer-events-none absolute right-3 top-20 opacity-30 sm:right-8 sm:top-16 lg:hidden">
           <PaddleScene size={120} />
@@ -189,8 +185,8 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
             </motion.div>
           </motion.div>
 
-          <div className="relative">
-            <LiveAvailability />
+          <div className="relative flex justify-center items-center">
+            <PaddleScene size={320} className="opacity-95" />
           </div>
         </Container>
       </section>

@@ -236,6 +236,7 @@ export function BookingGrid() {
   useEffect(() => {
     let active = true;
     const quiet = () => {
+      if (document.visibilityState !== "visible") return;
       fetch(`/api/slots?date=${date}&sport=${sport}`)
         .then((r) => r.json())
         .then((d) => {
@@ -244,7 +245,7 @@ export function BookingGrid() {
         })
         .catch(() => {});
     };
-    const id = setInterval(quiet, 25000);
+    const id = setInterval(quiet, 60000);
     const onVis = () => document.visibilityState === "visible" && quiet();
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("focus", quiet);
