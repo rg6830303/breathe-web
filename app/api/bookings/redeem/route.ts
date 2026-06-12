@@ -11,7 +11,10 @@ import { bookingRequestSchema, formatZodError } from "@/lib/validation";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-type SlotInput = { date: string; time: string; court: number; durationMin?: number };
+type Sport = "pickleball" | "cricket" | "badminton";
+type SlotInput = { date: string; time: string; court: number; durationMin?: number; sport?: Sport };
+const slotSport = (s: SlotInput, fallback: Sport): Sport =>
+  s.sport && ["pickleball", "cricket", "badminton"].includes(s.sport) ? s.sport : fallback;
 const slotDur = (s: SlotInput) => Math.max(30, Number(s.durationMin) || SLOT_MINUTES);
 
 /**
@@ -35,9 +38,9 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => ({}));
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
-    const sport = ["pickleball", "cricket", "badminton"].includes(String(body.sport))
+    const sport: Sport = (["pickleball", "cricket", "badminton"].includes(String(body.sport))
       ? String(body.sport)
-      : "pickleball";
+      : "pickleball") as Sport;
     const parsed = bookingRequestSchema.safeParse({ slots, addons: [] });
     if (!parsed.success) {
       return NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 });
@@ -70,20 +73,19 @@ export async function POST(req: Request) {
 
     const now = Date.now();
     const bookingIds: string[] = [];
-    const bookedSlots: { id: string; date: string; time: string; court: number; durationMin: number }[] = [];
+    const bookedSlots: { id: string; date: string; time: string; court: number; durationMin: number; sport: string }[] = [];
     let booked = 0;
     let bookedMin = 0;
 
     const normalizedSlots = slots.map((s) => {
-      let court = s.court;
-      if (sport === "cricket" || sport === "badminton") {
-        court = 1; // Cricket and Badminton are forced to Court 1
-      }
-      return { ...s, court };
+      const sSport = slotSport(s, sport);
+      const court = sSport === "cricket" || sSport === "badminton" ? 1 : s.court;
+      return { ...s, court, sport: sSport };
     });
 
     for (const s of normalizedSlots) {
-      const court = Number.isFinite(Number(s.court)) ? Math.max(1, Math.min(9, Number(s.court))) : 1;
+      const sSport = s.sport;
+      const court = sSport === "cricket" || sSport === "badminton" ? 1 : (Number.isFinite(Number(s.court)) ? Math.max(1, Math.min(9, Number(s.court))) : 1);
       const duration = slotDur(s);
       // Skip if the range (incl. ±30-min extensions) overlaps a confirmed booking.
       try {
@@ -96,7 +98,7 @@ export async function POST(req: Request) {
             s.court,
             s.time,
             duration,
-            sport,
+            sSport,
             Number(row.court_number) || 1,
             String(row.slot_time),
             Number(row.duration_min) || 60,
@@ -116,11 +118,11 @@ export async function POST(req: Request) {
               guest_name, guest_phone, guest_email,
               subtotal, gst, total, amount_paid, status, source, sport, notes, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 'confirmed', 'online', ?, ?, ?)`,
-            args: [id, session.id, s.date, s.time, duration, court, userName, userPhone, userEmail, sport, notes, now],
+            args: [id, session.id, s.date, s.time, duration, court, userName, userPhone, userEmail, sSport, notes, now],
           }
         ];
 
-        const targetCourts = sport === "cricket" ? [1, 2, 3] : [court];
+        const targetCourts = sSport === "cricket" ? [1, 2, 3] : [court];
         const intervals = cellsFor(s.time, duration);
         for (const c of targetCourts) {
           for (const cellTime of intervals) {
@@ -134,7 +136,7 @@ export async function POST(req: Request) {
         await turso.batch(statements, "write");
 
         bookingIds.push(id);
-        bookedSlots.push({ id, date: s.date, time: s.time, court, durationMin: duration });
+        bookedSlots.push({ id, date: s.date, time: s.time, court, durationMin: duration, sport: sSport });
         booked++;
         bookedMin += duration;
       } catch (e) {
@@ -146,7 +148,7 @@ export async function POST(req: Request) {
         const { supabase, hasSupabase } = require("@/lib/supabase");
         if (hasSupabase) {
           await supabase.from("bookings").insert({
-            id, user_id: session.id, slot_date: s.date, slot_time: s.time, duration_min: duration, sport,
+            id, user_id: session.id, slot_date: s.date, slot_time: s.time, duration_min: duration, sport: sSport,
             court_number: court, guest_name: userName, guest_phone: userPhone, guest_email: userEmail,
             subtotal: 0, gst: 0, total: 0, amount_paid: 0, status: "confirmed", source: "online", notes, created_at: now,
           });
@@ -180,6 +182,7 @@ export async function POST(req: Request) {
           courtNumber: bs.court,
           subtotal: 0,
           gst: 0,
+          sport: bs.sport,
         }).catch((e: unknown) => console.error("[redeem notify error]", e));
         if (waitUntil) waitUntil(run);
       }

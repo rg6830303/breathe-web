@@ -7,7 +7,7 @@ import { ArrowRight, ShoppingCart, Trash2, CalendarDays } from "lucide-react";
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { Container } from "@/components/ui";
-import { loadCart, saveCart, cartTotal, SPORT_LABEL, type Cart } from "@/lib/cart";
+import { loadCart, saveCart, cartTotal, cartSports, SPORT_LABEL, type Cart } from "@/lib/cart";
 import { priceForRange } from "@/lib/slots";
 
 function fmt(t: string) {
@@ -71,28 +71,42 @@ export default function CartPage() {
                     <span className="flex items-center gap-2 text-sm font-extrabold text-ink dark:text-white">
                       <CalendarDays className="h-4 w-4 text-brand" /> {dateLabel(cart!.date)}
                     </span>
-                    <span className="tag-sport">{SPORT_LABEL[cart!.sport] ?? cart!.sport}</span>
+                    <span className="tag-sport">
+                      {cartSports(cart).length > 1
+                        ? `${cartSports(cart).length} sports`
+                        : SPORT_LABEL[cart!.sport] ?? cart!.sport}
+                    </span>
                   </div>
 
                   <ul className="space-y-2">
-                    {cart!.items.map((it, idx) => (
-                      <li key={`${it.court}-${it.time}-${idx}`} className="flex items-center justify-between gap-3 rounded-2xl border-2 border-ink/8 bg-ink/[0.02] p-3 dark:border-white/10 dark:bg-white/[0.02]">
-                        <div>
-                          <div className="text-sm font-extrabold text-ink dark:text-white">Court {it.court}</div>
-                          <div className="text-xs text-slatey dark:text-white/50">
-                            {fmt(it.time)} – {fmt(addMin(it.time, it.durationMin))} · {it.durationMin} min
+                    {cart!.items.map((it, idx) => {
+                      const itSport = it.sport ?? cart!.sport;
+                      const courtLabel =
+                        itSport === "cricket" ? "Cricket Turf" : itSport === "badminton" ? "Badminton Court" : `Court ${it.court}`;
+                      return (
+                        <li key={`${it.court}-${it.time}-${idx}`} className="flex items-center justify-between gap-3 rounded-2xl border-2 border-ink/8 bg-ink/[0.02] p-3 dark:border-white/10 dark:bg-white/[0.02]">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-extrabold text-ink dark:text-white">{courtLabel}</span>
+                              <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[0.6rem] font-extrabold uppercase tracking-wide text-brand dark:bg-brand/20 dark:text-brand-300">
+                                {SPORT_LABEL[itSport] ?? itSport}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slatey dark:text-white/50">
+                              {fmt(it.time)} – {fmt(addMin(it.time, it.durationMin))} · {it.durationMin} min
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-display text-base font-extrabold text-brand dark:text-brand-300">
-                            ₹{priceForRange(cart!.sport, cart!.date, it.time, it.durationMin)}
-                          </span>
-                          <button type="button" onClick={() => removeItem(idx)} aria-label="Remove" className="rounded-lg p-1.5 text-slatey transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </li>
-                    ))}
+                          <div className="flex items-center gap-3">
+                            <span className="font-display text-base font-extrabold text-brand dark:text-brand-300">
+                              ₹{priceForRange(itSport, cart!.date, it.time, it.durationMin)}
+                            </span>
+                            <button type="button" onClick={() => removeItem(idx)} aria-label="Remove" className="rounded-lg p-1.5 text-slatey transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
 
                   <div className="mt-4 flex items-center justify-between rounded-2xl bg-ink px-4 py-3 text-lg font-extrabold text-white dark:bg-white dark:text-ink">

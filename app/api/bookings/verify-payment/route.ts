@@ -12,8 +12,11 @@ import { adjustCredit, BULK_PACKAGE } from "@/lib/credits";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-type SlotInput = { date: string; time: string; court: number; durationMin?: number };
+type Sport = "pickleball" | "cricket" | "badminton";
+type SlotInput = { date: string; time: string; court: number; durationMin?: number; sport?: Sport };
 const slotDur = (s: SlotInput) => Math.max(30, Number(s.durationMin) || 60);
+const slotSport = (s: SlotInput, fallback: Sport): Sport =>
+  s.sport && ["pickleball", "cricket", "badminton"].includes(s.sport) ? s.sport : fallback;
 type AddonInput = { id: string; label: string; price: number; qty?: number };
 
 export async function POST(req: Request) {
@@ -96,11 +99,9 @@ export async function POST(req: Request) {
       Number.isFinite(Number(c)) ? Math.max(1, Math.min(9, Number(c))) : 1;
 
     const normalizedSlots = slots.map((s) => {
-      let court = s.court;
-      if (sport === "cricket" || sport === "badminton") {
-        court = 1; // Cricket and Badminton are forced to Court 1
-      }
-      return { ...s, court };
+      const sSport = slotSport(s, sport);
+      const court = sSport === "cricket" || sSport === "badminton" ? 1 : s.court;
+      return { ...s, court, sport: sSport };
     });
 
     // All-or-nothing availability pre-check: if ANY requested slot was taken
@@ -119,8 +120,8 @@ export async function POST(req: Request) {
 
           // Resolve courts occupied by existing booking
           const rowCourts = rowSport === "cricket" ? [1, 2, 3] : [rowCourt];
-          // Resolve courts requested by the new booking
-          const requestedCourts = sport === "cricket" ? [1, 2, 3] : [s.court];
+          // Resolve courts requested by the new booking (per its own sport)
+          const requestedCourts = s.sport === "cricket" ? [1, 2, 3] : [s.court];
 
           const sharesCourt = requestedCourts.some((c) => rowCourts.includes(c));
 
@@ -148,12 +149,14 @@ export async function POST(req: Request) {
 
     let i = 0;
     for (const s of slots) {
+      const sSport = slotSport(s, sport);
       const duration = slotDur(s);
-      const price = priceForRange(sport, s.date, s.time, duration);
+      const price = priceForRange(sSport, s.date, s.time, duration);
       const totals = calculateTotals(price, addonTotal / slotCount);
       const id = uuid();
       bookingIds.push(id);
-      const court = clampCourt(s.court);
+      // Cricket/Badminton always occupy Court 1; pickleball keeps its court.
+      const court = sSport === "cricket" || sSport === "badminton" ? 1 : clampCourt(s.court);
 
       const notesObj = {
         razorpay_order_id: orderId,
@@ -161,7 +164,7 @@ export async function POST(req: Request) {
         razorpay_signature: signature,
         addons,
         requested_court: court,
-        sport,
+        sport: sSport,
       };
 
       // Pay exactly ₹200 advance for the first slot; subsequent slots in this order have ₹0 paid online.
@@ -241,7 +244,7 @@ export async function POST(req: Request) {
             amount_paid: amtPaidForThisBooking,
             status: "confirmed",
             source: "online",
-            sport,
+            sport: sSport,
             notes: JSON.stringify(notesObj),
             created_at: now,
           });
@@ -259,12 +262,15 @@ export async function POST(req: Request) {
       if (notifyBookingConfirmed) {
         const payloadFor = (idx: number) => {
           const s = slots[idx];
+          const sSport = slotSport(s, sport);
           const duration = slotDur(s);
-          const price = priceForRange(sport, s.date, s.time, duration);
+          const price = priceForRange(sSport, s.date, s.time, duration);
           const totals = calculateTotals(price, addonTotal / slotCount);
-          const court = Number.isFinite(Number(s.court))
-            ? Math.max(1, Math.min(9, Number(s.court)))
-            : 1;
+          const court = sSport === "cricket" || sSport === "badminton"
+            ? 1
+            : Number.isFinite(Number(s.court))
+              ? Math.max(1, Math.min(9, Number(s.court)))
+              : 1;
           return {
             id: bookingIds[idx],
             userEmail,
@@ -278,7 +284,7 @@ export async function POST(req: Request) {
             subtotal: Math.round(totals.subtotal),
             gst: Math.round(totals.taxes),
             amountPaid: idx === 0 ? 200 : 0,
-            sport,
+            sport: sSport,
           };
         };
 

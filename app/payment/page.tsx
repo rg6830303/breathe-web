@@ -7,7 +7,7 @@ import { Loader2, Lock, ShieldCheck } from "lucide-react";
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { Container } from "@/components/ui";
-import { loadCart, clearCart, cartTotal, cartMinutes, SPORT_LABEL, type Cart } from "@/lib/cart";
+import { loadCart, clearCart, cartTotal, cartMinutes, cartSports, SPORT_LABEL, type Cart } from "@/lib/cart";
 import { priceForRange } from "@/lib/slots";
 
 type Account = { id: string; email: string; name: string; role: "user" | "admin" } | null;
@@ -54,7 +54,13 @@ export default function PaymentPage() {
   const total = cartTotal(cart);
   const neededMin = cartMinutes(cart);
   const hasCredit = creditMin >= neededMin && (cart?.items.length ?? 0) > 0;
-  const slotsPayload = (cart?.items ?? []).map((i) => ({ date: cart!.date, court: i.court, time: i.time, durationMin: i.durationMin }));
+  const slotsPayload = (cart?.items ?? []).map((i) => ({
+    date: cart!.date,
+    court: i.court,
+    time: i.time,
+    durationMin: i.durationMin,
+    sport: i.sport ?? cart!.sport, // carry per-slot sport so mixed carts price/book correctly
+  }));
 
   function done() {
     clearCart();
@@ -168,16 +174,25 @@ export default function PaymentPage() {
             ) : (
               <div className="card-sport mt-6 p-5 sm:p-6">
                 <div className="mb-3 flex items-center justify-between">
-                  <span className="text-sm font-extrabold text-ink dark:text-white">{SPORT_LABEL[cart!.sport] ?? cart!.sport}</span>
+                  <span className="text-sm font-extrabold text-ink dark:text-white">
+                    {cartSports(cart).length > 1
+                      ? `${cartSports(cart).length} sports`
+                      : SPORT_LABEL[cart!.sport] ?? cart!.sport}
+                  </span>
                   <Link href="/cart" className="text-xs font-bold text-brand hover:underline">Edit cart</Link>
                 </div>
                 <ul className="space-y-1.5 text-sm">
-                  {cart!.items.map((it, idx) => (
-                    <li key={idx} className="flex justify-between text-slatey dark:text-white/60">
-                      <span>Court {it.court} · {fmt(it.time)}–{fmt(addMin(it.time, it.durationMin))}</span>
-                      <span className="font-bold text-ink dark:text-white">₹{priceForRange(cart!.sport, cart!.date, it.time, it.durationMin)}</span>
-                    </li>
-                  ))}
+                  {cart!.items.map((it, idx) => {
+                    const itSport = it.sport ?? cart!.sport;
+                    const courtLabel =
+                      itSport === "cricket" ? "Cricket Turf" : itSport === "badminton" ? "Badminton" : `Court ${it.court}`;
+                    return (
+                      <li key={idx} className="flex justify-between text-slatey dark:text-white/60">
+                        <span>{SPORT_LABEL[itSport]?.split(" ")[0] ?? ""} {courtLabel} · {fmt(it.time)}–{fmt(addMin(it.time, it.durationMin))}</span>
+                        <span className="font-bold text-ink dark:text-white">₹{priceForRange(itSport, cart!.date, it.time, it.durationMin)}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
                 <div className="mt-4 flex items-center justify-between rounded-2xl bg-ink px-4 py-3 text-lg font-extrabold text-white dark:bg-white dark:text-ink">
                   <span>Total</span>

@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { CalendarDays, Check, Gift, Loader2, Lock, LogIn, Plus, ReceiptText } from "lucide-react";
 import { calculateTotals, getSlotPrice } from "@/lib/pricing";
 import { priceForRange } from "@/lib/slots";
-import { saveCart } from "@/lib/cart";
+import { saveCart, loadCart } from "@/lib/cart";
 
 type Ext = { before: boolean; after: boolean };
 
@@ -152,15 +152,29 @@ export function BookingGrid() {
   // to the dedicated cart → payment → confirmation flow.
   function proceedToCart() {
     if (selected.length === 0) return;
-    const items = selected.map((s) => {
+    const newItems = selected.map((s) => {
       const ef = effective(s);
       return {
         court: s.court,
         time: ef.startTime,
         durationMin: ef.durationMin,
         price: priceForRange(sport, date, ef.startTime, ef.durationMin),
+        sport, // tag each line with the sport it was booked under
       };
     });
+    // Merge with an existing same-date cart so "Add more slots" accumulates
+    // ACROSS sports (a cart holds one date). Dedupe by court+time+sport.
+    const existing = loadCart();
+    let items = newItems;
+    if (existing && existing.date === date && Array.isArray(existing.items)) {
+      const keyOf = (i: { court: number; time: string; sport?: string }) =>
+        `${i.court}|${i.time}|${i.sport ?? existing.sport}`;
+      const incoming = new Set(newItems.map(keyOf));
+      const kept = existing.items
+        .map((i) => ({ ...i, sport: i.sport ?? existing.sport }))
+        .filter((i) => !incoming.has(keyOf(i)));
+      items = [...kept, ...newItems];
+    }
     saveCart({ date, sport, items });
     router.push("/cart");
   }
