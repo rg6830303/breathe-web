@@ -11,6 +11,7 @@ import { WalkInModal } from "@/components/admin/walk-in-modal";
 import { BulkBlockModal } from "@/components/admin/bulk-block-modal";
 import { AddUserModal } from "@/components/admin/add-user-modal";
 import { NotificationBell } from "@/components/notification-bell";
+import { getAdminCache, setAdminCache } from "@/lib/admin-cache";
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   ArrowRight,
@@ -331,20 +332,31 @@ function OverviewTab() {
 function BookingsTab() {
   const toast = useToast();
   const [date, setDate] = useState<string>("");
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `bookings:${date}`;
+  const [bookings, setBookings] = useState<Booking[]>(() => getAdminCache<Booking[]>(`bookings:`) ?? []);
+  // Spinner only when there's nothing cached to show — otherwise revalidate silently.
+  const [loading, setLoading] = useState(() => getAdminCache<Booking[]>(`bookings:`) === undefined);
   const [busy, setBusy] = useState<string | null>(null);
 
   function reload() {
-    setLoading(true);
+    const cached = getAdminCache<Booking[]>(cacheKey);
+    if (cached) {
+      setBookings(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     const url = date ? `/api/admin/bookings?date=${date}` : "/api/admin/bookings";
     fetch(url)
       .then((r) => r.json())
-      .then((data) => setBookings(data.bookings ?? []))
+      .then((data) => {
+        setBookings(data.bookings ?? []);
+        setAdminCache(cacheKey, data.bookings ?? []);
+      })
       .finally(() => setLoading(false));
   }
 
-  useEffect(reload, [date]);
+  useEffect(reload, [date]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-refresh so new bookings (online or walk-in) appear without a manual
   // reload — quietly re-fetch every 60s without flipping the loading state.
@@ -493,7 +505,15 @@ function CourtTab() {
   const [busy, setBusy] = useState<string | null>(null);
 
   function load() {
-    setLoading(true);
+    const ck = `courts:${date}`;
+    const cached = getAdminCache<{ slots: SlotResp; bookings: Booking[] }>(ck);
+    if (cached) {
+      setData(cached.slots);
+      setBookings(cached.bookings);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     Promise.all([
       fetch(`/api/slots?date=${date}`).then((r) => r.json()),
       fetch(`/api/admin/bookings?date=${date}`).then((r) => r.json()),
@@ -501,11 +521,12 @@ function CourtTab() {
       .then(([slots, bks]) => {
         setData(slots);
         setBookings(bks.bookings ?? []);
+        setAdminCache(ck, { slots, bookings: bks.bookings ?? [] });
       })
       .finally(() => setLoading(false));
   }
 
-  useEffect(load, [date]);
+  useEffect(load, [date]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const byCourt = useMemo(() => {
     if (!data) return {} as Record<number, SlotResp["slots"]>;
@@ -621,18 +642,22 @@ function CourtTab() {
 }
 
 function UsersTab() {
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<AdminUser[]>(() => getAdminCache<AdminUser[]>("users") ?? []);
+  const [loading, setLoading] = useState(() => getAdminCache<AdminUser[]>("users") === undefined);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [userBookings, setUserBookings] = useState<Record<string, Booking[]>>({});
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
 
   function load() {
-    setLoading(true);
+    if (getAdminCache<AdminUser[]>("users")) setLoading(false);
+    else setLoading(true);
     fetch("/api/admin/users")
       .then((r) => r.json())
-      .then((data) => setUsers(data.users ?? []))
+      .then((data) => {
+        setUsers(data.users ?? []);
+        setAdminCache("users", data.users ?? []);
+      })
       .finally(() => setLoading(false));
   }
 
@@ -833,13 +858,23 @@ function ExpensesTab() {
   const [form, setForm] = useState({ expense_date: today, category: "food", description: "", amount: "", payment_method: "Cash" });
 
   function load() {
-    setLoading(true);
+    const ck = `expenses:${range.from}:${range.to}`;
+    const cached = getAdminCache<{ expenses: Expense[]; total: number; byCategory: Record<string, number> }>(ck);
+    if (cached) {
+      setExpenses(cached.expenses);
+      setTotal(cached.total);
+      setByCat(cached.byCategory);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     fetch(`/api/admin/expenses?from=${range.from}&to=${range.to}`)
       .then((r) => r.json())
       .then((d) => {
         setExpenses(d.expenses ?? []);
         setTotal(d.total ?? 0);
         setByCat(d.byCategory ?? {});
+        setAdminCache(ck, { expenses: d.expenses ?? [], total: d.total ?? 0, byCategory: d.byCategory ?? {} });
       })
       .finally(() => setLoading(false));
   }
@@ -999,14 +1034,21 @@ type Tournament = {
 
 function TournamentsTab() {
   const toast = useToast();
-  const [items, setItems] = useState<Tournament[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<Tournament[]>(() => getAdminCache<Tournament[]>("tournaments") ?? []);
+  const [loading, setLoading] = useState(() => getAdminCache<Tournament[]>("tournaments") === undefined);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ name: "", event_date: "", format: "Open Doubles", prize: "", fee: "", description: "", status: "upcoming" });
 
   function load() {
-    setLoading(true);
-    fetch("/api/admin/tournaments").then((r) => r.json()).then((d) => setItems(d.tournaments ?? [])).finally(() => setLoading(false));
+    if (getAdminCache<Tournament[]>("tournaments")) setLoading(false);
+    else setLoading(true);
+    fetch("/api/admin/tournaments")
+      .then((r) => r.json())
+      .then((d) => {
+        setItems(d.tournaments ?? []);
+        setAdminCache("tournaments", d.tournaments ?? []);
+      })
+      .finally(() => setLoading(false));
   }
   useEffect(load, []);
 
