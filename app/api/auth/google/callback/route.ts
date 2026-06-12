@@ -6,7 +6,7 @@ import crypto from "crypto";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
 import { signToken, COOKIE_NAME } from "@/lib/auth";
-import { exchangeCode, fetchProfile, googleConfigured } from "@/lib/google-oauth";
+import { exchangeCode, fetchProfile, googleConfigured, originFromRequest } from "@/lib/google-oauth";
 
 export const runtime = "nodejs";
 
@@ -18,7 +18,10 @@ export const runtime = "nodejs";
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const fail = (e: string) => NextResponse.redirect(new URL(`/login?error=${e}`, url.origin));
+  // Use the real public origin (forwarded host) for redirect_uri + redirects so
+  // the OAuth round-trip stays on the user's actual domain.
+  const origin = originFromRequest(req);
+  const fail = (e: string) => NextResponse.redirect(new URL(`/login?error=${e}`, origin));
 
   try {
     if (!googleConfigured()) return fail("google_unconfigured");
@@ -37,7 +40,7 @@ export async function GET(req: Request) {
     c.set("g_oauth_next", "", { path: "/", maxAge: 0 });
     if (!savedState || savedState !== state) return fail("google_state");
 
-    const tokens = await exchangeCode(code);
+    const tokens = await exchangeCode(code, origin);
     const profile = await fetchProfile(tokens.access_token);
     if (!profile.email) return fail("google_noemail");
     if (profile.verified_email === false) return fail("google_unverified");
@@ -114,7 +117,7 @@ export async function GET(req: Request) {
       secure: process.env.NODE_ENV === "production",
     });
 
-    return NextResponse.redirect(new URL(next, url.origin));
+    return NextResponse.redirect(new URL(next, origin));
   } catch (e) {
     console.error("[google callback error]", e);
     return fail("google_failed");
