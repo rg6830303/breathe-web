@@ -213,21 +213,21 @@ export function AdminConsole() {
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-0 border-b-2 border-ink/10 dark:border-white/10">
+        {/* Tabs — horizontally scrollable, labels always visible for clear nav */}
+        <div className="no-scrollbar flex flex-nowrap gap-0 overflow-x-auto border-b-2 border-ink/10 dark:border-white/10">
           {TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               type="button"
               onClick={() => setTab(key)}
-              className={`relative inline-flex items-center gap-2 px-4 py-3 text-xs font-extrabold uppercase tracking-wide transition-colors ${
+              className={`relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-3 text-xs font-extrabold uppercase tracking-wide transition-colors ${
                 tab === key
                   ? "text-brand dark:text-brand-300"
                   : "text-ink/50 hover:text-ink dark:text-white/50 dark:hover:text-white"
               }`}
             >
-              <Icon className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{label}</span>
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <span>{label}</span>
               {tab === key && (
                 <motion.span
                   layoutId="admin-tab-underline"

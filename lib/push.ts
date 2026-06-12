@@ -47,12 +47,16 @@ export async function ensurePushTable(): Promise<void> {
         endpoint TEXT NOT NULL UNIQUE,
         keys_p256dh TEXT NOT NULL,
         keys_auth TEXT NOT NULL,
-        created_at INTEGER NOT NULL
+        created_at BIGINT NOT NULL
       )`,
     )
     .catch(() => {});
   // Back-fill the role column onto an older table that predates it.
   await turso.execute("ALTER TABLE push_subscriptions ADD COLUMN role TEXT NOT NULL DEFAULT 'user'").catch(() => {});
+  // CRITICAL (Postgres): widen created_at to BIGINT. A legacy INTEGER (int4)
+  // column overflows on Date.now() (~1.78e12) → every subscribe INSERT 500s,
+  // which is exactly the "couldn't enable notifications" failure.
+  await turso.execute("ALTER TABLE push_subscriptions ALTER COLUMN created_at TYPE BIGINT").catch(() => {});
 }
 
 async function deliver(rows: SubRow[], payload: PushPayload): Promise<number> {
