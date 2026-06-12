@@ -84,7 +84,11 @@ function getPg(): Pg {
   pg = postgres(PG_URL, {
     prepare: false,
     ssl: "require",
-    max: 1,
+    // max: 3 lets a single request run a few independent queries CONCURRENTLY
+    // (e.g. the analytics dashboard's aggregates) instead of serializing them on
+    // one connection. Still tiny against the pooler's 200-client ceiling, so it
+    // stays safe on the free tier even with many simultaneous instances.
+    max: 3,
     idle_timeout: 30,
     max_lifetime: 60 * 5,
     connect_timeout: 10,
