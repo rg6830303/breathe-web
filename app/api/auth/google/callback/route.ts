@@ -46,8 +46,28 @@ export async function GET(req: Request) {
     const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
     if (!savedState || savedState !== state) return fail("google_state");
 
-    const tokens = await exchangeCode(code, origin);
-    const profile = await fetchProfile(tokens.access_token);
+    // Exchange the auth code → tokens. Distinguish the common misconfig causes
+    // so the failure is diagnosable from the /login?error= code (no secrets are
+    // exposed — only a coarse reason).
+    let tokens;
+    try {
+      tokens = await exchangeCode(code, origin);
+    } catch (e) {
+      const msg = String((e as Error)?.message ?? "");
+      console.error("[google exchange error]", msg);
+      if (/redirect_uri_mismatch/i.test(msg)) return fail("google_redirect");
+      if (/invalid_client|unauthorized_client/i.test(msg)) return fail("google_client");
+      if (/invalid_grant/i.test(msg)) return fail("google_grant");
+      return fail("google_exchange");
+    }
+
+    let profile;
+    try {
+      profile = await fetchProfile(tokens.access_token);
+    } catch (e) {
+      console.error("[google profile error]", e);
+      return fail("google_profile");
+    }
     if (!profile.email) return fail("google_noemail");
     if (profile.verified_email === false) return fail("google_unverified");
 
