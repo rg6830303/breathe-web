@@ -7,7 +7,10 @@ export const VAPID_PUBLIC_KEY_DEFAULT =
   "BPAZHLXp_OsSjmFvwJASm_cmJSfl-BNjyPVbPJfwUjY4KHBWddNnp5qOVkQzolai-722LD6CZSlvsiCejGByD7E";
 
 export function getVapidPublicKey(): string {
-  return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY_DEFAULT;
+  // Trim — a stray space/newline pasted into NEXT_PUBLIC_VAPID_PUBLIC_KEY makes
+  // the decoded applicationServerKey the wrong length, which the browser
+  // rejects with AbortError on subscribe().
+  return (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY_DEFAULT).trim();
 }
 
 /** Convert a base64url VAPID public key into the Uint8Array the Push API wants. */

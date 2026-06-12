@@ -56,7 +56,19 @@ export function PushToggle({ className = "" }: { className?: string }) {
         return;
       }
       const reg = await navigator.serviceWorker.ready;
-      const appKey = urlBase64ToUint8Array(getVapidPublicKey());
+      const keyStr = getVapidPublicKey();
+      const appKey = urlBase64ToUint8Array(keyStr);
+      // A valid P-256 VAPID public key is exactly 65 bytes. If it isn't, the
+      // browser rejects subscribe() with AbortError — almost always a wrong /
+      // whitespaced / swapped NEXT_PUBLIC_VAPID_PUBLIC_KEY. Fail fast with a
+      // precise message naming the env var + the actual length we received.
+      if (appKey.length !== 65) {
+        setMsg(
+          `Push key invalid: NEXT_PUBLIC_VAPID_PUBLIC_KEY decoded to ${appKey.length} bytes (must be 65). ` +
+            `Re-paste the 87-char public key (starts "B…") — not the private key — and redeploy.`,
+        );
+        return;
+      }
 
       // Drop any existing subscription whose key differs from the current VAPID
       // public key. A leftover subscription from a previous key is the #1 cause
@@ -91,9 +103,12 @@ export function PushToggle({ className = "" }: { className?: string }) {
         }
         if (!sub) {
           const name = lastErr instanceof Error ? lastErr.name : "Error";
+          // Include the key fingerprint (public, not secret) so a mismatch
+          // between the deployed key and the one set in Vercel is visible.
           setMsg(
-            `Couldn't subscribe this device (${name}). Make sure you're online, then reload and try again. ` +
-              `On Android, opening the installed app (not a private tab) is most reliable.`,
+            `Couldn't subscribe (${name}). Using key ${keyStr.slice(0, 8)}…(${keyStr.length} chars). ` +
+              `Be online; on Android use the installed app (not a private tab). If it persists, ` +
+              `clear this site's Notifications in Chrome settings and retry.`,
           );
           return;
         }
