@@ -56,24 +56,49 @@ export function PushToggle({ className = "" }: { className?: string }) {
         return;
       }
       const reg = await navigator.serviceWorker.ready;
+      const appKey = urlBase64ToUint8Array(getVapidPublicKey());
+
+      // Drop any existing subscription whose key differs from the current VAPID
+      // public key. A leftover subscription from a previous key is the #1 cause
+      // of AbortError on re-subscribe (and of pushes silently not arriving).
       let sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        const existing = new Uint8Array((sub.options.applicationServerKey as ArrayBuffer) ?? new ArrayBuffer(0));
+        const sameKey = existing.length === appKey.length && existing.every((b, i) => b === appKey[i]);
+        if (!sameKey) {
+          await sub.unsubscribe().catch(() => {});
+          sub = null;
+        }
+      }
+
+      // Subscribe with up to 3 attempts: AbortError from the push service is
+      // often transient, and a fresh unsubscribe + short backoff clears it.
       if (!sub) {
-        try {
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(getVapidPublicKey()) as BufferSource,
-          });
-        } catch (subErr) {
-          // Common cause: a stale subscription created with a DIFFERENT VAPID
-          // key. Clearing it lets the next attempt re-subscribe cleanly.
-          const name = subErr instanceof Error ? subErr.name : "Error";
-          console.error("[push subscribe]", subErr);
-          const stale = await reg.pushManager.getSubscription().catch(() => null);
-          if (stale) await stale.unsubscribe().catch(() => {});
-          setMsg(`Couldn't subscribe this device (${name}). Please tap again.`);
+        let lastErr: unknown = null;
+        for (let attempt = 0; attempt < 3 && !sub; attempt++) {
+          try {
+            sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: appKey as BufferSource,
+            });
+          } catch (subErr) {
+            lastErr = subErr;
+            console.error(`[push subscribe attempt ${attempt + 1}]`, subErr);
+            const stale = await reg.pushManager.getSubscription().catch(() => null);
+            if (stale) await stale.unsubscribe().catch(() => {});
+            await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+          }
+        }
+        if (!sub) {
+          const name = lastErr instanceof Error ? lastErr.name : "Error";
+          setMsg(
+            `Couldn't subscribe this device (${name}). Make sure you're online, then reload and try again. ` +
+              `On Android, opening the installed app (not a private tab) is most reliable.`,
+          );
           return;
         }
       }
+
       const res = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
