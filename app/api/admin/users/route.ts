@@ -83,6 +83,7 @@ export async function GET() {
       created_at: string;
       booking_count: number;
       total_spent: number;
+      total_due: number;
     };
     const byEmail = new Map<string, Row>();
 
@@ -91,7 +92,8 @@ export async function GET() {
       const result = await turso.execute({
         sql: `SELECT u.id, u.full_name as name, u.email, u.phone, u.created_at,
                      COUNT(b.id) AS booking_count,
-                     COALESCE(SUM(CASE WHEN b.status = 'confirmed' THEN b.amount_paid ELSE 0 END), 0) AS total_spent
+                     COALESCE(SUM(CASE WHEN b.status = 'confirmed' THEN b.amount_paid ELSE 0 END), 0) AS total_spent,
+                     COALESCE(SUM(CASE WHEN b.status = 'confirmed' THEN (b.total - b.amount_paid) ELSE 0 END), 0) AS total_due
               FROM users u
               LEFT JOIN bookings b ON b.user_id = u.id
               GROUP BY u.id
@@ -108,6 +110,7 @@ export async function GET() {
           created_at: String(row.created_at),
           booking_count: Number(row.booking_count),
           total_spent: Number(row.total_spent),
+          total_due: Number(row.total_due),
         });
       }
     } catch (dbErr) {
@@ -134,6 +137,7 @@ export async function GET() {
               created_at: String(u.created_at ?? ""),
               booking_count: 0,
               total_spent: 0,
+              total_due: 0,
             });
           }
         }

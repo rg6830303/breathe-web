@@ -30,9 +30,28 @@ export function cellsFor(startTime: string, durationMin: number): string[] {
 /** Authoritative price for an arbitrary range, charged per half-hour so a
  *  standard 60-min slot equals getSlotPrice() and each ±30-min extension adds
  *  exactly half of the hour it lands in. */
-export function priceForRange(startTime: string, durationMin: number): number {
+export function priceForRange(
+  sportOrTime: string,
+  dateOrDuration?: string | number,
+  startTime?: string,
+  durationMin?: number
+): number {
+  if (typeof dateOrDuration === "number" || arguments.length === 2 || !dateOrDuration) {
+    const sTime = sportOrTime;
+    const dur = Number(dateOrDuration) || 60;
+    let total = 0;
+    for (const cell of cellsFor(sTime, dur)) total += getSlotPrice(cell) / 2;
+    return Math.round(total);
+  }
+
+  const sport = sportOrTime;
+  const date = String(dateOrDuration);
+  const sTime = startTime || "05:00";
+  const dur = durationMin || 60;
   let total = 0;
-  for (const cell of cellsFor(startTime, durationMin)) total += getSlotPrice(cell) / 2;
+  for (const cell of cellsFor(sTime, dur)) {
+    total += getSlotPrice(sport, date, cell) / 2;
+  }
   return Math.round(total);
 }
 

@@ -11,10 +11,32 @@ function getClient(): Client {
   return client;
 }
 
+let ensured = false;
+let ensuring = false;
+
+async function ensureSchemaLazy(): Promise<void> {
+  if (ensured || ensuring) return;
+  ensuring = true;
+  try {
+    const { applySchema } = await import("./db/ensure");
+    await applySchema();
+    ensured = true;
+  } catch (err) {
+    console.error("[lazy ensureSchema] failed", err);
+  } finally {
+    ensuring = false;
+  }
+}
+
 export const turso = {
-  execute: ((arg: Parameters<Client["execute"]>[0]) => getClient().execute(arg)) as Client["execute"],
-  batch: ((statements: Parameters<Client["batch"]>[0], mode?: Parameters<Client["batch"]>[1]) =>
-    getClient().batch(statements, mode)) as Client["batch"],
+  execute: (async (arg: Parameters<Client["execute"]>[0]) => {
+    await ensureSchemaLazy();
+    return getClient().execute(arg);
+  }) as Client["execute"],
+  batch: (async (statements: Parameters<Client["batch"]>[0], mode?: Parameters<Client["batch"]>[1]) => {
+    await ensureSchemaLazy();
+    return getClient().batch(statements, mode);
+  }) as Client["batch"],
 };
 
 /**
@@ -26,7 +48,7 @@ export const turso = {
 let blockedSlotsEnsured = false;
 export async function ensureBlockedSlotsTable(): Promise<void> {
   if (blockedSlotsEnsured) return;
-  await getClient().execute(
+  await turso.execute(
     `CREATE TABLE IF NOT EXISTS blocked_slots (
       id TEXT PRIMARY KEY,
       slot_date TEXT NOT NULL,

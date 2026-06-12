@@ -30,6 +30,7 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
+    const sport = String(body.sport ?? "pickleball");
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
     const addons: AddonInput[] = Array.isArray(body.addons) ? body.addons : [];
 
@@ -54,8 +55,6 @@ export async function POST(req: Request) {
         });
         return NextResponse.json({ orderId: order.id, amount: order.amount, currency: "INR", keyId: keyIdEarly });
       } catch (rzpErr) {
-        // Log the FULL error (own props included) so the real cause is visible
-        // in the server logs, and surface the exact Razorpay reason to the UI.
         try {
           console.error(
             "[create-order bulk razorpay error]",
@@ -91,14 +90,11 @@ export async function POST(req: Request) {
 
     const dates = Array.from(new Set(slots.map((s) => s.date)));
 
-    // Reject if any requested range (slot, incl. ±30-min extensions) overlaps an
-    // existing confirmed booking on the SAME court — extensions are checked at
-    // 30-min granularity, not just on the hour.
     for (const d of dates) {
       let booked;
       try {
         booked = await turso.execute({
-          sql: "SELECT slot_time, duration_min, court_number FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
+          sql: "SELECT slot_time, duration_min, court_number, notes FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
           args: [d],
         });
       } catch (dbErr) {
@@ -108,21 +104,35 @@ export async function POST(req: Request) {
 
       for (const s of slots) {
         if (s.date !== d) continue;
-        const clash = booked.rows.some(
-          (row) =>
-            Number(row.court_number) === Number(s.court) &&
-            rangesOverlap(s.time, dur(s), String(row.slot_time), Number(row.duration_min) || 60),
-        );
+        const clash = booked.rows.some((row) => {
+          const rowNotes = row.notes ? JSON.parse(String(row.notes)) : {};
+          const rowSport = rowNotes.sport || "pickleball";
+          const rowCourt = Number(row.court_number) || 1;
+
+          // Resolve courts occupied by existing booking
+          const rowCourts = rowSport === "cricket" ? [1, 2, 3] : [rowCourt];
+          // Resolve courts requested by the new booking
+          const requestedCourts = sport === "cricket" ? [1, 2, 3] : [s.court];
+
+          const sharesCourt = requestedCourts.some((c) => rowCourts.includes(c));
+
+          return (
+            sharesCourt &&
+            rangesOverlap(s.time, dur(s), String(row.slot_time), Number(row.duration_min) || 60)
+          );
+        });
+
         if (clash) {
+          const displayCourt = sport === "cricket" ? "Cricket Turf" : `Court ${s.court}`;
           return NextResponse.json(
-            { error: `Court ${s.court} at ${s.time.slice(0, 5)} is no longer available.` },
+            { error: `${displayCourt} at ${s.time.slice(0, 5)} is no longer available.` },
             { status: 409 },
           );
         }
       }
     }
 
-    const base = slots.reduce((sum, s) => sum + priceForRange(s.time, dur(s)), 0);
+    const base = slots.reduce((sum, s) => sum + priceForRange(sport, s.date, s.time, dur(s)), 0);
     const addonTotal = addons.reduce((sum, a) => sum + (Number(a.price) || 0) * (Number(a.qty) || 1), 0);
     const totals = calculateTotals(base, addonTotal);
 
@@ -135,11 +145,14 @@ export async function POST(req: Request) {
     let order;
     try {
       const rzp = new Razorpay({ key_id: keyId, key_secret: keySecret });
+      // Charging exactly ₹200 (or ₹1 in TEST_ONE_RUPEE mode) as booking advance
+      const payAmount = TEST_ONE_RUPEE ? 100 : 200 * 100;
+
       order = await rzp.orders.create({
-        amount: orderAmount(Math.round(totals.total * 100)),
+        amount: payAmount,
         currency: "INR",
         receipt: uuid(),
-        notes: { user_id: session.id, slots: String(slots.length) },
+        notes: { user_id: session.id, slots: String(slots.length), sport },
       });
     } catch (rzpErr) {
       console.error("[create-order razorpay error]", rzpErr);

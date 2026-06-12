@@ -63,6 +63,7 @@ type AdminUser = {
   created_at: string;
   booking_count: number;
   total_spent: number;
+  total_due: number;
 };
 type SlotResp = {
   date: string;
@@ -551,7 +552,7 @@ function UsersTab() {
   useEffect(load, []);
 
   function exportCsv() {
-    const header = ["Name", "Email", "Phone", "Joined", "Bookings", "Total spent (INR)"];
+    const header = ["Name", "Email", "Phone", "Joined", "Bookings", "Total spent (INR)", "Outstanding Due (INR)"];
     const rows = filtered.map((u) => [
       u.name,
       u.email,
@@ -559,6 +560,7 @@ function UsersTab() {
       u.created_at.slice(0, 10),
       String(u.booking_count),
       String(u.total_spent),
+      String(u.total_due),
     ]);
     const csv = [header, ...rows]
       .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
@@ -649,7 +651,7 @@ function UsersTab() {
           <table className="w-full min-w-[760px] border-collapse text-sm">
             <thead>
               <tr className="border-b-2 border-ink/10 dark:border-white/10">
-                {["Name", "Email", "Phone", "Joined", "Bookings", "Spent", ""].map((h) => (
+                {["Name", "Email", "Phone", "Joined", "Bookings", "Spent", "Due", ""].map((h) => (
                   <th key={h} className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">{h}</th>
                 ))}
               </tr>
@@ -664,6 +666,7 @@ function UsersTab() {
                     <td className="p-3 text-[11px] text-ink/50 dark:text-white/50">{u.created_at.slice(0, 10)}</td>
                     <td className="p-3 font-semibold text-ink dark:text-white">{u.booking_count}</td>
                     <td className="p-3 font-extrabold text-brand">{money(u.total_spent)}</td>
+                    <td className={`p-3 font-extrabold ${u.total_due > 0 ? "text-red-500" : "text-ink/40 dark:text-white/40"}`}>{money(u.total_due)}</td>
                     <td className="p-3 text-right">
                       <div className="inline-flex gap-1">
                         <button

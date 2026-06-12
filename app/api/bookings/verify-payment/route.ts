@@ -23,6 +23,7 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
+    const sport = String(body.sport ?? "pickleball");
     let orderId = String(body.orderId ?? "");
     let paymentId = String(body.paymentId ?? "");
     const signature = String(body.signature ?? "");
@@ -114,12 +115,27 @@ export async function POST(req: Request) {
       const court = clampCourt(s.court);
       try {
         const ex = await turso.execute({
-          sql: "SELECT slot_time, duration_min FROM bookings WHERE slot_date = ? AND court_number = ? AND status = 'confirmed'",
-          args: [s.date, court],
+          sql: "SELECT slot_time, duration_min, court_number, notes FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
+          args: [s.date],
         });
-        const clash = ex.rows.some((row) =>
-          rangesOverlap(s.time, slotDur(s), String(row.slot_time), Number(row.duration_min) || 60),
-        );
+        const clash = ex.rows.some((row) => {
+          const rowNotes = row.notes ? JSON.parse(String(row.notes)) : {};
+          const rowSport = rowNotes.sport || "pickleball";
+          const rowCourt = Number(row.court_number) || 1;
+
+          // Resolve courts occupied by existing booking
+          const rowCourts = rowSport === "cricket" ? [1, 2, 3] : [rowCourt];
+          // Resolve courts requested by the new booking
+          const requestedCourts = sport === "cricket" ? [1, 2, 3] : [court];
+
+          const sharesCourt = requestedCourts.some((c) => rowCourts.includes(c));
+
+          return (
+            sharesCourt &&
+            rangesOverlap(s.time, slotDur(s), String(row.slot_time), Number(row.duration_min) || 60)
+          );
+        });
+
         if (clash) {
           const refunded = await refundFull("slot taken before confirmation");
           return NextResponse.json(
@@ -136,9 +152,10 @@ export async function POST(req: Request) {
       }
     }
 
+    let i = 0;
     for (const s of slots) {
       const duration = slotDur(s);
-      const price = priceForRange(s.time, duration);
+      const price = priceForRange(sport, s.date, s.time, duration);
       const totals = calculateTotals(price, addonTotal / slotCount);
       const id = uuid();
       bookingIds.push(id);
@@ -150,7 +167,12 @@ export async function POST(req: Request) {
         razorpay_signature: signature,
         addons,
         requested_court: court,
+        sport,
       };
+
+      // Pay exactly ₹200 advance for the first slot; subsequent slots in this order have ₹0 paid online.
+      const amtPaidForThisBooking = i === 0 ? 200 : 0;
+      i++;
 
       try {
         await turso.execute({
@@ -173,7 +195,7 @@ export async function POST(req: Request) {
             Math.round(totals.subtotal),
             Math.round(totals.taxes),
             Math.round(totals.total),
-            Math.round(totals.total),
+            amtPaidForThisBooking,
             JSON.stringify(notesObj),
             now,
           ],
@@ -182,8 +204,6 @@ export async function POST(req: Request) {
         console.error("[verify-payment db-insert error]", insertErr);
         const msg = String((insertErr as Error)?.message ?? "").toLowerCase();
         const isCollision = msg.includes("unique") || msg.includes("constraint");
-        // Roll back any sibling slots already inserted in this request so we
-        // never leave a partial booking, then refund the entire payment.
         for (const bid of bookingIds.filter((b) => b !== id)) {
           await turso
             .execute({
@@ -220,7 +240,7 @@ export async function POST(req: Request) {
             subtotal: Math.round(totals.subtotal),
             gst: Math.round(totals.taxes),
             total: Math.round(totals.total),
-            amount_paid: Math.round(totals.total),
+            amount_paid: amtPaidForThisBooking,
             status: "confirmed",
             source: "online",
             notes: JSON.stringify(notesObj),
@@ -232,25 +252,22 @@ export async function POST(req: Request) {
       }
     }
 
-    // Dispatch confirmation notifications. The FIRST booking's email is awaited
-    // so we can report real delivery status to the UI (no more "email sent"
-    // when it actually failed); any additional bookings + admin/telegram alerts
-    // run best-effort in the background.
+    // Dispatch confirmation notifications.
     let emailed = false;
     try {
       const { notifyBookingConfirmed } = require("@/lib/notifications");
       const { waitUntil } = require("@vercel/functions");
       if (notifyBookingConfirmed) {
-        const payloadFor = (i: number) => {
-          const s = slots[i];
+        const payloadFor = (idx: number) => {
+          const s = slots[idx];
           const duration = slotDur(s);
-          const price = priceForRange(s.time, duration);
+          const price = priceForRange(sport, s.date, s.time, duration);
           const totals = calculateTotals(price, addonTotal / slotCount);
           const court = Number.isFinite(Number(s.court))
             ? Math.max(1, Math.min(9, Number(s.court)))
             : 1;
           return {
-            id: bookingIds[i],
+            id: bookingIds[idx],
             userEmail,
             userName,
             userPhone: userPhone || undefined,
@@ -261,6 +278,8 @@ export async function POST(req: Request) {
             courtNumber: court,
             subtotal: Math.round(totals.subtotal),
             gst: Math.round(totals.taxes),
+            amountPaid: idx === 0 ? 200 : 0,
+            sport,
           };
         };
 
@@ -273,8 +292,8 @@ export async function POST(req: Request) {
           }
         }
 
-        for (let i = 1; i < slots.length; i++) {
-          const run = notifyBookingConfirmed(payloadFor(i)).catch((e: unknown) =>
+        for (let idx = 1; idx < slots.length; idx++) {
+          const run = notifyBookingConfirmed(payloadFor(idx)).catch((e: unknown) =>
             console.error("[notify error]", e),
           );
           if (waitUntil) waitUntil(run);
