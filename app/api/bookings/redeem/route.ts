@@ -5,7 +5,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { ensureSchema } from "@/lib/db/ensure";
 import { turso } from "@/lib/turso";
 import { getCreditBalance, adjustCredit, SLOT_MINUTES } from "@/lib/credits";
-import { rangesOverlap, isWithinHours, slotsClash, cellsFor } from "@/lib/slots";
+import { rangesOverlap, isWithinHours, slotsClash, cellsFor, isPastIST } from "@/lib/slots";
 import { bookingRequestSchema, formatZodError } from "@/lib/validation";
 
 export const runtime = "nodejs";
@@ -49,6 +49,12 @@ export async function POST(req: Request) {
     for (const s of slots) {
       if (!isWithinHours(s.time, slotDur(s))) {
         return NextResponse.json({ error: "That time is outside opening hours." }, { status: 400 });
+      }
+      if (isPastIST(s.date, s.time)) {
+        return NextResponse.json(
+          { error: `The ${s.time} slot has already started — please pick an upcoming time.` },
+          { status: 400 },
+        );
       }
     }
 

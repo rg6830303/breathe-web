@@ -11,7 +11,7 @@ import { saveCart, loadCart } from "@/lib/cart";
 
 type Ext = { before: boolean; after: boolean };
 
-type Slot = { court: number; time: string; status: "open" | "booked" | "blocked"; price: number };
+type Slot = { court: number; time: string; status: "open" | "booked" | "blocked" | "past"; price: number };
 type Account = { id: string; email: string; name: string; role: "user" | "admin" } | null;
 type Addon = { id: string; label: string; price: number; qty: number; on: boolean };
 
@@ -770,6 +770,9 @@ function SlotButton({ slot, selected, onClick }: { slot: Slot; selected: boolean
     cls = "cursor-not-allowed border-2 border-red-200/60 bg-red-50/80 text-[#E24B4A] dark:border-red-900/40 dark:bg-red-900/10 dark:text-red-400";
   if (state === "blocked")
     cls = "cursor-not-allowed border-2 border-ink/10 bg-ink/5 text-ink/30 dark:border-white/10 dark:bg-white/5 dark:text-white/20";
+  // Past (today IST, start time already gone): render as an empty, inert cell.
+  if (state === "past")
+    cls = "cursor-default border-2 border-dashed border-ink/5 bg-transparent text-ink/15 dark:border-white/5 dark:text-white/10";
 
   return (
     <motion.button
@@ -782,7 +785,7 @@ function SlotButton({ slot, selected, onClick }: { slot: Slot; selected: boolean
     >
       <span className="flex w-full items-center justify-between">
         <span className="uppercase tracking-wide">
-          {state === "open" ? "Open" : state === "selected" ? "Picked" : state === "booked" ? "Booked" : "Blocked"}
+          {state === "open" ? "Open" : state === "selected" ? "Picked" : state === "booked" ? "Booked" : state === "past" ? "—" : "Blocked"}
         </span>
         {state === "booked" ? (
           <Lock className="h-3.5 w-3.5" />
@@ -790,7 +793,7 @@ function SlotButton({ slot, selected, onClick }: { slot: Slot; selected: boolean
           <Check className="h-3.5 w-3.5" />
         ) : null}
       </span>
-      {slot.status !== "blocked" && (
+      {slot.status !== "blocked" && slot.status !== "past" && (
         <span className={`mt-1 text-[11px] font-bold ${state === "selected" ? "text-white/80" : ""}`}>
           ₹{slot.price}
         </span>
@@ -807,12 +810,13 @@ function MobileRow({ slot, selected, onToggle, sport }: { slot: Slot; selected: 
   if (state === "selected") pill = "border-2 border-brand bg-brand text-white";
   if (state === "booked") pill = "border-2 border-red-200 bg-red-50 text-[#E24B4A] dark:border-red-900/40 dark:bg-red-900/10 dark:text-red-400";
   if (state === "blocked") pill = "border-2 border-ink/10 bg-ink/5 text-ink/30 dark:border-white/10 dark:bg-white/5 dark:text-white/25";
+  if (state === "past") pill = "border border-dashed border-ink/10 bg-transparent text-ink/25 dark:border-white/10 dark:text-white/20";
 
   return (
     <li
       className={`flex min-h-[64px] items-center justify-between border-b border-ink/5 px-4 py-3.5 transition dark:border-white/5 ${
         disabled ? "cursor-default" : "cursor-pointer hover:bg-brand/5 active:bg-brand/10 dark:hover:bg-white/5"
-      }`}
+      } ${state === "past" ? "opacity-50" : ""}`}
       onClick={() => !disabled && onToggle()}
     >
       <div>
@@ -822,12 +826,12 @@ function MobileRow({ slot, selected, onToggle, sport }: { slot: Slot; selected: 
             ? "Cricket Turf"
             : sport === "badminton"
               ? "Badminton Court"
-              : `Court ${slot.court}`}{" "}
-          · ₹{slot.price}
+              : `Court ${slot.court}`}
+          {state !== "past" && <> · ₹{slot.price}</>}
         </div>
       </div>
       <span className={`rounded-full px-3 py-1 text-[0.65rem] font-extrabold uppercase tracking-wide ${pill}`}>
-        {state === "open" ? "Open" : state === "selected" ? "Picked" : state === "booked" ? "Booked" : "Blocked"}
+        {state === "open" ? "Open" : state === "selected" ? "Picked" : state === "booked" ? "Booked" : state === "past" ? "Ended" : "Blocked"}
       </span>
     </li>
   );

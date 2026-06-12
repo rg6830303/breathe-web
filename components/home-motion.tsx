@@ -15,6 +15,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import { LiveAvailability } from "@/components/live-availability";
 import { NoticeBoard } from "@/components/notice-board";
 import { Container } from "@/components/ui";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
@@ -185,8 +186,8 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
             </motion.div>
           </motion.div>
 
-          <div className="relative flex justify-center items-center">
-            <PaddleScene size={320} className="opacity-95" />
+          <div className="relative">
+            <LiveAvailability />
           </div>
         </Container>
       </section>

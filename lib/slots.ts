@@ -98,3 +98,23 @@ export function isWithinHours(startTime: string, durationMin: number): boolean {
   return start >= OPEN_MIN && end <= CLOSE_MIN && durationMin >= 30 && durationMin % 30 === 0;
 }
 
+/** True when the slot's start has already passed in IST — such a slot is no
+ *  longer bookable (the UI shows it blank; this is the server-side guard). */
+export function isPastIST(date: string, startTime: string): boolean {
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  if (date < today) return true;
+  if (date > today) return false;
+  const now = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date());
+  return startTime.slice(0, 5) <= now;
+}
+
