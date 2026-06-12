@@ -5,7 +5,7 @@ import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { calculateTotals } from "@/lib/pricing";
-import { priceForRange, rangesOverlap, slotsClash } from "@/lib/slots";
+import { priceForRange, rangesOverlap, slotsClash, cellsFor } from "@/lib/slots";
 import { refundPayment, razorpayConfigured } from "@/lib/razorpay";
 import { adjustCredit, BULK_PACKAGE } from "@/lib/credits";
 
@@ -154,32 +154,47 @@ export async function POST(req: Request) {
       };
 
       try {
-        await turso.execute({
-          sql: `INSERT INTO bookings (
-            id, user_id, slot_date, slot_time, duration_min, court_number,
-            guest_name, guest_phone, guest_email,
-            subtotal, gst, total, amount_paid,
-            status, source, sport, notes, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'online', ?, ?, ?)`,
-          args: [
-            id,
-            session.id,
-            s.date,
-            s.time,
-            duration,
-            court,
-            userName,
-            userPhone,
-            userEmail,
-            Math.round(totals.subtotal),
-            Math.round(totals.taxes),
-            Math.round(totals.total),
-            Math.round(totals.total),
-            sport,
-            JSON.stringify(notesObj),
-            now,
-          ],
-        });
+        const statements = [
+          {
+            sql: `INSERT INTO bookings (
+              id, user_id, slot_date, slot_time, duration_min, court_number,
+              guest_name, guest_phone, guest_email,
+              subtotal, gst, total, amount_paid,
+              status, source, sport, notes, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'online', ?, ?, ?)`,
+            args: [
+              id,
+              session.id,
+              s.date,
+              s.time,
+              duration,
+              court,
+              userName,
+              userPhone,
+              userEmail,
+              Math.round(totals.subtotal),
+              Math.round(totals.taxes),
+              Math.round(totals.total),
+              Math.round(totals.total),
+              sport,
+              JSON.stringify(notesObj),
+              now,
+            ],
+          }
+        ];
+
+        const targetCourts = sport === "cricket" ? [1, 2, 3] : [court];
+        const intervals = cellsFor(s.time, duration);
+        for (const c of targetCourts) {
+          for (const cellTime of intervals) {
+            statements.push({
+              sql: "INSERT INTO booking_courts (booking_id, court_number, slot_date, slot_time) VALUES (?, ?, ?, ?)",
+              args: [id, c, s.date, cellTime],
+            });
+          }
+        }
+
+        await turso.batch(statements, "write");
       } catch (insertErr) {
         console.error("[verify-payment db-insert error]", insertErr);
         const msg = String((insertErr as Error)?.message ?? "").toLowerCase();
@@ -187,12 +202,16 @@ export async function POST(req: Request) {
         // Roll back any sibling slots already inserted in this request so we
         // never leave a partial booking, then refund the entire payment.
         for (const bid of bookingIds.filter((b) => b !== id)) {
-          await turso
-            .execute({
+          await turso.batch([
+            {
               sql: "UPDATE bookings SET status = 'cancelled', cancelled_at = ? WHERE id = ?",
               args: [now, bid],
-            })
-            .catch(() => {});
+            },
+            {
+              sql: "DELETE FROM booking_courts WHERE booking_id = ?",
+              args: [bid],
+            }
+          ], "write").catch(() => {});
         }
         const refunded = await refundFull(isCollision ? "slot collision" : "insert failed");
         return NextResponse.json(
@@ -265,6 +284,7 @@ export async function POST(req: Request) {
             courtNumber: court,
             subtotal: Math.round(totals.subtotal),
             gst: Math.round(totals.taxes),
+            sport,
           };
         };
 

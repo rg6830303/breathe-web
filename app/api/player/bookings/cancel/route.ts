@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   let row;
   try {
     const result = await turso.execute({
-      sql: "SELECT id, user_id, slot_date, slot_time, status, court_number, amount_paid, duration_min, notes, guest_name, guest_email FROM bookings WHERE id = ? LIMIT 1",
+      sql: "SELECT id, user_id, slot_date, slot_time, status, court_number, amount_paid, duration_min, notes, guest_name, guest_email, sport FROM bookings WHERE id = ? LIMIT 1",
       args: [id],
     });
     row = result.rows[0];
@@ -49,10 +49,16 @@ export async function POST(req: Request) {
 
   const now = Date.now();
   try {
-    await turso.execute({
-      sql: "UPDATE bookings SET status = 'cancelled', cancelled_at = ? WHERE id = ?",
-      args: [now, id],
-    });
+    await turso.batch([
+      {
+        sql: "UPDATE bookings SET status = 'cancelled', cancelled_at = ? WHERE id = ?",
+        args: [now, id],
+      },
+      {
+        sql: "DELETE FROM booking_courts WHERE booking_id = ?",
+        args: [id],
+      }
+    ], "write");
   } catch (err) {
     console.error("[player cancel update error]", err);
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
@@ -118,6 +124,7 @@ export async function POST(req: Request) {
       courtNumber: row.court_number ? Number(row.court_number) : undefined,
       amount: row.amount_paid ? Number(row.amount_paid) : undefined,
       refunded: refund.ok,
+      sport: row.sport ? String(row.sport) : undefined,
     }).catch((e: unknown) => console.error("[cancel notify error]", e));
     if (waitUntil) waitUntil(run);
   } catch (e) {

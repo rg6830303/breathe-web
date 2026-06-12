@@ -133,6 +133,12 @@ export const SCHEMA_TABLES: string[] = [
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS booking_courts (
+    booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    court_number INTEGER NOT NULL,
+    slot_date TEXT NOT NULL,
+    slot_time TEXT NOT NULL
+  )`,
 ];
 
 /** Indexes — created LAST, after SCHEMA_ALTERS guarantee their columns exist. */
@@ -156,6 +162,7 @@ export const SCHEMA_INDEXES: string[] = [
   // application-level availability check will now collide here, and the loser's
   // INSERT throws (handled by the booking routes with a refund).
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_unique_confirmed_slot ON bookings (court_number, slot_date, slot_time) WHERE status = 'confirmed'`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_booking_courts_unique ON booking_courts (court_number, slot_date, slot_time)`,
 ];
 
 /** Back-compat: combined list (tables + indexes) for any external reference. */
@@ -227,6 +234,48 @@ export async function applySchema(): Promise<void> {
     console.error("[applySchema indexes batch failed — falling back]", e);
     for (const sql of indexes) await runResilient(sql);
   }
+
+  // 4. Backfill existing confirmed bookings into booking_courts if empty
+  try {
+    const countCheck = await turso.execute("SELECT COUNT(*) as count FROM booking_courts");
+    const count = Number(countCheck.rows[0]?.count ?? 0);
+    if (count === 0) {
+      console.log("[ensureSchema] Backfilling booking_courts table...");
+      const activeBookings = await turso.execute(
+        "SELECT id, court_number, slot_date, slot_time, duration_min, sport FROM bookings WHERE status = 'confirmed'"
+      );
+      for (const row of activeBookings.rows) {
+        const id = String(row.id);
+        const court = Number(row.court_number) || 1;
+        const date = String(row.slot_date);
+        const time = String(row.slot_time).slice(0, 5);
+        const duration = Number(row.duration_min) || 60;
+        const sport = row.sport ? String(row.sport) : "pickleball";
+
+        const courts = sport === "cricket" ? [1, 2, 3] : [court];
+        for (const c of courts) {
+          for (let offset = 0; offset < duration; offset += 30) {
+            const cellTime = addMin(time, offset);
+            await turso.execute({
+              sql: "INSERT OR IGNORE INTO booking_courts (booking_id, court_number, slot_date, slot_time) VALUES (?, ?, ?, ?)",
+              args: [id, c, date, cellTime],
+            }).catch(() => {});
+          }
+        }
+      }
+      console.log("[ensureSchema] Backfill complete.");
+    }
+  } catch (err) {
+    console.error("[ensureSchema] Backfill failed", err);
+  }
+}
+
+function addMin(t: string, mins: number): string {
+  const [h, m] = t.split(":").map(Number);
+  const total = h * 60 + m + mins;
+  const hh = Math.floor(total / 60);
+  const mm = total % 60;
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
 
 // Cache so the ~18 idempotent statements run at most once per warm instance.

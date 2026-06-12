@@ -90,31 +90,47 @@ export async function POST(req: Request) {
   });
 
   try {
-    await turso.execute({
-      sql: `INSERT INTO bookings (
-        id, user_id, slot_date, slot_time, duration_min, court_number,
-        guest_name, guest_phone, guest_email,
-        subtotal, gst, total, amount_paid,
-        status, source, sport, notes, created_at
-      ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'walk_in', ?, ?, ?)`,
-      args: [
-        id,
-        data.slot_date,
-        data.slot_time,
-        data.duration_min,
-        courtNumber,
-        data.guest_name,
-        data.guest_phone ?? null,
-        data.guest_email ?? null,
-        Math.round(totals.subtotal),
-        Math.round(totals.taxes),
-        Math.round(totals.total),
-        Math.round(totals.total),
-        data.sport,
-        notes,
-        now,
-      ],
-    });
+    const { cellsFor } = require("@/lib/slots");
+    const statements = [
+      {
+        sql: `INSERT INTO bookings (
+          id, user_id, slot_date, slot_time, duration_min, court_number,
+          guest_name, guest_phone, guest_email,
+          subtotal, gst, total, amount_paid,
+          status, source, sport, notes, created_at
+        ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'walk_in', ?, ?, ?)`,
+        args: [
+          id,
+          data.slot_date,
+          data.slot_time,
+          data.duration_min,
+          courtNumber,
+          data.guest_name,
+          data.guest_phone ?? null,
+          data.guest_email ?? null,
+          Math.round(totals.subtotal),
+          Math.round(totals.taxes),
+          Math.round(totals.total),
+          Math.round(totals.total),
+          data.sport,
+          notes,
+          now,
+        ],
+      }
+    ];
+
+    const targetCourts = data.sport === "cricket" ? [1, 2, 3] : [courtNumber];
+    const intervals = cellsFor(data.slot_time, data.duration_min);
+    for (const c of targetCourts) {
+      for (const cellTime of intervals) {
+        statements.push({
+          sql: "INSERT INTO booking_courts (booking_id, court_number, slot_date, slot_time) VALUES (?, ?, ?, ?)",
+          args: [id, c, data.slot_date, cellTime],
+        });
+      }
+    }
+
+    await turso.batch(statements, "write");
   } catch (err) {
     console.error("[walk-in insert error]", err);
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
@@ -162,9 +178,10 @@ export async function POST(req: Request) {
         slotTime: data.slot_time,
         durationMin: data.duration_min,
         amount: Math.round(totals.total),
-        courtNumber: data.court_number,
+        courtNumber: courtNumber,
         subtotal: Math.round(totals.subtotal),
         gst: Math.round(totals.taxes),
+        sport: data.sport,
       });
       if (waitUntil) waitUntil(p);
       else await p;
