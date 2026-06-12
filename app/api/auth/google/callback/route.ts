@@ -21,7 +21,14 @@ export async function GET(req: Request) {
   // Use the real public origin (forwarded host) for redirect_uri + redirects so
   // the OAuth round-trip stays on the user's actual domain.
   const origin = originFromRequest(req);
-  const fail = (e: string) => NextResponse.redirect(new URL(`/login?error=${e}`, origin));
+  // Clear the one-time flow cookies on the *response* (see note below) and
+  // redirect to /login with the reason on any failure.
+  const fail = (e: string) => {
+    const res = NextResponse.redirect(new URL(`/login?error=${e}`, origin));
+    res.cookies.set("g_oauth_state", "", { path: "/", maxAge: 0 });
+    res.cookies.set("g_oauth_next", "", { path: "/", maxAge: 0 });
+    return res;
+  };
 
   try {
     if (!googleConfigured()) return fail("google_unconfigured");
@@ -31,13 +38,12 @@ export async function GET(req: Request) {
     const state = url.searchParams.get("state");
     if (!code || !state) return fail("google_invalid");
 
+    // Read the flow cookies from the request. (Writes must go on the response —
+    // see the session-cookie note at the end of this handler.)
     const c = await cookies();
     const savedState = c.get("g_oauth_state")?.value;
     const rawNext = c.get("g_oauth_next")?.value || "/dashboard";
     const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
-    // One-time use: clear the flow cookies regardless of outcome.
-    c.set("g_oauth_state", "", { path: "/", maxAge: 0 });
-    c.set("g_oauth_next", "", { path: "/", maxAge: 0 });
     if (!savedState || savedState !== state) return fail("google_state");
 
     const tokens = await exchangeCode(code, origin);
@@ -138,15 +144,24 @@ export async function GET(req: Request) {
     }
 
     const token = await signToken({ id: userId, email, name, role: "user" });
-    c.set(COOKIE_NAME, token, {
+
+    // CRITICAL: set the session cookie on the redirect RESPONSE, not via the
+    // next/headers cookies() store. In Next 15 route handlers, store mutations
+    // are not attached to a NextResponse.redirect(), so the cookie would be
+    // dropped and the /dashboard middleware gate would bounce the user straight
+    // back to /login — exactly the "login page comes back after Google" bug.
+    const res = NextResponse.redirect(new URL(next, origin));
+    res.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
       secure: process.env.NODE_ENV === "production",
     });
-
-    return NextResponse.redirect(new URL(next, origin));
+    // One-time flow cookies are now spent.
+    res.cookies.set("g_oauth_state", "", { path: "/", maxAge: 0 });
+    res.cookies.set("g_oauth_next", "", { path: "/", maxAge: 0 });
+    return res;
   } catch (e) {
     console.error("[google callback error]", e);
     return fail("google_failed");
