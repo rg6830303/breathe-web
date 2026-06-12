@@ -113,7 +113,14 @@ export default function CartPage() {
                     <span>Total</span>
                     <span>₹{cartTotal(cart)}</span>
                   </div>
-                  <p className="mt-2 text-[0.7rem] text-slatey dark:text-white/40">Paddles &amp; balls are complimentary. Extensions are charged at half the hourly rate.</p>
+                  <div className="mt-2 flex items-center justify-between rounded-xl border-2 border-lime/40 bg-lime/10 px-4 py-2.5 text-sm font-extrabold text-lime-dark dark:text-lime">
+                    <span>Pay now · advance only</span>
+                    <span>₹{Math.min(200, cartTotal(cart))}</span>
+                  </div>
+                  <p className="mt-2 text-[0.7rem] text-slatey dark:text-white/40">
+                    You pay a flat ₹200 advance online — the balance of ₹{Math.max(0, cartTotal(cart) - 200)} is settled at the venue.
+                    Paddles &amp; balls are complimentary. Extensions are charged at half the hourly rate.
+                  </p>
                 </div>
 
                 <div className="mt-5 flex flex-col gap-3 sm:flex-row">

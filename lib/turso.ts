@@ -71,15 +71,24 @@ function getPg(): Pg {
   if (!PG_URL) throw new Error("POSTGRES_URL is not set");
   // Serverless-tuned pool: one connection per instance (the pooler multiplexes),
   // no prepared statements (required for pgbouncer transaction mode), fail fast.
-  // idle_timeout is deliberately short so a warm-but-idle Lambda releases its
-  // server connection quickly instead of pinning a slot on the free tier.
+  //
+  // idle_timeout: 30 — NOT lower. A 2s idle timeout (tried previously) made a
+  // warm Lambda drop its connection between user actions, so nearly every
+  // request paid a fresh TCP+TLS+auth handshake → bursty pooler load + visible
+  // lag. 30s keeps the connection warm across consecutive clicks while still
+  // releasing the slot quickly when the instance goes quiet. The pooler client
+  // limit is 200 and one connection per warm instance is tiny.
+  //
+  // fetch_types: false — skips postgres.js's extra type-discovery round trip on
+  // first connect (we only use text/int/bigint and convert with Number()).
   pg = postgres(PG_URL, {
     prepare: false,
     ssl: "require",
     max: 1,
-    idle_timeout: 2,
+    idle_timeout: 30,
     max_lifetime: 60 * 5,
     connect_timeout: 10,
+    fetch_types: false,
   });
   return pg;
 }

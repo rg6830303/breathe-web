@@ -194,9 +194,22 @@ export default function PaymentPage() {
                     );
                   })}
                 </ul>
-                <div className="mt-4 flex items-center justify-between rounded-2xl bg-ink px-4 py-3 text-lg font-extrabold text-white dark:bg-white dark:text-ink">
-                  <span>Total</span>
-                  <span>₹{total}</span>
+                {/* Advance-payment breakdown: only ₹200 is collected online —
+                    regardless of slot count/sports — the balance is settled at
+                    the venue. The emphasized row is what's payable NOW. */}
+                <div className="mt-4 overflow-hidden rounded-2xl border-2 border-ink/10 dark:border-white/10">
+                  <div className="flex items-center justify-between px-4 py-2.5 text-sm text-slatey dark:text-white/60">
+                    <span>Total booking value</span>
+                    <span className="font-bold text-ink dark:text-white">₹{total}</span>
+                  </div>
+                  <div className="flex items-center justify-between bg-ink px-4 py-3 text-lg font-extrabold text-white dark:bg-white dark:text-ink">
+                    <span>Pay now · advance</span>
+                    <span>₹{Math.min(200, total)}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-2.5 text-sm text-slatey dark:text-white/60">
+                    <span>Balance at the venue</span>
+                    <span className="font-bold text-ink dark:text-white">₹{Math.max(0, total - 200)}</span>
+                  </div>
                 </div>
 
                 {error && (

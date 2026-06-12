@@ -3,7 +3,9 @@ export type NoticeType = "daily" | "weekly" | "monthly";
 export type Slot = {
   court: number;
   time: string;
-  status: "open" | "booked" | "blocked";
+  // "past" = the slot's start time has already passed today (IST) — it is no
+  // longer bookable and renders blank instead of "Open".
+  status: "open" | "booked" | "blocked" | "past";
   price: number;
 };
 

@@ -69,7 +69,7 @@ type AdminUser = {
 };
 type SlotResp = {
   date: string;
-  slots: { court: number; time: string; status: "open" | "booked" | "blocked"; price: number }[];
+  slots: { court: number; time: string; status: "open" | "booked" | "blocked" | "past"; price: number }[];
 };
 
 function money(n: number) {
@@ -586,11 +586,13 @@ function CourtTab() {
                   let cls = "border-2 border-ink/10 bg-white text-ink hover:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
                   if (s.status === "booked") cls = "border-2 border-red-300 bg-red-50 text-red-700 dark:border-red-700/50 dark:bg-red-950/20 dark:text-red-300";
                   if (s.status === "blocked") cls = "border-2 border-ink/20 bg-ink/10 text-ink/50 dark:border-white/10 dark:bg-white/5 dark:text-white/40";
+                  // Past (today IST): time has gone by — inert, dimmed, no action.
+                  if (s.status === "past") cls = "border border-dashed border-ink/10 bg-transparent text-ink/25 dark:border-white/10 dark:text-white/20";
                   return (
                     <li key={key}>
                       <button
                         type="button"
-                        disabled={s.status === "booked" || isBusy}
+                        disabled={s.status === "booked" || s.status === "past" || isBusy}
                         onClick={() => (s.status === "blocked" ? unblock(court, s.time) : block(court, s.time))}
                         title={booking ? `${booking.user_name} (${booking.user_email})` : s.status}
                         className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-[11px] font-bold transition ${cls} ${
@@ -599,7 +601,7 @@ function CourtTab() {
                       >
                         <span>{s.time}</span>
                         <span className="text-[9px] font-extrabold uppercase tracking-wide">
-                          {s.status === "booked" ? "Booked" : s.status === "blocked" ? "Closed" : "Open"}
+                          {s.status === "booked" ? "Booked" : s.status === "blocked" ? "Closed" : s.status === "past" ? "Ended" : "Open"}
                         </span>
                       </button>
                     </li>

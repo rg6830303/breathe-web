@@ -182,8 +182,11 @@ export function PushToggle({ className = "" }: { className?: string }) {
 
   return (
     <div className={`card-sport p-5 ${className}`}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
+      {/* Mobile-safe layout: the text column gets min-w-0 so it wraps instead
+          of pushing the switch off-card, and the switch keeps a 44px-tall tap
+          target (Android/iOS guideline) aligned with the heading. */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <span
             className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
               on ? "bg-brand text-white" : "bg-brand/10 text-brand dark:bg-white/10 dark:text-brand-300"
@@ -191,7 +194,7 @@ export function PushToggle({ className = "" }: { className?: string }) {
           >
             {on ? <BellRing className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
           </span>
-          <div>
+          <div className="min-w-0">
             <h3 className="font-display text-base font-extrabold text-ink dark:text-white">Notifications</h3>
             <p className="mt-0.5 text-xs leading-5 text-slatey dark:text-white/55">
               {state === "unsupported"
@@ -211,16 +214,21 @@ export function PushToggle({ className = "" }: { className?: string }) {
             onClick={on ? disable : enable}
             disabled={busy}
             aria-pressed={on}
-            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition disabled:opacity-60 ${
-              on ? "bg-brand" : "bg-ink/15 dark:bg-white/20"
-            }`}
+            aria-label={on ? "Turn notifications off" : "Turn notifications on"}
+            className="-m-2 shrink-0 touch-manipulation p-2"
           >
             <span
-              className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-white shadow transition ${
-                on ? "translate-x-6" : "translate-x-1"
-              }`}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition ${
+                busy ? "opacity-60" : ""
+              } ${on ? "bg-brand" : "bg-ink/15 dark:bg-white/20"}`}
             >
-              {busy ? <Loader2 className="h-3 w-3 animate-spin text-brand" /> : null}
+              <span
+                className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-white shadow transition ${
+                  on ? "translate-x-6" : "translate-x-1"
+                }`}
+              >
+                {busy ? <Loader2 className="h-3 w-3 animate-spin text-brand" /> : null}
+              </span>
             </span>
           </button>
         )}
@@ -240,7 +248,7 @@ export function PushToggle({ className = "" }: { className?: string }) {
           type="button"
           onClick={sendTest}
           disabled={busy}
-          className="mt-3 inline-flex items-center gap-1.5 rounded-full border-2 border-ink/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-wide text-ink transition hover:border-brand hover:text-brand disabled:opacity-60 dark:border-white/15 dark:text-white dark:hover:border-brand-300 dark:hover:text-brand-300"
+          className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-ink/10 px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-ink transition hover:border-brand hover:text-brand disabled:opacity-60 dark:border-white/15 dark:text-white dark:hover:border-brand-300 dark:hover:text-brand-300 sm:w-auto"
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />}
           Send a test notification

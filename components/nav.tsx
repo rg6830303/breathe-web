@@ -10,8 +10,24 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type Account = { email: string; name: string; role: "user" | "admin" } | null;
 
+/** Console-only navigation. On /admin routes the nav must NOT surface the
+ *  public-website links (Home/About/Pricing/…/Book a Slot) — the owner gets the
+ *  admin areas instead. */
+const adminLinks = [
+  { href: "/admin", label: "Console" },
+  { href: "/admin/notices", label: "Notices" },
+  { href: "/admin/settings", label: "Settings" },
+  { href: "/admin/gallery", label: "Gallery" },
+  { href: "/admin/import", label: "Import" },
+  { href: "/admin/diagnostics", label: "Diagnostics" },
+];
+
 export function Nav() {
   const pathname = usePathname();
+  const isAdminArea = pathname?.startsWith("/admin") ?? false;
+  const links = isAdminArea ? adminLinks : navLinks;
+  const isActive = (href: string) =>
+    href === "/" || href === "/admin" ? pathname === href : pathname.startsWith(href);
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [account, setAccount] = useState<Account>(null);
@@ -93,8 +109,8 @@ export function Nav() {
 
           {/* Desktop links */}
           <div className="hidden items-center gap-0.5 lg:flex">
-            {navLinks.map((link) => {
-              const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+            {links.map((link) => {
+              const active = isActive(link.href);
               return (
                 <Link
                   key={link.href}
@@ -148,13 +164,15 @@ export function Nav() {
               )
             )}
 
-            {/* Book CTA — chunky btn-accent style */}
-            <Link
-              href="/book"
-              className="btn-accent hidden sm:inline-flex"
-            >
-              Book a Slot <ArrowRight className="h-4 w-4" />
-            </Link>
+            {/* Book CTA — website only; the console gets no customer actions */}
+            {!isAdminArea && (
+              <Link
+                href="/book"
+                className="btn-accent hidden sm:inline-flex"
+              >
+                Book a Slot <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
 
             {/* Mobile hamburger */}
             <button
@@ -208,8 +226,8 @@ export function Nav() {
                 </div>
 
                 <div className="grid gap-1">
-                  {navLinks.map((link, idx) => {
-                    const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+                  {links.map((link, idx) => {
+                    const active = isActive(link.href);
                     return (
                       <motion.div
                         key={link.href}
@@ -235,58 +253,72 @@ export function Nav() {
               </div>
 
               <div className="mt-6 space-y-3 border-t-2 border-ink/8 pt-5 dark:border-white/10">
-                <Link
-                  href="/book"
-                  className="btn-accent flex items-center justify-center gap-2 w-full"
-                >
-                  Book a Slot <ArrowRight className="h-4 w-4" />
-                </Link>
+                {isAdminArea ? (
+                  /* Console drawer footer: just the admin's session action — no
+                     customer CTAs (Book a Slot / login / signup / phone). */
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-ink/10 px-4 py-3 text-xs font-extrabold uppercase tracking-wide text-ink dark:border-white/10 dark:text-white"
+                  >
+                    <LogOut className="h-4 w-4" /> Log out{account ? ` (${account.name})` : ""}
+                  </button>
+                ) : (
+                  <>
+                    <Link
+                      href="/book"
+                      className="btn-accent flex items-center justify-center gap-2 w-full"
+                    >
+                      Book a Slot <ArrowRight className="h-4 w-4" />
+                    </Link>
 
-                <div className="grid gap-2">
-                  {account ? (
-                    <>
-                      <Link
-                        href={account.role === "admin" ? "/admin" : "/dashboard"}
-                        className="flex items-center justify-between rounded-xl border-2 border-ink/10 px-4 py-3 text-xs font-extrabold uppercase tracking-wide text-ink dark:border-white/10 dark:text-white"
-                      >
-                        <span className="flex items-center gap-2">
-                          {account.role === "admin" ? <Shield className="h-4 w-4 text-brand" /> : <LayoutDashboard className="h-4 w-4 text-brand" />}
-                          {account.role === "admin" ? "Owner console" : "My dashboard"}
-                        </span>
-                        <ArrowRight className="h-4 w-4 opacity-50" />
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-ink/10 px-4 py-3 text-xs font-extrabold uppercase tracking-wide text-ink dark:border-white/10 dark:text-white"
-                      >
-                        <LogOut className="h-4 w-4" /> Log out ({account.name})
-                      </button>
-                    </>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      <Link
-                        href="/login"
-                        className="flex items-center justify-center rounded-xl border-2 border-ink/10 px-4 py-3 text-xs font-extrabold uppercase tracking-wide text-ink dark:border-white/10 dark:text-white"
-                      >
-                        Log in
-                      </Link>
-                      <Link
-                        href="/signup"
-                        className="btn-primary flex items-center justify-center text-xs"
-                      >
-                        Sign up
-                      </Link>
+                    <div className="grid gap-2">
+                      {account ? (
+                        <>
+                          <Link
+                            href={account.role === "admin" ? "/admin" : "/dashboard"}
+                            className="flex items-center justify-between rounded-xl border-2 border-ink/10 px-4 py-3 text-xs font-extrabold uppercase tracking-wide text-ink dark:border-white/10 dark:text-white"
+                          >
+                            <span className="flex items-center gap-2">
+                              {account.role === "admin" ? <Shield className="h-4 w-4 text-brand" /> : <LayoutDashboard className="h-4 w-4 text-brand" />}
+                              {account.role === "admin" ? "Owner console" : "My dashboard"}
+                            </span>
+                            <ArrowRight className="h-4 w-4 opacity-50" />
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={handleLogout}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-ink/10 px-4 py-3 text-xs font-extrabold uppercase tracking-wide text-ink dark:border-white/10 dark:text-white"
+                          >
+                            <LogOut className="h-4 w-4" /> Log out ({account.name})
+                          </button>
+                        </>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Link
+                            href="/login"
+                            className="flex items-center justify-center rounded-xl border-2 border-ink/10 px-4 py-3 text-xs font-extrabold uppercase tracking-wide text-ink dark:border-white/10 dark:text-white"
+                          >
+                            Log in
+                          </Link>
+                          <Link
+                            href="/signup"
+                            className="btn-primary flex items-center justify-center text-xs"
+                          >
+                            Sign up
+                          </Link>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                <a
-                  href={site.phoneHref}
-                  className="flex items-center justify-center gap-2 rounded-xl border-2 border-ink/10 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-ink dark:border-white/10 dark:text-white"
-                >
-                  <Phone className="h-4 w-4 text-brand" /> {site.phoneDisplay}
-                </a>
+                    <a
+                      href={site.phoneHref}
+                      className="flex items-center justify-center gap-2 rounded-xl border-2 border-ink/10 px-5 py-3 text-xs font-extrabold uppercase tracking-wide text-ink dark:border-white/10 dark:text-white"
+                    >
+                      <Phone className="h-4 w-4 text-brand" /> {site.phoneDisplay}
+                    </a>
+                  </>
+                )}
               </div>
             </motion.div>
           </div>

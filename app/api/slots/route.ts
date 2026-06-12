@@ -28,6 +28,15 @@ function todayIST(): string {
   }).format(new Date());
 }
 
+function nowHHMMIST(): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date());
+}
+
 function addMinutes(hhmm: string, mins: number): string {
   const [h, m] = hhmm.split(":").map(Number);
   const total = h * 60 + m + mins;
@@ -239,6 +248,18 @@ export async function GET(request: NextRequest) {
           const price = getSlotPrice("pickleball", date, time);
           slots.push({ court, time, status, price });
         }
+      }
+    }
+
+    // Real-time IST tracker: once a slot's start time has passed today, it is
+    // no longer bookable — downgrade "open" to "past" so UIs render it blank
+    // instead of "Open". (Booked/blocked stay as-is for the admin's records.)
+    // For dates before today, every unsold slot is past.
+    const today = todayIST();
+    if (date <= today) {
+      const cutoff = date < today ? "24:00" : nowHHMMIST();
+      for (const s of slots) {
+        if (s.status === "open" && s.time <= cutoff) s.status = "past";
       }
     }
 
