@@ -58,22 +58,38 @@ export function PushToggle({ className = "" }: { className?: string }) {
       const reg = await navigator.serviceWorker.ready;
       let sub = await reg.pushManager.getSubscription();
       if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(getVapidPublicKey()) as BufferSource,
-        });
+        try {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(getVapidPublicKey()) as BufferSource,
+          });
+        } catch (subErr) {
+          // Common cause: a stale subscription created with a DIFFERENT VAPID
+          // key. Clearing it lets the next attempt re-subscribe cleanly.
+          const name = subErr instanceof Error ? subErr.name : "Error";
+          console.error("[push subscribe]", subErr);
+          const stale = await reg.pushManager.getSubscription().catch(() => null);
+          if (stale) await stale.unsubscribe().catch(() => {});
+          setMsg(`Couldn't subscribe this device (${name}). Please tap again.`);
+          return;
+        }
       }
       const res = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(sub.toJSON()),
       });
-      if (!res.ok) throw new Error("save failed");
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+        console.error("[push enable] server", data);
+        setMsg(`Couldn't save: ${data.detail || data.error || `HTTP ${res.status}`}`);
+        return;
+      }
       setState("granted");
       setMsg("Notifications are on for this device.");
     } catch (e) {
       console.error("[push enable]", e);
-      setMsg("Couldn't enable notifications. Please try again.");
+      setMsg(`Couldn't enable notifications: ${e instanceof Error ? e.message : "unknown error"}`);
     } finally {
       setBusy(false);
     }

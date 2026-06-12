@@ -104,6 +104,14 @@ export async function POST(req: Request) {
     console.error("[tournament create supabase error]", e);
   }
   if (!ok) return NextResponse.json({ error: "Could not save the tournament." }, { status: 500 });
+
+  try {
+    const { notifyAdminAction } = require("@/lib/notifications");
+    await notifyAdminAction("Tournament saved", `${row.name}${row.event_date ? ` · ${row.event_date}` : ""} · ${row.status}`, { actor: admin.email });
+  } catch (e) {
+    console.error("[tournament notify error]", e);
+  }
+
   return NextResponse.json({ ok: true, id });
 }
 

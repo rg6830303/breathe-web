@@ -61,6 +61,14 @@ export async function POST(req: Request) {
       console.error("[admin block supabase sync error]", sbErr);
     }
 
+    // Owner confirmation (email + inbox + push). Awaited but never fatal.
+    try {
+      const { notifyAdminAction } = require("@/lib/notifications");
+      await notifyAdminAction("Slot blocked", `Court ${court} · ${date} ${time} · ${reason}`, { actor: admin.email });
+    } catch (e) {
+      console.error("[admin block notify error]", e);
+    }
+
     return NextResponse.json({ ok: true, id });
   } catch (err: unknown) {
     console.error("[admin block error]", err);

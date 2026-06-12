@@ -130,6 +130,19 @@ export async function POST(req: Request) {
     console.error("[expense create supabase error]", e);
   }
   if (!ok) return NextResponse.json({ error: "Could not save the expense." }, { status: 500 });
+
+  try {
+    const { notifyAdminAction } = require("@/lib/notifications");
+    const desc = row.description ? ` · ${row.description}` : "";
+    await notifyAdminAction(
+      "Expense recorded",
+      `₹${row.amount.toLocaleString("en-IN")} · ${row.category} · ${row.expense_date}${desc}`,
+      { actor: admin.email },
+    );
+  } catch (e) {
+    console.error("[expense notify error]", e);
+  }
+
   return NextResponse.json({ ok: true, id });
 }
 
