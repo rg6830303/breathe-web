@@ -39,6 +39,7 @@ export function WalkInModal({ open, onClose }: { open: boolean; onClose: () => v
     amount: 700,
     notes: "",
     notify_guest: false,
+    sport: "pickleball",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -143,19 +144,42 @@ export function WalkInModal({ open, onClose }: { open: boolean; onClose: () => v
                 </label>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className={labelCls}>Sport</span>
+                  <select
+                    value={form.sport}
+                    onChange={(e) => {
+                      const nextSport = e.target.value as "pickleball" | "badminton" | "cricket";
+                      setForm({
+                        ...form,
+                        sport: nextSport,
+                        court_number: nextSport === "pickleball" ? form.court_number : 1,
+                      });
+                    }}
+                    className={inputCls}
+                  >
+                    <option value="pickleball">🎾 Pickleball</option>
+                    <option value="badminton">🏸 Badminton</option>
+                    <option value="cricket">🏏 Cricket</option>
+                  </select>
+                </label>
                 <label className="block">
                   <span className={labelCls}>Court</span>
                   <select
-                    value={form.court_number}
+                    value={form.sport === "pickleball" ? form.court_number : 1}
                     onChange={(e) => setForm({ ...form, court_number: Number(e.target.value) })}
-                    className={inputCls}
+                    disabled={form.sport !== "pickleball"}
+                    className={`${inputCls} disabled:opacity-60 disabled:cursor-not-allowed`}
                   >
                     <option value={1}>Court 1</option>
                     <option value={2}>Court 2</option>
                     <option value={3}>Court 3</option>
                   </select>
                 </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <span className={labelCls}>Duration</span>
                   <select

@@ -19,6 +19,7 @@ const schema = z.object({
   amount: z.number().int().min(0).max(50_000),
   notes: z.string().trim().max(500).optional().or(z.literal("").transform(() => undefined)),
   notify_guest: z.boolean().default(false),
+  sport: z.enum(["pickleball", "cricket", "badminton"]).default("pickleball"),
 });
 
 export async function POST(req: Request) {
@@ -32,21 +33,45 @@ export async function POST(req: Request) {
   }
   const data = parsed.data;
 
+  // Enforce sport court rules
+  let courtNumber = data.court_number;
+  if (data.sport === "cricket" || data.sport === "badminton") {
+    courtNumber = 1;
+  }
+
   // Conflict check: refuse to walk-in over an existing confirmed booking on
   // the same court that overlaps the requested time range.
   try {
     const overlap = await turso.execute({
-      sql: `SELECT id FROM bookings
+      sql: `SELECT slot_time, duration_min, court_number, sport FROM bookings
             WHERE slot_date = ?
-              AND court_number = ?
-              AND status = 'confirmed'
-              AND slot_time = ?
-            LIMIT 1`,
-      args: [data.slot_date, data.court_number, data.slot_time],
+              AND status = 'confirmed'`,
+      args: [data.slot_date],
     });
-    if (overlap.rows.length > 0) {
+
+    const { slotsClash } = require("@/lib/slots");
+    const clash = overlap.rows.some((row) =>
+      slotsClash(
+        courtNumber,
+        data.slot_time,
+        data.duration_min,
+        data.sport,
+        Number(row.court_number) || 1,
+        String(row.slot_time),
+        Number(row.duration_min) || 60,
+        row.sport ? String(row.sport) : "pickleball",
+      )
+    );
+
+    if (clash) {
+      const courtName =
+        data.sport === "cricket"
+          ? "Cricket Turf"
+          : data.sport === "badminton"
+            ? "Badminton Court"
+            : `Court ${courtNumber}`;
       return NextResponse.json(
-        { error: `Court ${data.court_number} is already booked at ${data.slot_time} on ${data.slot_date}.` },
+        { error: `${courtName} is already booked at ${data.slot_time} on ${data.slot_date}.` },
         { status: 409 },
       );
     }
@@ -70,14 +95,14 @@ export async function POST(req: Request) {
         id, user_id, slot_date, slot_time, duration_min, court_number,
         guest_name, guest_phone, guest_email,
         subtotal, gst, total, amount_paid,
-        status, source, notes, created_at
-      ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'walk_in', ?, ?)`,
+        status, source, sport, notes, created_at
+      ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'walk_in', ?, ?, ?)`,
       args: [
         id,
         data.slot_date,
         data.slot_time,
         data.duration_min,
-        data.court_number,
+        courtNumber,
         data.guest_name,
         data.guest_phone ?? null,
         data.guest_email ?? null,
@@ -85,6 +110,7 @@ export async function POST(req: Request) {
         Math.round(totals.taxes),
         Math.round(totals.total),
         Math.round(totals.total),
+        data.sport,
         notes,
         now,
       ],
@@ -103,7 +129,7 @@ export async function POST(req: Request) {
         slot_date: data.slot_date,
         slot_time: data.slot_time,
         duration_min: data.duration_min,
-        court_number: data.court_number,
+        court_number: courtNumber,
         guest_name: data.guest_name,
         guest_phone: data.guest_phone ?? null,
         guest_email: data.guest_email ?? null,
@@ -113,6 +139,7 @@ export async function POST(req: Request) {
         amount_paid: Math.round(totals.total),
         status: "confirmed",
         source: "walk_in",
+        sport: data.sport,
         notes,
         created_at: now,
       });

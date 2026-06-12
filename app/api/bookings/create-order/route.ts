@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { turso } from "@/lib/turso";
 import { calculateTotals } from "@/lib/pricing";
-import { priceForRange, rangesOverlap, isWithinHours } from "@/lib/slots";
+import { priceForRange, rangesOverlap, isWithinHours, slotsClash } from "@/lib/slots";
 import { bookingRequestSchema, formatZodError } from "@/lib/validation";
 import { BULK_PACKAGE } from "@/lib/credits";
 
@@ -87,7 +87,20 @@ export async function POST(req: Request) {
       }
     }
 
-    const dates = Array.from(new Set(slots.map((s) => s.date)));
+    const sport = ["pickleball", "cricket", "badminton"].includes(String(body.sport))
+      ? (body.sport as "pickleball" | "cricket" | "badminton")
+      : "pickleball";
+
+    // Enforce sport constraints on slot courts
+    const normalizedSlots = slots.map((s) => {
+      let court = s.court;
+      if (sport === "cricket" || sport === "badminton") {
+        court = 1; // Cricket and Badminton are forced to Court 1
+      }
+      return { ...s, court };
+    });
+
+    const dates = Array.from(new Set(normalizedSlots.map((s) => s.date)));
 
     // Reject if any requested range (slot, incl. ±30-min extensions) overlaps an
     // existing confirmed booking on the SAME court — extensions are checked at
@@ -96,7 +109,7 @@ export async function POST(req: Request) {
       let booked;
       try {
         booked = await turso.execute({
-          sql: "SELECT slot_time, duration_min, court_number FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
+          sql: "SELECT slot_time, duration_min, court_number, sport FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
           args: [d],
         });
       } catch (dbErr) {
@@ -104,23 +117,36 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
       }
 
-      for (const s of slots) {
+      for (const s of normalizedSlots) {
         if (s.date !== d) continue;
-        const clash = booked.rows.some(
-          (row) =>
-            Number(row.court_number) === Number(s.court) &&
-            rangesOverlap(s.time, dur(s), String(row.slot_time), Number(row.duration_min) || 60),
+        const clash = booked.rows.some((row) =>
+          slotsClash(
+            s.court,
+            s.time,
+            dur(s),
+            sport,
+            Number(row.court_number) || 1,
+            String(row.slot_time),
+            Number(row.duration_min) || 60,
+            row.sport ? String(row.sport) : "pickleball",
+          ),
         );
         if (clash) {
+          const courtName =
+            sport === "cricket"
+              ? "Cricket Turf"
+              : sport === "badminton"
+                ? "Badminton Court"
+                : `Court ${s.court}`;
           return NextResponse.json(
-            { error: `Court ${s.court} at ${s.time.slice(0, 5)} is no longer available.` },
+            { error: `${courtName} at ${s.time.slice(0, 5)} is no longer available.` },
             { status: 409 },
           );
         }
       }
     }
 
-    const base = slots.reduce((sum, s) => sum + priceForRange(s.time, dur(s)), 0);
+    const base = normalizedSlots.reduce((sum, s) => sum + priceForRange(s.time, dur(s), s.date, sport), 0);
     const addonTotal = addons.reduce((sum, a) => sum + (Number(a.price) || 0) * (Number(a.qty) || 1), 0);
     const totals = calculateTotals(base, addonTotal);
 

@@ -5,7 +5,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { ensureSchema } from "@/lib/db/ensure";
 import { turso } from "@/lib/turso";
 import { getCreditBalance, adjustCredit, SLOT_MINUTES } from "@/lib/credits";
-import { rangesOverlap, isWithinHours } from "@/lib/slots";
+import { rangesOverlap, isWithinHours, slotsClash } from "@/lib/slots";
 import { bookingRequestSchema, formatZodError } from "@/lib/validation";
 
 export const runtime = "nodejs";
@@ -74,17 +74,34 @@ export async function POST(req: Request) {
     let booked = 0;
     let bookedMin = 0;
 
-    for (const s of slots) {
+    const normalizedSlots = slots.map((s) => {
+      let court = s.court;
+      if (sport === "cricket" || sport === "badminton") {
+        court = 1; // Cricket and Badminton are forced to Court 1
+      }
+      return { ...s, court };
+    });
+
+    for (const s of normalizedSlots) {
       const court = Number.isFinite(Number(s.court)) ? Math.max(1, Math.min(9, Number(s.court))) : 1;
       const duration = slotDur(s);
       // Skip if the range (incl. ±30-min extensions) overlaps a confirmed booking.
       try {
         const ex = await turso.execute({
-          sql: "SELECT slot_time, duration_min FROM bookings WHERE slot_date = ? AND court_number = ? AND status = 'confirmed'",
-          args: [s.date, court],
+          sql: "SELECT slot_time, duration_min, court_number, sport FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
+          args: [s.date],
         });
         const clash = ex.rows.some((row) =>
-          rangesOverlap(s.time, duration, String(row.slot_time), Number(row.duration_min) || 60),
+          slotsClash(
+            s.court,
+            s.time,
+            duration,
+            sport,
+            Number(row.court_number) || 1,
+            String(row.slot_time),
+            Number(row.duration_min) || 60,
+            row.sport ? String(row.sport) : "pickleball",
+          ),
         );
         if (clash) continue;
       } catch (e) { console.error("[redeem conflict check]", e); }
