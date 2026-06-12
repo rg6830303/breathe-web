@@ -25,7 +25,7 @@ export async function ensurePresenceTable(): Promise<void> {
   ensured = true;
 }
 
-/** A visitor is "live" if seen within this window. */
-export const LIVE_WINDOW_MS = 45_000;
+/** A visitor is "live" if seen within this window (beacon beats every ~45s). */
+export const LIVE_WINDOW_MS = 75_000;
 /** Rows older than this are pruned. */
 export const PRESENCE_TTL_MS = 10 * 60_000;

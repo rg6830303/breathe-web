@@ -16,10 +16,13 @@ export async function GET() {
   await ensurePresenceTable();
   const now = Date.now();
 
-  // Prune long-stale rows so the table stays small.
-  await turso
-    .execute({ sql: "DELETE FROM live_presence WHERE last_seen < ?", args: [now - PRESENCE_TTL_MS] })
-    .catch(() => {});
+  // Prune long-stale rows occasionally (not every poll) so the table stays
+  // small without adding a DELETE to each refresh.
+  if (Math.random() < 0.15) {
+    await turso
+      .execute({ sql: "DELETE FROM live_presence WHERE last_seen < ?", args: [now - PRESENCE_TTL_MS] })
+      .catch(() => {});
+  }
 
   let rows: Row[] = [];
   try {
