@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 
 /**
  * Brand logo using the official Breathe Pickleball image.
  * variant="light" → shown on dark/brand backgrounds (logo has blue bg, so same look)
  * variant="dark"  → shown on white backgrounds (adds a subtle rounded card)
+ *
+ * On /admin routes it renders a DISTINCT "Breathe Admin" lockup (dark/lime owner
+ * icon + label, linking to /admin) so the console is visually separated from the
+ * customer site — the public wordmark itself is left untouched.
  */
 export function Logo({
   variant = "dark",
@@ -16,6 +21,33 @@ export function Logo({
   variant?: "light" | "dark";
   className?: string;
 }) {
+  const pathname = usePathname();
+  const isAdmin = pathname?.startsWith("/admin");
+
+  if (isAdmin) {
+    return (
+      <motion.div whileHover={{ scale: 1.04 }} className="inline-block origin-left">
+        <Link
+          href="/admin"
+          className={`inline-flex items-center gap-2.5 ${className}`}
+          aria-label="Breathe Admin console"
+        >
+          <Image
+            src="/icons/admin-icon-192.png"
+            alt="Breathe Admin"
+            width={44}
+            height={44}
+            className="h-10 w-10 rounded-xl shadow-sm"
+            priority
+          />
+          <span className="font-display text-lg font-extrabold leading-none tracking-tight text-ink dark:text-white">
+            Breathe <span className="text-lime-dark dark:text-lime">Admin</span>
+          </span>
+        </Link>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div whileHover={{ scale: 1.04 }} className="inline-block origin-left">
       <Link

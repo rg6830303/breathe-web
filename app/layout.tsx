@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Plus_Jakarta_Sans, Instrument_Serif } from "next/f
 import "./globals.css";
 import { Providers } from "@/app/providers";
 import { ScrollPaddle } from "@/components/motion/scroll-paddle";
+import { PresenceBeacon } from "@/components/presence-beacon";
 import { site, SITE_URL } from "@/lib/site";
 
 const display = Bricolage_Grotesque({
@@ -173,6 +174,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-ink font-sans text-white/90 antialiased">
         <Providers>{children}</Providers>
         <ScrollPaddle />
+        <PresenceBeacon />
       </body>
     </html>
   );
