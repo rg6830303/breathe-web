@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Save, Settings as SettingsIcon, ShieldCheck, Check } from "lucide-react";
+import { Loader2, Save, Settings as SettingsIcon, ShieldCheck, Check, Send, BellRing } from "lucide-react";
 import { AdminSubHeader } from "@/components/admin/admin-sub-header";
+import { PushToggle } from "@/components/push-toggle";
 
 type Config = Record<string, string>;
 
@@ -33,6 +34,31 @@ export default function AdminSettingsPage() {
   const [pwSaving, setPwSaving] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwSuccess, setPwSuccess] = useState(false);
+
+  const [bcast, setBcast] = useState({ title: "", message: "", url: "/", audience: "all" as "all" | "users" });
+  const [bcastSending, setBcastSending] = useState(false);
+  const [bcastResult, setBcastResult] = useState<string | null>(null);
+
+  async function sendBroadcast(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBcastResult(null);
+    setBcastSending(true);
+    try {
+      const res = await fetch("/api/push/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bcast),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not send.");
+      setBcastResult(`Sent to ${data.sent} device${data.sent === 1 ? "" : "s"}.`);
+      setBcast({ title: "", message: "", url: "/", audience: bcast.audience });
+    } catch (err) {
+      setBcastResult(err instanceof Error ? err.message : "Could not send.");
+    } finally {
+      setBcastSending(false);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/admin/config")
@@ -242,6 +268,84 @@ export default function AdminSettingsPage() {
                   className="btn-dark disabled:opacity-60"
                 >
                   {pwSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Update password
+                </button>
+              </div>
+            </form>
+
+            {/* This device's notifications */}
+            <PushToggle />
+
+            {/* Broadcast push to players */}
+            <form onSubmit={sendBroadcast} className="card-sport p-6">
+              <div className="mb-5 border-b-2 border-ink/10 pb-4 dark:border-white/10">
+                <span className="eyebrow">Notifications</span>
+                <h2 className="mt-1 font-display text-lg font-extrabold tracking-tight text-ink dark:text-white">
+                  <BellRing className="mr-2 inline h-5 w-5 text-brand" /> Send a broadcast
+                </h2>
+                <p className="mt-0.5 text-xs text-ink/50 dark:text-white/50">
+                  Push an announcement to everyone who enabled notifications on their installed app.
+                </p>
+              </div>
+
+              <div className="grid gap-4">
+                <label className="block">
+                  <span className={labelCls}>Title</span>
+                  <input
+                    type="text"
+                    value={bcast.title}
+                    onChange={(e) => setBcast({ ...bcast, title: e.target.value })}
+                    required
+                    maxLength={60}
+                    placeholder="Courts closed tomorrow"
+                    className={inputCls}
+                  />
+                </label>
+                <label className="block">
+                  <span className={labelCls}>Message</span>
+                  <textarea
+                    value={bcast.message}
+                    onChange={(e) => setBcast({ ...bcast, message: e.target.value })}
+                    required
+                    maxLength={160}
+                    rows={3}
+                    placeholder="Maintenance 6–9 AM. Bookings resume at 9."
+                    className={`${inputCls} resize-none`}
+                  />
+                </label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className={labelCls}>Link (opens on tap)</span>
+                    <input
+                      type="text"
+                      value={bcast.url}
+                      onChange={(e) => setBcast({ ...bcast, url: e.target.value })}
+                      placeholder="/book"
+                      className={inputCls}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className={labelCls}>Audience</span>
+                    <select
+                      value={bcast.audience}
+                      onChange={(e) => setBcast({ ...bcast, audience: e.target.value as "all" | "users" })}
+                      className={inputCls}
+                    >
+                      <option value="all">Everyone</option>
+                      <option value="users">Players only</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              {bcastResult && (
+                <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1 text-xs font-extrabold text-brand dark:bg-white/10 dark:text-brand-300">
+                  <Check className="h-3.5 w-3.5" /> {bcastResult}
+                </div>
+              )}
+
+              <div className="mt-5 flex">
+                <button type="submit" disabled={bcastSending} className="btn-primary disabled:opacity-60">
+                  {bcastSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Send notification
                 </button>
               </div>
             </form>

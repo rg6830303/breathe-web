@@ -126,7 +126,13 @@ export async function POST(req: Request) {
       return genericResponse;
     }
 
-    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in").replace(/\/$/, "");
+    // Build the reset link from the ACTUAL host the request came from, so it
+    // always points at the domain the user is using (e.g. breathepickleball.in)
+    // — never a stale NEXT_PUBLIC_SITE_URL pointing at an old Vercel deployment.
+    const fwdHost = req.headers.get("x-forwarded-host") || req.headers.get("host");
+    const fwdProto = req.headers.get("x-forwarded-proto") || "https";
+    const originFromReq = fwdHost ? `${fwdProto}://${fwdHost}` : null;
+    const siteUrl = (originFromReq || process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in").replace(/\/$/, "");
     const resetUrl = `${siteUrl}/reset-password?token=${rawToken}`;
 
     // Plain inline HTML (NOT @react-email/render, which can throw/hang on the

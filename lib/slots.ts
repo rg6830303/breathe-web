@@ -68,6 +68,28 @@ export function rangesOverlap(
   return a < b + (bDur || 60) && b < a + (aDur || 60);
 }
 
+/** Check if slot A overlaps with slot B in both time and courts, considering
+ *  that Cricket takes courts 1, 2, 3, and Badminton is on Court 1. */
+export function slotsClash(
+  aCourt: number,
+  aStart: string,
+  aDur: number,
+  aSport: string,
+  bCourt: number,
+  bStart: string,
+  bDur: number,
+  bSport: string,
+): boolean {
+  // 1. Time overlap check
+  if (!rangesOverlap(aStart, aDur, bStart, bDur)) return false;
+
+  // 2. Court overlap check
+  const aCourts = aSport === "cricket" ? [1, 2, 3] : [aCourt];
+  const bCourts = bSport === "cricket" ? [1, 2, 3] : [bCourt];
+
+  return aCourts.some((ac) => bCourts.includes(ac));
+}
+
 /** Clamp/validate a requested range against club hours. Returns null if it
  *  falls outside 05:00–23:00 or has a bad duration. */
 export function isWithinHours(startTime: string, durationMin: number): boolean {
@@ -75,3 +97,4 @@ export function isWithinHours(startTime: string, durationMin: number): boolean {
   const end = start + (durationMin || 60);
   return start >= OPEN_MIN && end <= CLOSE_MIN && durationMin >= 30 && durationMin % 30 === 0;
 }
+

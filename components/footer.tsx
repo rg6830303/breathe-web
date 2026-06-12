@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Clock, Facebook, Instagram, Mail, MapPin, Phone } from "lucide-react";
+import { Clock, Mail, MapPin, Phone } from "lucide-react";
+import { InstagramIcon, FacebookIcon, WhatsAppIcon } from "@/components/ui/social-icons";
 import { Logo } from "@/components/logo";
 import { navLinks, site } from "@/lib/site";
 import { motion } from "framer-motion";
@@ -42,26 +43,37 @@ export function Footer() {
 
               <div className="mt-6 flex gap-3">
                 <motion.a
-                  whileHover={{ y: -3, scale: 1.15 }}
+                  whileHover={{ y: -3, scale: 1.12 }}
                   whileTap={{ scale: 0.95 }}
                   href={site.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Instagram"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/15 text-white transition-colors hover:border-lime hover:text-lime"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/15 transition hover:ring-white/40"
                 >
-                  <Instagram className="h-4 w-4" />
+                  <InstagramIcon className="h-5 w-5" colored />
                 </motion.a>
                 <motion.a
-                  whileHover={{ y: -3, scale: 1.15 }}
+                  whileHover={{ y: -3, scale: 1.12 }}
                   whileTap={{ scale: 0.95 }}
                   href={site.facebook}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Facebook"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/15 text-white transition-colors hover:border-lime hover:text-lime"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/15 transition hover:ring-white/40"
                 >
-                  <Facebook className="h-4 w-4" />
+                  <FacebookIcon className="h-5 w-5" colored />
+                </motion.a>
+                <motion.a
+                  whileHover={{ y: -3, scale: 1.12 }}
+                  whileTap={{ scale: 0.95 }}
+                  href={site.whatsappCommunity}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="WhatsApp community"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/15 transition hover:ring-white/40"
+                >
+                  <WhatsAppIcon className="h-5 w-5" colored />
                 </motion.a>
               </div>
             </div>

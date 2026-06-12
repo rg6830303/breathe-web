@@ -23,6 +23,7 @@ import { StatCounter } from "@/components/motion/stat-counter";
 import { TiltCard } from "@/components/motion/tilt-card";
 import { TestimonialsCarousel } from "@/components/testimonials-carousel";
 import { PaddleScene } from "@/components/ui/paddle-scene";
+import { CourtScene } from "@/components/ui/court-scene";
 import type { Notice } from "@/lib/types";
 
 const features = [
@@ -85,13 +86,13 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
 
   return (
     <>
-      {/* ── HERO — royal-blue brand banner (light) / ink (dark) ── */}
-      <section className="relative min-h-[88svh] overflow-hidden bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 text-white dark:from-ink dark:via-ink dark:to-ink">
-        {/* Court-tape accent stripe */}
-        <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
+      {/* ── HERO — animated pickleball court scene (dark-only) ── */}
+      <section className="relative min-h-[88svh] overflow-hidden bg-ink text-white">
+        {/* Animated court: two players rallying, ball + paddles in motion */}
+        <CourtScene />
 
-        {/* Court grid */}
-        <CourtLinesSVG />
+        {/* Court-tape accent stripe */}
+        <div aria-hidden className="tape-stripe absolute left-0 top-0 z-10 h-1.5 w-full opacity-90" />
 
         {/* Lime corner wash */}
         <div aria-hidden className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-lime/10 blur-3xl" />
@@ -155,7 +156,7 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
               <motion.div whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
                 <Link
                   href="/gallery"
-                  className="btn-outline w-full sm:w-auto"
+                  className="btn-outline w-full border-white/40 text-white hover:border-white hover:text-white dark:border-white/40 dark:text-white dark:hover:border-white dark:hover:text-white sm:w-auto"
                 >
                   View the Courts
                 </Link>
@@ -176,9 +177,13 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
                 },
                 { value: "All", label: "Skill levels" },
               ].map(({ value, label }) => (
-                <div key={label} className="rounded-2xl border-2 border-white/10 bg-white/5 px-3 py-4 text-center">
-                  <div className="font-display text-2xl font-extrabold text-lime sm:text-3xl">{value}</div>
-                  <div className="mt-1 text-[0.6rem] font-extrabold uppercase tracking-wider text-white/50 sm:text-xs">{label}</div>
+                <div key={label} className="flex flex-col items-center rounded-2xl border-2 border-white/10 bg-white/5 px-2 py-4 text-center">
+                  <div className="flex h-9 items-center justify-center font-display text-xl font-extrabold leading-none text-lime sm:h-10 sm:text-2xl">
+                    {value}
+                  </div>
+                  <div className="mt-1.5 flex min-h-[2.1em] items-center text-[0.6rem] font-extrabold uppercase leading-tight tracking-wider text-white/50">
+                    {label}
+                  </div>
                 </div>
               ))}
             </motion.div>

@@ -15,6 +15,12 @@ const OAUTH_ERRORS: Record<string, string> = {
   google_noemail: "Your Google account didn't share an email address.",
   google_unverified: "Please verify your email with Google, then try again.",
   google_dberror: "We couldn't finish creating your account. Please try again.",
+  // Granular token-exchange diagnostics (surface the misconfig clearly).
+  google_redirect: "Sign-in misconfigured: redirect URL mismatch. The redirect URI in Google Cloud must exactly match this site.",
+  google_client: "Sign-in misconfigured: invalid Google client credentials (check GOOGLE_CLIENT_SECRET).",
+  google_grant: "That sign-in link expired. Please try again.",
+  google_exchange: "Couldn't complete Google sign-in (token exchange). Please try again.",
+  google_profile: "Couldn't read your Google profile. Please try again.",
   google_failed: "Google sign-in failed. Please try again.",
 };
 

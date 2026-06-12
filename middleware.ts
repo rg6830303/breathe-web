@@ -36,7 +36,9 @@ export async function middleware(req: NextRequest) {
       !pathname.startsWith("/_next/") &&
       pathname !== "/favicon.ico" &&
       pathname !== "/robots.txt" &&
-      !pathname.startsWith("/icons/")
+      !pathname.startsWith("/icons/") &&
+      !pathname.startsWith("/gallery/") &&
+      !/\.(png|jpg|jpeg|gif|svg|json|ico)$/i.test(pathname)
     ) {
       const dest = req.nextUrl.clone();
       dest.pathname = "/admin";

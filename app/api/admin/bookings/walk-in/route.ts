@@ -19,6 +19,7 @@ const schema = z.object({
   amount: z.number().int().min(0).max(50_000),
   notes: z.string().trim().max(500).optional().or(z.literal("").transform(() => undefined)),
   notify_guest: z.boolean().default(false),
+  sport: z.enum(["pickleball", "cricket", "badminton"]).default("pickleball"),
 });
 
 export async function POST(req: Request) {
@@ -32,21 +33,45 @@ export async function POST(req: Request) {
   }
   const data = parsed.data;
 
+  // Enforce sport court rules
+  let courtNumber = data.court_number;
+  if (data.sport === "cricket" || data.sport === "badminton") {
+    courtNumber = 1;
+  }
+
   // Conflict check: refuse to walk-in over an existing confirmed booking on
   // the same court that overlaps the requested time range.
   try {
     const overlap = await turso.execute({
-      sql: `SELECT id FROM bookings
+      sql: `SELECT slot_time, duration_min, court_number, sport FROM bookings
             WHERE slot_date = ?
-              AND court_number = ?
-              AND status = 'confirmed'
-              AND slot_time = ?
-            LIMIT 1`,
-      args: [data.slot_date, data.court_number, data.slot_time],
+              AND status = 'confirmed'`,
+      args: [data.slot_date],
     });
-    if (overlap.rows.length > 0) {
+
+    const { slotsClash } = require("@/lib/slots");
+    const clash = overlap.rows.some((row) =>
+      slotsClash(
+        courtNumber,
+        data.slot_time,
+        data.duration_min,
+        data.sport,
+        Number(row.court_number) || 1,
+        String(row.slot_time),
+        Number(row.duration_min) || 60,
+        row.sport ? String(row.sport) : "pickleball",
+      )
+    );
+
+    if (clash) {
+      const courtName =
+        data.sport === "cricket"
+          ? "Cricket Turf"
+          : data.sport === "badminton"
+            ? "Badminton Court"
+            : `Court ${courtNumber}`;
       return NextResponse.json(
-        { error: `Court ${data.court_number} is already booked at ${data.slot_time} on ${data.slot_date}.` },
+        { error: `${courtName} is already booked at ${data.slot_time} on ${data.slot_date}.` },
         { status: 409 },
       );
     }
@@ -65,30 +90,47 @@ export async function POST(req: Request) {
   });
 
   try {
-    await turso.execute({
-      sql: `INSERT INTO bookings (
-        id, user_id, slot_date, slot_time, duration_min, court_number,
-        guest_name, guest_phone, guest_email,
-        subtotal, gst, total, amount_paid,
-        status, source, notes, created_at
-      ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'walk_in', ?, ?)`,
-      args: [
-        id,
-        data.slot_date,
-        data.slot_time,
-        data.duration_min,
-        data.court_number,
-        data.guest_name,
-        data.guest_phone ?? null,
-        data.guest_email ?? null,
-        Math.round(totals.subtotal),
-        Math.round(totals.taxes),
-        Math.round(totals.total),
-        Math.round(totals.total),
-        notes,
-        now,
-      ],
-    });
+    const { cellsFor } = require("@/lib/slots");
+    const statements = [
+      {
+        sql: `INSERT INTO bookings (
+          id, user_id, slot_date, slot_time, duration_min, court_number,
+          guest_name, guest_phone, guest_email,
+          subtotal, gst, total, amount_paid,
+          status, source, sport, notes, created_at
+        ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'walk_in', ?, ?, ?)`,
+        args: [
+          id,
+          data.slot_date,
+          data.slot_time,
+          data.duration_min,
+          courtNumber,
+          data.guest_name,
+          data.guest_phone ?? null,
+          data.guest_email ?? null,
+          Math.round(totals.subtotal),
+          Math.round(totals.taxes),
+          Math.round(totals.total),
+          Math.round(totals.total),
+          data.sport,
+          notes,
+          now,
+        ],
+      }
+    ];
+
+    const targetCourts = data.sport === "cricket" ? [1, 2, 3] : [courtNumber];
+    const intervals = cellsFor(data.slot_time, data.duration_min);
+    for (const c of targetCourts) {
+      for (const cellTime of intervals) {
+        statements.push({
+          sql: "INSERT INTO booking_courts (booking_id, court_number, slot_date, slot_time) VALUES (?, ?, ?, ?)",
+          args: [id, c, data.slot_date, cellTime],
+        });
+      }
+    }
+
+    await turso.batch(statements, "write");
   } catch (err) {
     console.error("[walk-in insert error]", err);
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
@@ -103,7 +145,7 @@ export async function POST(req: Request) {
         slot_date: data.slot_date,
         slot_time: data.slot_time,
         duration_min: data.duration_min,
-        court_number: data.court_number,
+        court_number: courtNumber,
         guest_name: data.guest_name,
         guest_phone: data.guest_phone ?? null,
         guest_email: data.guest_email ?? null,
@@ -113,6 +155,7 @@ export async function POST(req: Request) {
         amount_paid: Math.round(totals.total),
         status: "confirmed",
         source: "walk_in",
+        sport: data.sport,
         notes,
         created_at: now,
       });
@@ -121,12 +164,11 @@ export async function POST(req: Request) {
     console.error("[walk-in supabase sync error]", sbErr);
   }
 
-  // Optional: send confirmation + admin notification using the standard
-  // notifications pipeline if a guest email is on file and notify_guest = true.
-  if (data.notify_guest && data.guest_email) {
-    try {
+  try {
+    const { waitUntil } = require("@vercel/functions");
+    if (data.notify_guest && data.guest_email) {
+      // Full pipeline: emails the guest + emails/pushes admins + records inbox.
       const { notifyBookingConfirmed } = require("@/lib/notifications");
-      const { waitUntil } = require("@vercel/functions");
       const p = notifyBookingConfirmed({
         id,
         userEmail: data.guest_email,
@@ -136,15 +178,27 @@ export async function POST(req: Request) {
         slotTime: data.slot_time,
         durationMin: data.duration_min,
         amount: Math.round(totals.total),
-        courtNumber: data.court_number,
+        courtNumber: courtNumber,
         subtotal: Math.round(totals.subtotal),
         gst: Math.round(totals.taxes),
+        sport: data.sport,
       });
       if (waitUntil) waitUntil(p);
       else await p;
-    } catch (notifErr) {
-      console.error("[walk-in notify error]", notifErr);
+    } else {
+      // No guest email — still alert admin devices + inbox about the walk-in.
+      const { sendPushToAdmins } = require("@/lib/push");
+      const { recordNotification } = require("@/lib/notify-store");
+      const body = `${data.guest_name} — ${data.slot_date} ${data.slot_time} · Court ${data.court_number} · ₹${Math.round(totals.total)}`;
+      const run = Promise.all([
+        sendPushToAdmins({ title: "Walk-in booking added", body, url: "/admin", tag: `walkin-${id}` }),
+        recordNotification({ role: "admin", title: "Walk-in booking added", body, url: "/admin" }),
+      ]).catch((e) => console.error("[walk-in admin notify error]", e));
+      if (waitUntil) waitUntil(run);
+      else await run;
     }
+  } catch (notifErr) {
+    console.error("[walk-in notify error]", notifErr);
   }
 
   return NextResponse.json({ ok: true, id });

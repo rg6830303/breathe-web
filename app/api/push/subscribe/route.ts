@@ -1,32 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { turso } from "@/lib/turso";
-import { getSession } from "@/lib/auth";
+import { getSession, getAdminSession } from "@/lib/auth";
+import { ensurePushTable } from "@/lib/push";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Ensure push_subscriptions table exists (lazy init)
-async function ensureTable() {
-  try {
-    await turso.execute({
-      sql: `CREATE TABLE IF NOT EXISTS push_subscriptions (
-        id TEXT PRIMARY KEY,
-        user_id TEXT,
-        endpoint TEXT NOT NULL UNIQUE,
-        keys_p256dh TEXT NOT NULL,
-        keys_auth TEXT NOT NULL,
-        created_at INTEGER NOT NULL
-      )`,
-      args: [],
-    });
-  } catch {
-    // Table may already exist
-  }
-}
-
 export async function POST(req: NextRequest) {
   try {
-    await ensureTable();
+    const rl = await checkRateLimit(`push-sub:${getClientIp(req)}`, 30, 60 * 1000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: `Too many attempts. Try again in ${rl.retryAfterSec}s.` },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+      );
+    }
+    await ensurePushTable();
 
     const body = await req.json().catch(() => ({}));
     const { endpoint, keys } = body;
@@ -35,23 +25,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid subscription payload" }, { status: 400 });
     }
 
-    // Optionally link to user if logged in
-    const session = await getSession().catch(() => null);
-    const userId = session?.id ?? null;
+    // Infer the audience from the caller's session: admin devices are tagged
+    // 'admin' so staff alerts can be targeted separately from player alerts.
+    const admin = await getAdminSession().catch(() => null);
+    const session = admin ? null : await getSession().catch(() => null);
+    const role = admin ? "admin" : "user";
+    const userId = admin ? admin.id : (session?.id ?? null);
 
     const id = crypto.randomUUID();
     const now = Date.now();
 
     await turso.execute({
-      sql: `INSERT OR REPLACE INTO push_subscriptions (id, user_id, endpoint, keys_p256dh, keys_auth, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)`,
-      args: [id, userId, endpoint, keys.p256dh, keys.auth, now],
+      sql: `INSERT INTO push_subscriptions (id, user_id, role, endpoint, keys_p256dh, keys_auth, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(endpoint) DO UPDATE SET
+              user_id = excluded.user_id,
+              role = excluded.role,
+              keys_p256dh = excluded.keys_p256dh,
+              keys_auth = excluded.keys_auth`,
+      args: [id, userId, role, endpoint, keys.p256dh, keys.auth, now],
     });
 
-    return NextResponse.json({ ok: true, id });
+    return NextResponse.json({ ok: true, id, role });
   } catch (err) {
     console.error("[push/subscribe error]", err);
-    return NextResponse.json({ error: "Failed to save subscription" }, { status: 500 });
+    // Surface a short, non-sensitive reason so the toggle can show WHY it
+    // failed (DB errors here name the column/constraint — no secrets).
+    const detail = (err instanceof Error ? err.message : String(err)).slice(0, 160);
+    return NextResponse.json({ error: "Failed to save subscription", detail }, { status: 500 });
   }
 }
 

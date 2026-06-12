@@ -6,10 +6,13 @@ import { HomeMotion } from "@/components/home-motion";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
 
-// ISR: serve a fast, cached static homepage (revalidated hourly) so Googlebot
-// always gets quick, reliable HTML — better for indexing than force-dynamic,
-// and resilient if the DB is briefly unreachable during a crawl.
-export const revalidate = 3600;
+// Render on-demand (not at build time). The homepage reads live notices from
+// the DB; prerendering it during `next build` opens a Postgres connection in the
+// build container, whose pool can surface a connection error as an unhandled
+// rejection and crash the export worker ("Export encountered an error on /").
+// force-dynamic keeps it out of the static-export step — it still SSRs full HTML
+// for crawlers, and DB errors at request time fall back gracefully.
+export const dynamic = "force-dynamic";
 
 async function getLiveNotices(): Promise<Notice[]> {
   try {

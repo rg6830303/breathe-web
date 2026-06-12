@@ -68,15 +68,31 @@ export async function POST(req: Request) {
 
   if (!result.ok) {
     return NextResponse.json(
-      { ok: false, to, error: result.error, code: result.code, config: mailerConfigState() },
+      {
+        ok: false,
+        to,
+        error: result.error,
+        code: result.code,
+        config: mailerConfigState(),
+        sent: {
+          ok: false,
+          error: result.error,
+          code: result.code,
+        },
+      },
       { status: 500 },
     );
   }
   return NextResponse.json({
     ok: true,
     to,
+    sent: {
+      ok: true,
+      transport: result.transport,
+    },
     messageId: result.messageId,
     accepted: result.accepted,
     rejected: result.rejected,
   });
 }
+

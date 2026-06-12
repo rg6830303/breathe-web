@@ -91,5 +91,13 @@ export async function POST(req: Request) {
   if (!tursoOk && !supabaseOk) {
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   }
+
+  try {
+    const { notifyAdminAction } = require("@/lib/notifications");
+    await notifyAdminAction("Notice published", `${parsed.data.title} · ${parsed.data.category}`, { actor: admin.email });
+  } catch (e) {
+    console.error("[admin notice notify error]", e);
+  }
+
   return NextResponse.json({ ok: true, id });
 }

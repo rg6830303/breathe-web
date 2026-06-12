@@ -12,6 +12,8 @@ import { ActivityHeatmap } from "./activity-heatmap";
 import { GameStats } from "./game-stats";
 import { StatTiles } from "./stat-tile";
 import { ProfileForm } from "./profile-form";
+import { PushToggle } from "@/components/push-toggle";
+import { NotificationBell } from "@/components/notification-bell";
 import { CancelBookingButton } from "./cancel-button";
 import { NextSessionCard } from "./next-session-card";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
@@ -29,8 +31,18 @@ type Row = {
   amount_paid: number;
   sport: string;
   status: string;
+  sport: string;
   created_at: string;
 };
+
+const SPORT_LABEL: Record<string, string> = {
+  pickleball: "🎾 Pickleball",
+  cricket: "🏏 Cricket",
+  badminton: "🏸 Badminton",
+};
+function sportLabel(s: string) {
+  return SPORT_LABEL[s] ?? "🎾 Pickleball";
+}
 
 type Profile = {
   full_name: string;
@@ -60,6 +72,11 @@ async function getProfile(userId: string): Promise<Profile | null> {
 }
 
 async function getBookings(userId: string): Promise<Row[]> {
+  const query = (withSport: boolean) =>
+    `SELECT id, court_number, slot_date, slot_time, duration_min,
+            amount_paid as total_amount, status, ${withSport ? "sport," : ""} created_at
+     FROM bookings WHERE user_id = ?
+     ORDER BY slot_date DESC, slot_time DESC LIMIT 500`;
   try {
     const result = await turso.execute({
       sql: `SELECT id, court_number, slot_date, slot_time, duration_min,
@@ -257,9 +274,12 @@ export default async function DashboardPage() {
           }
           right={
             <div className="flex flex-col items-start gap-3 md:items-end">
-              <span className="tag-sport border-white/20 bg-white/10 text-white">
-                <FavIcon className="h-3.5 w-3.5" /> {favBand.label}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="tag-sport border-white/20 bg-white/10 text-white">
+                  <FavIcon className="h-3.5 w-3.5" /> {favBand.label}
+                </span>
+                <NotificationBell onDark />
+              </div>
               <Link href="/book" className="btn-accent">
                 Book another slot <ArrowRight className="h-4 w-4" />
               </Link>
@@ -422,6 +442,9 @@ export default async function DashboardPage() {
                                   <div className="text-sm text-slatey dark:text-white/50">
                                     {format12h(b.slot_time)} – {format12h(endTime(b.slot_time, b.duration_min))}
                                   </div>
+                                  <div className="mt-0.5 text-xs font-bold text-slatey dark:text-white/45">
+                                    {sportLabel(b.sport)} · Court {b.court_number}
+                                  </div>
                                 </div>
                               </div>
                               <span className={`rounded-full px-2.5 py-0.5 text-[0.6rem] font-extrabold uppercase tracking-[0.15em] ${statusBadge(b.status)}`}>
@@ -504,9 +527,12 @@ export default async function DashboardPage() {
             </section>
 
             {/* Profile sidebar */}
-            <aside>
+            <aside className="space-y-5">
               <ScrollReveal direction="right">
                 <ProfileForm initialName={fullName} initialPhone={phone} email={email} />
+              </ScrollReveal>
+              <ScrollReveal direction="right" delay={0.05}>
+                <PushToggle />
               </ScrollReveal>
             </aside>
           </div>

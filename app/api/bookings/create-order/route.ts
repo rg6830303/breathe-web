@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { turso } from "@/lib/turso";
 import { calculateTotals } from "@/lib/pricing";
-import { priceForRange, rangesOverlap, isWithinHours } from "@/lib/slots";
+import { priceForRange, rangesOverlap, isWithinHours, slotsClash } from "@/lib/slots";
+import { bookingRequestSchema, formatZodError } from "@/lib/validation";
 import { BULK_PACKAGE } from "@/lib/credits";
 
 export const runtime = "nodejs";
@@ -29,6 +31,15 @@ export async function POST(req: Request) {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    // Rate limit order creation (payment-gateway calls cost money / are abusable).
+    const rl = await checkRateLimit(`create-order:${getClientIp(req)}`, 20, 60 * 1000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: `Too many attempts. Try again in ${rl.retryAfterSec}s.` },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     const sport = String(body.sport ?? "pickleball");
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
@@ -48,7 +59,7 @@ export async function POST(req: Request) {
       try {
         const rzp = new Razorpay({ key_id: keyIdEarly, key_secret: keySecretEarly });
         const order = await rzp.orders.create({
-          amount: orderAmount(Math.round(BULK_PACKAGE.price * 100)),
+          amount: Math.round(BULK_PACKAGE.price * 100),
           currency: "INR",
           receipt: uuid(),
           notes: { user_id: session.id, purchase: "bulk-12h" },
@@ -75,20 +86,31 @@ export async function POST(req: Request) {
       }
     }
 
-    if (slots.length === 0) {
-      return NextResponse.json({ error: "Select at least one slot." }, { status: 400 });
+    // Schema validation (type/length/range/enum) before any DB or payment work.
+    const parsed = bookingRequestSchema.safeParse({ slots, addons });
+    if (!parsed.success) {
+      return NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 });
     }
-
     for (const s of slots) {
-      if (!s.date || !s.time || ![1, 2, 3].includes(s.court)) {
-        return NextResponse.json({ error: "Invalid slot." }, { status: 400 });
-      }
       if (!isWithinHours(s.time, dur(s))) {
         return NextResponse.json({ error: "That time is outside opening hours." }, { status: 400 });
       }
     }
 
-    const dates = Array.from(new Set(slots.map((s) => s.date)));
+    const sport = ["pickleball", "cricket", "badminton"].includes(String(body.sport))
+      ? (body.sport as "pickleball" | "cricket" | "badminton")
+      : "pickleball";
+
+    // Enforce sport constraints on slot courts
+    const normalizedSlots = slots.map((s) => {
+      let court = s.court;
+      if (sport === "cricket" || sport === "badminton") {
+        court = 1; // Cricket and Badminton are forced to Court 1
+      }
+      return { ...s, court };
+    });
+
+    const dates = Array.from(new Set(normalizedSlots.map((s) => s.date)));
 
     for (const d of dates) {
       let booked;
@@ -102,7 +124,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
       }
 
-      for (const s of slots) {
+      for (const s of normalizedSlots) {
         if (s.date !== d) continue;
         const clash = booked.rows.some((row) => {
           const rowNotes = row.notes ? JSON.parse(String(row.notes)) : {};

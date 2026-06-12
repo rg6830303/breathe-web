@@ -52,16 +52,35 @@ export async function POST(req: Request) {
     const results = [];
     const now = Date.now();
 
+    // Server-side upload validation: allow only known image types/extensions and
+    // store under a random UUID name (never the client-supplied filename).
+    const ALLOWED_MIME: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/gif": "gif",
+      "image/avif": "avif",
+    };
+
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
-      if (!f || !f.type.startsWith("image/")) continue;
+      if (!f) continue;
+      const ext = ALLOWED_MIME[f.type];
+      const nameExt = (f.name.split(".").pop() ?? "").toLowerCase();
+      if (!ext || !["jpg", "jpeg", "png", "webp", "gif", "avif"].includes(nameExt)) {
+        return NextResponse.json(
+          { error: `Unsupported file type. Allowed: JPG, PNG, WEBP, GIF, AVIF.` },
+          { status: 400 },
+        );
+      }
       if (f.size > 5 * 1024 * 1024) {
-        return NextResponse.json({ error: `File ${f.name} exceeds 5MB size limit.` }, { status: 400 });
+        return NextResponse.json({ error: `File exceeds the 5MB size limit.` }, { status: 400 });
       }
 
       let blob;
       try {
-        blob = await put(`gallery/${now}-${f.name}`, f, {
+        // UUID filename — original name is never used in the stored path.
+        blob = await put(`gallery/${uuid()}.${ext}`, f, {
           access: "public",
           contentType: f.type,
         });

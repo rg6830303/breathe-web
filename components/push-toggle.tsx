@@ -1,0 +1,253 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Bell, BellOff, BellRing, Loader2 } from "lucide-react";
+import { getVapidPublicKey, urlBase64ToUint8Array } from "@/lib/push-public";
+
+type State = "loading" | "unsupported" | "default" | "granted" | "denied" | "blocked";
+
+/**
+ * Enable/disable web-push notifications for the installed PWA. Works for both
+ * the player dashboard and the admin console — the API tags the device's role
+ * from the session, so admins get staff alerts and players get their own.
+ */
+export function PushToggle({ className = "" }: { className?: string }) {
+  const [state, setState] = useState<State>("loading");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const supported =
+    typeof window !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window;
+
+  useEffect(() => {
+    if (!supported) {
+      setState("unsupported");
+      return;
+    }
+    (async () => {
+      try {
+        if (Notification.permission === "denied") {
+          setState("denied");
+          return;
+        }
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        setState(sub ? "granted" : Notification.permission === "granted" ? "granted" : "default");
+        if (sub && Notification.permission !== "granted") setState("default");
+        setState(sub ? "granted" : "default");
+      } catch {
+        setState("default");
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function enable() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") {
+        setState(perm === "denied" ? "denied" : "default");
+        setMsg(perm === "denied" ? "Notifications are blocked in your browser settings." : null);
+        return;
+      }
+      const reg = await navigator.serviceWorker.ready;
+      const keyStr = getVapidPublicKey();
+      const appKey = urlBase64ToUint8Array(keyStr);
+      // A valid P-256 VAPID public key is exactly 65 bytes. If it isn't, the
+      // browser rejects subscribe() with AbortError — almost always a wrong /
+      // whitespaced / swapped NEXT_PUBLIC_VAPID_PUBLIC_KEY. Fail fast with a
+      // precise message naming the env var + the actual length we received.
+      if (appKey.length !== 65) {
+        setMsg(
+          `Push key invalid: NEXT_PUBLIC_VAPID_PUBLIC_KEY decoded to ${appKey.length} bytes (must be 65). ` +
+            `Re-paste the 87-char public key (starts "B…") — not the private key — and redeploy.`,
+        );
+        return;
+      }
+
+      // Drop any existing subscription whose key differs from the current VAPID
+      // public key. A leftover subscription from a previous key is the #1 cause
+      // of AbortError on re-subscribe (and of pushes silently not arriving).
+      let sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        const existing = new Uint8Array((sub.options.applicationServerKey as ArrayBuffer) ?? new ArrayBuffer(0));
+        const sameKey = existing.length === appKey.length && existing.every((b, i) => b === appKey[i]);
+        if (!sameKey) {
+          await sub.unsubscribe().catch(() => {});
+          sub = null;
+        }
+      }
+
+      // Subscribe with up to 3 attempts: AbortError from the push service is
+      // often transient, and a fresh unsubscribe + short backoff clears it.
+      if (!sub) {
+        let lastErr: unknown = null;
+        for (let attempt = 0; attempt < 3 && !sub; attempt++) {
+          try {
+            sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: appKey as BufferSource,
+            });
+          } catch (subErr) {
+            lastErr = subErr;
+            console.error(`[push subscribe attempt ${attempt + 1}]`, subErr);
+            const stale = await reg.pushManager.getSubscription().catch(() => null);
+            if (stale) await stale.unsubscribe().catch(() => {});
+            await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+          }
+        }
+        if (!sub) {
+          const name = lastErr instanceof Error ? lastErr.name : "Error";
+          // Include the key fingerprint (public, not secret) so a mismatch
+          // between the deployed key and the one set in Vercel is visible.
+          setMsg(
+            `Couldn't subscribe (${name}). Using key ${keyStr.slice(0, 8)}…(${keyStr.length} chars). ` +
+              `Be online; on Android use the installed app (not a private tab). If it persists, ` +
+              `clear this site's Notifications in Chrome settings and retry.`,
+          );
+          return;
+        }
+      }
+
+      const res = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sub.toJSON()),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+        console.error("[push enable] server", data);
+        setMsg(`Couldn't save: ${data.detail || data.error || `HTTP ${res.status}`}`);
+        return;
+      }
+      setState("granted");
+      setMsg("Notifications are on for this device.");
+    } catch (e) {
+      console.error("[push enable]", e);
+      setMsg(`Couldn't enable notifications: ${e instanceof Error ? e.message : "unknown error"}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendTest() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/push/test", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; sent?: number; error?: string };
+      if (!res.ok || data.ok === false) {
+        setMsg(data.error || `Test failed (HTTP ${res.status}).`);
+      } else if ((data.sent ?? 0) > 0) {
+        setMsg(`Test sent to ${data.sent} device(s) — check your notification shade.`);
+      } else {
+        setMsg("No subscribed device found for your account. Toggle off and on, then retry.");
+      }
+    } catch {
+      setMsg("Couldn't send a test notification. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disable() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch("/api/push/subscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        }).catch(() => {});
+        await sub.unsubscribe().catch(() => {});
+      }
+      setState("default");
+      setMsg("Notifications turned off for this device.");
+    } catch (e) {
+      console.error("[push disable]", e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const on = state === "granted";
+
+  return (
+    <div className={`card-sport p-5 ${className}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <span
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+              on ? "bg-brand text-white" : "bg-brand/10 text-brand dark:bg-white/10 dark:text-brand-300"
+            }`}
+          >
+            {on ? <BellRing className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
+          </span>
+          <div>
+            <h3 className="font-display text-base font-extrabold text-ink dark:text-white">Notifications</h3>
+            <p className="mt-0.5 text-xs leading-5 text-slatey dark:text-white/55">
+              {state === "unsupported"
+                ? "This browser doesn't support push notifications. Install the app to your home screen first."
+                : state === "denied"
+                  ? "Blocked. Enable notifications for this site in your browser settings, then reload."
+                  : on
+                    ? "You'll get booking confirmations and updates on this device."
+                    : "Turn on to get booking confirmations and club updates — even when the app is closed."}
+            </p>
+          </div>
+        </div>
+
+        {state !== "unsupported" && state !== "denied" && (
+          <button
+            type="button"
+            onClick={on ? disable : enable}
+            disabled={busy}
+            aria-pressed={on}
+            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition disabled:opacity-60 ${
+              on ? "bg-brand" : "bg-ink/15 dark:bg-white/20"
+            }`}
+          >
+            <span
+              className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-white shadow transition ${
+                on ? "translate-x-6" : "translate-x-1"
+              }`}
+            >
+              {busy ? <Loader2 className="h-3 w-3 animate-spin text-brand" /> : null}
+            </span>
+          </button>
+        )}
+      </div>
+
+      {(state === "denied" || state === "unsupported") && (
+        <div className="mt-3 flex items-center gap-2 rounded-xl border-2 border-ink/10 bg-ink/[0.02] px-3 py-2 text-xs text-slatey dark:border-white/10 dark:bg-white/[0.02] dark:text-white/55">
+          <BellOff className="h-4 w-4 shrink-0" />
+          {state === "unsupported"
+            ? "On iPhone/iPad: open in Safari → Share → Add to Home Screen, then open the installed app."
+            : "Notifications are blocked at the browser level."}
+        </div>
+      )}
+
+      {on && (
+        <button
+          type="button"
+          onClick={sendTest}
+          disabled={busy}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full border-2 border-ink/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-wide text-ink transition hover:border-brand hover:text-brand disabled:opacity-60 dark:border-white/15 dark:text-white dark:hover:border-brand-300 dark:hover:text-brand-300"
+        >
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />}
+          Send a test notification
+        </button>
+      )}
+
+      {msg && <p className="mt-3 text-xs font-semibold text-brand dark:text-brand-300">{msg}</p>}
+    </div>
+  );
+}

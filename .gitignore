@@ -9,3 +9,4 @@ Breathe-web/
 .vercel/
 
 .env*
+!.env.example

@@ -20,18 +20,30 @@ export function googleConfigured(): boolean {
   return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }
 
+/** Derive the public origin (https://host) from the incoming request, so OAuth
+ *  always uses the domain the user is actually on (e.g. breathepickleball.in)
+ *  instead of a possibly-stale NEXT_PUBLIC_SITE_URL pointing at an old Vercel
+ *  deployment. Falls back to the env var, then the canonical domain. */
+export function originFromRequest(req: Request): string {
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  if (host) return `${proto}://${host}`;
+  return (process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in").replace(/\/$/, "");
+}
+
 /** Canonical redirect URI. Must EXACTLY match an entry registered in Google
- *  Cloud → Credentials → OAuth client. We derive it from the public site URL so
- *  it is identical on the authorize and token-exchange calls. */
-export function getRedirectUri(): string {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in").replace(/\/$/, "");
+ *  Cloud → Credentials → OAuth client. Pass the request origin so the value is
+ *  identical on the authorize and token-exchange calls and matches the live
+ *  domain. */
+export function getRedirectUri(origin?: string): string {
+  const base = (origin || process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in").replace(/\/$/, "");
   return `${base}/api/auth/google/callback`;
 }
 
-export function buildAuthUrl(state: string): string {
+export function buildAuthUrl(state: string, origin?: string): string {
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID as string,
-    redirect_uri: getRedirectUri(),
+    redirect_uri: getRedirectUri(origin),
     response_type: "code",
     scope: "openid email profile",
     state,
@@ -45,7 +57,7 @@ export function buildAuthUrl(state: string): string {
 
 export type GoogleTokens = { access_token: string; id_token?: string; expires_in?: number };
 
-export async function exchangeCode(code: string): Promise<GoogleTokens> {
+export async function exchangeCode(code: string, origin?: string): Promise<GoogleTokens> {
   const res = await fetch(GOOGLE_TOKEN, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -53,7 +65,7 @@ export async function exchangeCode(code: string): Promise<GoogleTokens> {
       code,
       client_id: process.env.GOOGLE_CLIENT_ID as string,
       client_secret: process.env.GOOGLE_CLIENT_SECRET as string,
-      redirect_uri: getRedirectUri(),
+      redirect_uri: getRedirectUri(origin),
       grant_type: "authorization_code",
     }),
   });

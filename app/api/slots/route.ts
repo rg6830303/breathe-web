@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     let bookingsFromTurso = false;
     try {
       const r = await turso.execute({
-        sql: `SELECT slot_time, duration_min, court_number, notes
+        sql: `SELECT slot_time, duration_min, court_number, notes, sport
               FROM bookings
               WHERE slot_date = ? AND status = 'confirmed'`,
         args: [date],
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
         if (hasSupabase) {
           const { data } = await supabase
             .from("bookings")
-            .select("slot_time, duration_min, court_number, notes")
+            .select("slot_time, duration_min, court_number, notes, sport")
             .eq("slot_date", date)
             .eq("status", "confirmed");
           if (Array.isArray(data)) bookingsResult = { rows: data as Array<Record<string, unknown>> };
@@ -135,11 +135,14 @@ export async function GET(request: NextRequest) {
     const occupancy = new Map<string, CellState>();
     const key = (court: number, time: string) => `${court}@${time}`;
 
+    const targetSport = (params.get("sport") ?? "pickleball") as "pickleball" | "badminton" | "cricket";
+
     // 1. Confirmed bookings → booked (60-min overlap honored)
     for (const b of bookingsResult.rows) {
       const startTime = String(b.slot_time).slice(0, 5);
       const dur = Number(b.duration_min) || 60;
       const court = Number(b.court_number) || 1;
+      const bSport = b.sport ? String(b.sport) : "pickleball";
       const notes = b.notes ? String(b.notes) : null;
       let notesObj: any = {};
       try {
@@ -188,6 +191,8 @@ export async function GET(request: NextRequest) {
 
     // Generate slots based on selected sport
     const slots: Slot[] = [];
+    const responseCourts = targetSport === "cricket" ? [1] : targetSport === "badminton" ? [1] : [...COURTS];
+
     for (const time of allTimes) {
       if (sportParam === "cricket") {
         const c1First = occupancy.get(key(1, time));

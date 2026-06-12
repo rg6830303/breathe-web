@@ -10,6 +10,7 @@ import { EmailPanel } from "@/components/admin/email-panel";
 import { WalkInModal } from "@/components/admin/walk-in-modal";
 import { BulkBlockModal } from "@/components/admin/bulk-block-modal";
 import { AddUserModal } from "@/components/admin/add-user-modal";
+import { NotificationBell } from "@/components/notification-bell";
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   ArrowRight,
@@ -53,6 +54,7 @@ type Booking = {
   price: number;
   total_amount: number;
   status: string;
+  sport?: string;
   created_at: string;
 };
 type AdminUser = {
@@ -72,6 +74,64 @@ type SlotResp = {
 
 function money(n: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+}
+
+/* ---- Shared console styles (dark-first, consistent across every tab) ---- */
+const TH =
+  "px-3 py-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50";
+const TH_RIGHT =
+  "px-3 py-3 text-right text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50";
+const TR_HOVER =
+  "border-b border-ink/5 transition-colors hover:bg-brand/[0.03] dark:border-white/5 dark:hover:bg-white/[0.03]";
+const INPUT =
+  "rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-brand dark:border-white/10 dark:bg-[#0b1530] dark:text-white";
+const DANGER_BTN =
+  "inline-flex items-center gap-1 rounded-lg border-2 border-red-200 px-2.5 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10";
+
+function StatusPill({ status }: { status: string }) {
+  const tone =
+    status === "confirmed" || status === "open" || status === "active"
+      ? "bg-lime/20 text-lime-dark dark:bg-lime/15 dark:text-lime"
+      : status === "cancelled"
+        ? "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"
+        : "bg-ink/5 text-ink/60 dark:bg-white/10 dark:text-white/60";
+  return (
+    <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${tone}`}>
+      {status}
+    </span>
+  );
+}
+
+/** Uniform header for every tab panel: eyebrow + title + subtitle left, controls right. */
+function PanelHeader({
+  eyebrow,
+  title,
+  subtitle,
+  children,
+}: {
+  eyebrow: string;
+  title: React.ReactNode;
+  subtitle?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b-2 border-ink/10 pb-4 dark:border-white/10">
+      <div>
+        <span className="eyebrow">{eyebrow}</span>
+        <h3 className="mt-1 font-display text-lg font-extrabold tracking-tight text-ink dark:text-white">{title}</h3>
+        {subtitle && <p className="mt-0.5 text-xs text-ink/50 dark:text-white/50">{subtitle}</p>}
+      </div>
+      {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
+    </div>
+  );
+}
+
+function EmptyState({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border-2 border-dashed border-ink/10 p-8 text-center text-sm text-ink/40 dark:border-white/10 dark:text-white/40">
+      {children}
+    </div>
+  );
 }
 
 function todayIST() {
@@ -115,6 +175,9 @@ export function AdminConsole() {
       <div className="card-sport overflow-hidden rounded-2xl p-0">
         {/* Top action bar */}
         <div className="flex flex-wrap items-center justify-end gap-2 border-b-2 border-ink/10 bg-ink/[0.03] px-4 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
+          <div className="mr-auto">
+            <NotificationBell />
+          </div>
           <button
             type="button"
             onClick={() => setWalkInOpen(true)}
@@ -151,21 +214,21 @@ export function AdminConsole() {
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-0 border-b-2 border-ink/10 dark:border-white/10">
+        {/* Tabs — horizontally scrollable, labels always visible for clear nav */}
+        <div className="no-scrollbar flex flex-nowrap gap-0 overflow-x-auto border-b-2 border-ink/10 dark:border-white/10">
           {TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               type="button"
               onClick={() => setTab(key)}
-              className={`relative inline-flex items-center gap-2 px-4 py-3 text-xs font-extrabold uppercase tracking-wide transition-colors ${
+              className={`relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-3 text-xs font-extrabold uppercase tracking-wide transition-colors ${
                 tab === key
                   ? "text-brand dark:text-brand-300"
                   : "text-ink/50 hover:text-ink dark:text-white/50 dark:hover:text-white"
               }`}
             >
-              <Icon className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{label}</span>
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <span>{label}</span>
               {tab === key && (
                 <motion.span
                   layoutId="admin-tab-underline"
@@ -283,6 +346,25 @@ function BookingsTab() {
 
   useEffect(reload, [date]);
 
+  // Auto-refresh so new bookings (online or walk-in) appear without a manual
+  // reload — quietly re-fetch every 25s without flipping the loading state.
+  useEffect(() => {
+    const quiet = () => {
+      const url = date ? `/api/admin/bookings?date=${date}` : "/api/admin/bookings";
+      fetch(url)
+        .then((r) => r.json())
+        .then((data) => setBookings(data.bookings ?? []))
+        .catch(() => {});
+    };
+    const id = setInterval(quiet, 25000);
+    const onFocus = () => quiet();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [date]);
+
   async function cancel(id: string) {
     if (!confirm("Cancel this booking? The slot will reopen.")) return;
     setBusy(id);
@@ -339,11 +421,12 @@ function BookingsTab() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse text-sm">
+          <table className="w-full min-w-[940px] border-collapse text-sm">
             <thead>
               <tr className="border-b-2 border-ink/10 dark:border-white/10">
                 <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">User</th>
                 <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Court</th>
+                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Sport</th>
                 <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Date</th>
                 <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Time</th>
                 <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Amount</th>
@@ -360,6 +443,7 @@ function BookingsTab() {
                     <div className="text-[11px] text-ink/50 dark:text-white/50">{b.user_email}</div>
                   </td>
                   <td className="p-3 font-semibold text-ink dark:text-white">Court {b.court_number}</td>
+                  <td className="p-3 capitalize text-ink dark:text-white">{b.sport ?? "pickleball"}</td>
                   <td className="p-3 text-ink dark:text-white">{b.slot_date}</td>
                   <td className="p-3 text-ink dark:text-white">{b.slot_time}</td>
                   <td className="p-3 font-extrabold text-ink dark:text-white">{money(b.total_amount)}</td>

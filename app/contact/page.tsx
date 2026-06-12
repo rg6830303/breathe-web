@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, Facebook, Instagram, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Clock, Mail, MapPin, Phone } from "lucide-react";
+import { InstagramIcon, FacebookIcon, WhatsAppIcon } from "@/components/ui/social-icons";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { Container } from "@/components/ui";
@@ -61,7 +62,7 @@ function ContactMethodCard({ icon: Icon, label, value, href, delay }: CardProps)
 export default function ContactPage() {
   const contactCards = [
     { icon: Phone, label: "Call us", value: site.phoneDisplay, href: site.phoneHref },
-    { icon: MessageCircle, label: "WhatsApp", value: "Chat now", href: site.whatsappHref },
+    { icon: WhatsAppIcon, label: "WhatsApp", value: "Chat now", href: site.whatsappHref },
     { icon: Mail, label: "Email", value: site.email, href: site.emailHref },
     { icon: MapPin, label: "Visit", value: "Get directions", href: site.mapsLink },
   ];
@@ -159,7 +160,7 @@ export default function ContactPage() {
                       aria-label="Instagram"
                       className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-ink/15 text-ink dark:border-white/15 dark:text-white transition hover:border-lime hover:text-lime"
                     >
-                      <Instagram className="h-4 w-4" />
+                      <InstagramIcon className="h-4 w-4" colored />
                     </motion.a>
                     <motion.a
                       whileHover={{ y: -3, scale: 1.05 }}
@@ -170,7 +171,7 @@ export default function ContactPage() {
                       aria-label="Facebook"
                       className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-ink/15 text-ink dark:border-white/15 dark:text-white transition hover:border-lime hover:text-lime"
                     >
-                      <Facebook className="h-4 w-4" />
+                      <FacebookIcon className="h-4 w-4" colored />
                     </motion.a>
                   </div>
                 </div>
@@ -222,7 +223,7 @@ export default function ContactPage() {
                       className="inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-white/20 text-white transition hover:border-lime hover:text-lime"
                       aria-label="Follow us on Instagram"
                     >
-                      <Instagram className="w-5 h-5" />
+                      <InstagramIcon className="w-5 h-5" colored />
                     </motion.a>
                     <motion.a
                       whileHover={{ y: -4, scale: 1.1 }}
@@ -233,7 +234,7 @@ export default function ContactPage() {
                       className="inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-white/20 text-white transition hover:border-lime hover:text-lime"
                       aria-label="Follow us on Facebook"
                     >
-                      <Facebook className="w-5 h-5" />
+                      <FacebookIcon className="w-5 h-5" colored />
                     </motion.a>
                   </div>
                 </div>
@@ -251,7 +252,7 @@ export default function ContactPage() {
                 <div className="relative flex flex-col items-start gap-5 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-start gap-4">
                     <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-ink/10">
-                      <MessageCircle className="h-7 w-7 text-ink" />
+                      <WhatsAppIcon className="h-7 w-7 text-ink" />
                     </span>
                     <div>
                       <h2 className="font-display text-2xl font-extrabold leading-tight text-ink">
@@ -270,7 +271,7 @@ export default function ContactPage() {
                     rel="noopener noreferrer"
                     className="btn-dark shrink-0"
                   >
-                    <MessageCircle className="h-4 w-4" /> Join the group
+                    <WhatsAppIcon className="h-4 w-4" /> Join the group
                   </motion.a>
                 </div>
               </div>

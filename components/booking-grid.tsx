@@ -5,16 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CalendarDays, Check, Gift, Loader2, Lock, LogIn, Plus, ReceiptText } from "lucide-react";
-import { calculateTotals } from "@/lib/pricing";
+import { calculateTotals, getSlotPrice } from "@/lib/pricing";
 import { priceForRange } from "@/lib/slots";
+import { saveCart } from "@/lib/cart";
 
 type Ext = { before: boolean; after: boolean };
-
-// ── TEMPORARY: ₹1 hosted payment-link test mode ──────────────────────────────
-// Set TEST_PAYMENT_LINK = "" to restore the normal in-app Razorpay checkout.
-// When set, "Confirm & Pay" opens this ₹1 link and records the booking so the
-// full user→admin pipeline can be tested for a rupee, regardless of cart value.
-const TEST_PAYMENT_LINK = "";
 
 type Slot = { court: number; time: string; status: "open" | "booked" | "blocked"; price: number };
 type Account = { id: string; email: string; name: string; role: "user" | "admin" } | null;
@@ -22,19 +17,7 @@ type Addon = { id: string; label: string; price: number; qty: number; on: boolea
 
 const COURTS = [1, 2, 3] as const;
 
-type Band = "morning" | "afternoon" | "evening";
-const BANDS: { key: Band; label: string }[] = [
-  { key: "morning", label: "Morning · 5–12" },
-  { key: "afternoon", label: "Afternoon · 12–5" },
-  { key: "evening", label: "Evening · 5–11" },
-];
 
-function bandFor(time: string): Band {
-  const h = Number(time.slice(0, 2));
-  if (h < 12) return "morning";
-  if (h < 17) return "afternoon";
-  return "evening";
-}
 
 function todayIST() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -98,12 +81,15 @@ export function BookingGrid() {
   const [authLoaded, setAuthLoaded] = useState(false);
   const [addons] = useState(ADDONS);
   const [mobileCourt, setMobileCourt] = useState<number>(1);
-  const [band, setBand] = useState<Band>("evening");
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [emailed, setEmailed] = useState(true);
   const [creditMin, setCreditMin] = useState(0);
+  // Sport the court is being booked for (pickleball default; club also offers
+  // cricket and badminton on the same courts).
+  const [sport, setSport] = useState<"pickleball" | "cricket" | "badminton">("pickleball");
+  const [activeCourts, setActiveCourts] = useState<number[]>([1, 2, 3]);
 
   const activeCourts = useMemo(() => {
     if (sport === "badminton") return [1];
@@ -128,6 +114,15 @@ export function BookingGrid() {
 
   // Is an hour slot open (and not itself selected) so it can host an extension?
   function adjacentOpen(court: number, time: string) {
+    if (sport === "cricket") {
+      const c1 = slots.find((s) => s.court === 1 && s.time === time);
+      const c2 = slots.find((s) => s.court === 2 && s.time === time);
+      const c3 = slots.find((s) => s.court === 3 && s.time === time);
+      if (!c1 || c1.status !== "open") return false;
+      if (!c2 || c2.status !== "open") return false;
+      if (!c3 || c3.status !== "open") return false;
+      return !selected.some((x) => x.time === time);
+    }
     const cell = slots.find((s) => s.court === court && s.time === time);
     if (!cell || cell.status !== "open") return false;
     return !selected.some((x) => x.court === court && x.time === time);
@@ -160,6 +155,23 @@ export function BookingGrid() {
   const slotsNeededMin = selected.reduce((sum, s) => sum + effective(s).durationMin, 0);
   const hasEnoughCredit = creditMin >= slotsNeededMin && selected.length > 0;
 
+  // Build the cart from the current selection (incl. extensions + sport) and go
+  // to the dedicated cart → payment → confirmation flow.
+  function proceedToCart() {
+    if (selected.length === 0) return;
+    const items = selected.map((s) => {
+      const ef = effective(s);
+      return {
+        court: s.court,
+        time: ef.startTime,
+        durationMin: ef.durationMin,
+        price: priceForRange(ef.startTime, ef.durationMin, date, sport),
+      };
+    });
+    saveCart({ date, sport, items });
+    router.push("/cart");
+  }
+
   async function bookWithCredit() {
     if (!hasEnoughCredit) return;
     setPaying(true);
@@ -169,6 +181,7 @@ export function BookingGrid() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sport,
           slots: selected.map((s) => {
             const ef = effective(s);
             return { date, court: s.court, time: ef.startTime, durationMin: ef.durationMin };
@@ -200,7 +213,11 @@ export function BookingGrid() {
     setConfirmed(false);
     fetch(`/api/slots?date=${date}&sport=${sport}`)
       .then((r) => r.json())
-      .then((d) => setSlots(d.slots ?? []))
+      .then((d) => {
+        setSlots(d.slots ?? []);
+        if (d.courts) setActiveCourts(d.courts);
+      })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }
 
@@ -208,11 +225,10 @@ export function BookingGrid() {
 
   const minDate = todayIST();
 
-  const filtered = useMemo(() => slots.filter((s) => bandFor(s.time) === band), [slots, band]);
-  const times = useMemo(() => Array.from(new Set(filtered.map((s) => s.time))).sort(), [filtered]);
+  const times = useMemo(() => Array.from(new Set(slots.map((s) => s.time))).sort(), [slots]);
 
   function findSlot(court: number, time: string) {
-    return filtered.find((s) => s.court === court && s.time === time);
+    return slots.find((s) => s.court === court && s.time === time);
   }
   function isSelected(s: Slot) {
     return selected.some((x) => x.court === s.court && x.time === s.time);
@@ -256,33 +272,6 @@ export function BookingGrid() {
       });
       const addonsPayload = addons.filter((a) => a.on).map(({ id, label, price, qty }) => ({ id, label, price, qty }));
 
-      // TEMP ₹1 test: open the hosted payment link in a new tab for the rupee
-      // payment, record the booking (test bypass) so it confirms on the
-      // dashboard + admin, then HARD-redirect this tab to the portal so the
-      // fresh booking is guaranteed to render (bypasses the client router cache).
-      if (TEST_PAYMENT_LINK) {
-        // Opened inside the click gesture so it isn't pop-up-blocked.
-        const payTab = window.open(TEST_PAYMENT_LINK, "_blank", "noopener,noreferrer");
-        const verifyRes = await fetch("/api/bookings/verify-payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ test: true, slots: slotsPayload, addons: addonsPayload }),
-        });
-        const verify = await verifyRes.json();
-        if (!verifyRes.ok) {
-          if (payTab) payTab.close();
-          throw new Error(verify.error ?? "Could not confirm booking");
-        }
-        setEmailed(verify.emailed !== false);
-        setConfirmed(true);
-        setSelected([]);
-        setExt({});
-        setTimeout(() => {
-          window.location.href = "/dashboard";
-        }, 1500);
-        return;
-      }
-
       const orderRes = await fetch("/api/bookings/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -295,7 +284,9 @@ export function BookingGrid() {
       if (!loaded) throw new Error("Could not load Razorpay checkout.");
 
       // Razorpay global injected by checkout.js
-      const Razorpay = (window as unknown as { Razorpay: new (opts: unknown) => { open: () => void } }).Razorpay;
+      const Razorpay = (window as unknown as {
+        Razorpay: new (opts: unknown) => { open: () => void; on: (evt: string, cb: (resp: { error?: { description?: string } }) => void) => void };
+      }).Razorpay;
       const rzp = new Razorpay({
         key: order.keyId,
         amount: order.amount,
@@ -340,6 +331,16 @@ export function BookingGrid() {
         modal: {
           ondismiss: () => setPaying(false),
         },
+      });
+      // Explicit failure handling — no booking is created, show a clear message.
+      rzp.on("payment.failed", (resp) => {
+        setPaying(false);
+        setConfirmed(false);
+        setError(
+          resp?.error?.description
+            ? `Payment failed: ${resp.error.description}. You have not been charged — please try again.`
+            : "Payment failed or was cancelled. You have not been charged — please try again.",
+        );
       });
       rzp.open();
     } catch (e) {
@@ -444,21 +445,33 @@ export function BookingGrid() {
             const isActive = band === b.key;
             return (
               <button
-                key={b.key}
+                key={s.key}
                 type="button"
-                onClick={() => setBand(b.key)}
-                className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-extrabold uppercase tracking-wide transition ${
+                onClick={() => setSport(s.key)}
+                className={`text-left p-4 rounded-2xl border-2 transition-all duration-200 ${
                   isActive
-                    ? "bg-brand text-white"
-                    : "border-2 border-ink/10 bg-white text-ink/60 hover:border-brand/40 hover:text-brand dark:border-white/10 dark:bg-white/5 dark:text-white/50 dark:hover:border-brand-300/40 dark:hover:text-brand-300"
+                    ? "border-brand bg-brand/5 dark:border-brand-300 dark:bg-brand/10 shadow-[0_4px_20px_-4px_rgba(47,91,255,0.3)]"
+                    : "border-ink/10 hover:border-brand/40 hover:bg-slate-50 dark:border-white/10 dark:hover:border-brand-300/40 dark:hover:bg-white/5"
                 }`}
-                aria-pressed={isActive}
               >
-                {b.label}
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{s.emoji}</span>
+                  <div>
+                    <h3 className="font-display font-extrabold text-ink dark:text-white">{s.label}</h3>
+                    <p className="text-[10px] text-brand dark:text-brand-300 font-bold uppercase tracking-wider">{s.sub}</p>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-slatey dark:text-white/60 leading-normal">
+                  {s.desc}
+                </p>
+                <div className="mt-3 text-xs font-extrabold text-ink dark:text-white">
+                  {s.price}
+                </div>
               </button>
             );
           })}
         </div>
+      </section>
 
         {/* Mobile: court tabs */}
         <div className="lg:hidden">
@@ -499,7 +512,6 @@ export function BookingGrid() {
               })}
             </ul>
           )}
-        </div>
 
         {/* Desktop grid */}
         <div className="hidden lg:block">
@@ -512,12 +524,68 @@ export function BookingGrid() {
               <div key={c} className="border-l border-ink/5 p-3 text-brand dark:border-white/5 dark:text-brand-300">
                 {sport === "cricket" ? "Cricket Turf" : sport === "badminton" ? "Badminton Court" : `Court ${c}`}
               </div>
-            ))}
+            </div>
+            <div className="flex items-center justify-between gap-3 sm:justify-end">
+              <span className="flex items-center gap-2 text-sm font-bold text-ink dark:text-white sm:hidden">
+                <CalendarDays className="h-4 w-4 text-brand" /> Date:
+              </span>
+              <input
+                type="date"
+                min={minDate}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="rounded-xl border-2 border-ink/10 bg-white px-3 py-2.5 text-sm font-bold text-ink outline-none transition focus:border-brand dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-brand-300"
+              />
+            </div>
           </div>
-          <div className="relative max-h-[640px] overflow-y-auto">
+
+          {/* Date + legend row */}
+          <div className="flex flex-col gap-3 border-b border-ink/5 bg-ink/[0.02] px-5 py-3 text-xs dark:border-white/5 dark:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-between">
+            <span className="font-extrabold text-ink dark:text-white">{dateLabel(date)}</span>
+            <div className="flex flex-wrap items-center gap-3 text-slatey dark:text-white/50">
+              <span className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded border-2 border-lime/60 bg-lime/20" /> Open
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-brand" /> Selected
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-[#E24B4A]" /> Booked
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-ink/30 dark:bg-white/20" /> Blocked
+              </span>
+            </div>
+          </div>
+
+
+
+          {/* Mobile: court tabs */}
+          <div className="lg:hidden">
+            {sport === "pickleball" && activeCourts.length > 1 && (
+              <div className="flex gap-1 border-b-2 border-ink/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#111c38]">
+                {activeCourts.map((c) => {
+                  const isActive = mobileCourt === c;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setMobileCourt(c)}
+                      className={`flex-1 rounded-full px-3 py-2 text-xs font-extrabold uppercase tracking-wide transition ${
+                        isActive
+                          ? "bg-brand text-white"
+                          : "text-ink/60 hover:bg-brand/5 dark:text-white/50 dark:hover:bg-white/5"
+                      }`}
+                    >
+                      Court {c}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {loading ? (
               <div className="space-y-2 p-3">
-                {Array.from({ length: 10 }).map((_, i) => (
+                {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="h-14 animate-pulse rounded-xl bg-ink/5 dark:bg-white/5" />
                 ))}
               </div>
@@ -545,8 +613,53 @@ export function BookingGrid() {
               ))
             )}
           </div>
-        </div>
-      </section>
+
+          {/* Desktop grid */}
+          <div className="hidden lg:block">
+            <div
+              className="grid border-y border-ink/5 bg-ink/[0.02] text-center text-[0.65rem] font-extrabold uppercase tracking-[0.15em] text-slatey dark:border-white/5 dark:bg-white/[0.02]"
+              style={{ gridTemplateColumns: `72px repeat(${activeCourts.length}, minmax(0, 1fr))` }}
+            >
+              <div className="p-3">Time</div>
+              {activeCourts.map((c) => (
+                <div key={c} className="border-l border-ink/5 p-3 text-brand dark:border-white/5 dark:text-brand-300">
+                  {sport === "cricket" ? "Cricket Turf" : sport === "badminton" ? "Badminton Court" : `Court ${c}`}
+                </div>
+              ))}
+            </div>
+            <div className="relative max-h-[640px] overflow-y-auto">
+              {loading ? (
+                <div className="space-y-2 p-3">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <div key={i} className="h-14 animate-pulse rounded-xl bg-ink/5 dark:bg-white/5" />
+                  ))}
+                </div>
+              ) : (
+                times.map((t) => (
+                  <div
+                    key={t}
+                    className="grid border-b border-ink/5 dark:border-white/5"
+                    style={{ gridTemplateColumns: `72px repeat(${activeCourts.length}, minmax(0, 1fr))` }}
+                  >
+                    <div className="sticky left-0 z-10 flex items-center justify-center bg-white p-2 text-center text-[0.65rem] font-extrabold uppercase tracking-wide text-slatey dark:bg-[#111c38] dark:text-white/40">
+                      {timeLabel(t)}
+                    </div>
+                    {activeCourts.map((c) => {
+                      const cell = findSlot(c, t);
+                      if (!cell) return <div key={c} className="border-l border-ink/5 dark:border-white/5" />;
+                      const sel = isSelected(cell);
+                      return (
+                        <div key={`${c}-${t}`} className="m-1.5">
+                          <SlotButton slot={cell} selected={sel} onClick={() => toggle(cell)} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
 
       {/* ---- Summary aside ---- */}
       <aside className="h-fit rounded-3xl border-2 border-ink/10 bg-white p-5 dark:border-white/10 dark:bg-[#111c38] lg:sticky lg:top-28">
@@ -585,13 +698,22 @@ export function BookingGrid() {
                 {(beforeAvail || afterAvail || ef.before || ef.after) && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {(beforeAvail || ef.before) && (
-                      <ExtChip on={ef.before} onClick={() => toggleExt(s, "before")} label="30 min before" />
+                      <ExtChip
+                        on={ef.before}
+                        onClick={() => toggleExt(s, "before")}
+                        label={`+₹${Math.round(getSlotPrice(addMinutes(s.time, -30), date, sport) / 2)} · 30 min before`}
+                      />
                     )}
                     {(afterAvail || ef.after) && (
-                      <ExtChip on={ef.after} onClick={() => toggleExt(s, "after")} label="30 min after" />
+                      <ExtChip
+                        on={ef.after}
+                        onClick={() => toggleExt(s, "after")}
+                        label={`+₹${Math.round(getSlotPrice(addMinutes(s.time, 60), date, sport) / 2)} · 30 min after`}
+                      />
                     )}
                   </div>
                 )}
+                <p className="mt-1.5 text-[0.65rem] text-slatey dark:text-white/40">Extensions are charged at half the hourly rate.</p>
               </motion.div>
             );
           })}
@@ -707,8 +829,7 @@ export function BookingGrid() {
             </div>
             <button
               type="button"
-              onClick={payNow}
-              disabled={paying}
+              onClick={proceedToCart}
               className="btn-primary max-w-[60%] flex-1 justify-center disabled:opacity-60"
             >
               {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -718,7 +839,8 @@ export function BookingGrid() {
         </motion.div>
       )}
     </div>
-  );
+  </div>
+);
 }
 
 function ExtChip({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
@@ -779,7 +901,7 @@ function SlotButton({ slot, selected, onClick }: { slot: Slot; selected: boolean
   );
 }
 
-function MobileRow({ slot, selected, onToggle }: { slot: Slot; selected: boolean; onToggle: () => void }) {
+function MobileRow({ slot, selected, onToggle, sport }: { slot: Slot; selected: boolean; onToggle: () => void; sport: string }) {
   const state = selected ? "selected" : slot.status;
   const disabled = slot.status !== "open";
 
@@ -797,7 +919,14 @@ function MobileRow({ slot, selected, onToggle }: { slot: Slot; selected: boolean
     >
       <div>
         <div className="font-display text-sm font-extrabold text-ink dark:text-white">{timeLabel(slot.time)}</div>
-        <div className="text-xs text-slatey dark:text-white/40">Court {slot.court} · ₹{slot.price}</div>
+        <div className="text-xs text-slatey dark:text-white/40">
+          {sport === "cricket"
+            ? "Cricket Turf"
+            : sport === "badminton"
+              ? "Badminton Court"
+              : `Court ${slot.court}`}{" "}
+          · ₹{slot.price}
+        </div>
       </div>
       <span className={`rounded-full px-3 py-1 text-[0.65rem] font-extrabold uppercase tracking-wide ${pill}`}>
         {state === "open" ? "Open" : state === "selected" ? "Picked" : state === "booked" ? "Booked" : "Blocked"}

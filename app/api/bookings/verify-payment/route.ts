@@ -5,7 +5,7 @@ import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { calculateTotals } from "@/lib/pricing";
-import { priceForRange, rangesOverlap } from "@/lib/slots";
+import { priceForRange, rangesOverlap, slotsClash, cellsFor } from "@/lib/slots";
 import { refundPayment, razorpayConfigured } from "@/lib/razorpay";
 import { adjustCredit, BULK_PACKAGE } from "@/lib/credits";
 
@@ -29,37 +29,22 @@ export async function POST(req: Request) {
     const signature = String(body.signature ?? "");
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
     const addons: AddonInput[] = Array.isArray(body.addons) ? body.addons : [];
+    const sport = ["pickleball", "cricket", "badminton"].includes(String(body.sport))
+      ? String(body.sport)
+      : "pickleball";
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // TEMPORARY ₹1 PAYMENT-LINK TEST MODE — set TEST_PAYMENT_LINK = false to
-    // RESTORE the normal signature-verified flow. A hosted Razorpay payment link
-    // (rzp.io/...) can't call back into this route with an order/signature, so in
-    // test mode we trust the client's `test` flag, skip signature verification,
-    // and record the booking/credit exactly as a real payment would — letting us
-    // exercise the full user→admin pipeline for ₹1.
-    // ─────────────────────────────────────────────────────────────────────────
-    const TEST_PAYMENT_LINK = false;
-    const isTest = TEST_PAYMENT_LINK && body.test === true;
-
-    if (!isTest) {
-      if (!orderId || !paymentId || !signature) {
-        return NextResponse.json({ error: "Missing payment fields." }, { status: 400 });
-      }
-
-      const secret = process.env.RAZORPAY_KEY_SECRET;
-      if (!secret) return NextResponse.json({ error: "Razorpay not configured." }, { status: 500 });
-
-      const expected = crypto
-        .createHmac("sha256", secret)
-        .update(`${orderId}|${paymentId}`)
-        .digest("hex");
-      if (expected !== signature) {
-        return NextResponse.json({ error: "Invalid payment signature." }, { status: 401 });
-      }
-    } else {
-      // Placeholder identifiers recorded against the test booking.
-      orderId = orderId || `testlink-${Date.now()}`;
-      paymentId = paymentId || "testlink-1rs";
+    // Verify the Razorpay payment signature (HMAC of order_id|payment_id).
+    if (!orderId || !paymentId || !signature) {
+      return NextResponse.json({ error: "Missing payment fields." }, { status: 400 });
+    }
+    const secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!secret) return NextResponse.json({ error: "Razorpay not configured." }, { status: 500 });
+    const expected = crypto
+      .createHmac("sha256", secret)
+      .update(`${orderId}|${paymentId}`)
+      .digest("hex");
+    if (expected !== signature) {
+      return NextResponse.json({ error: "Invalid payment signature." }, { status: 401 });
     }
 
     // Bulk-hours package purchase: grant prepaid credit instead of booking slots.
@@ -108,11 +93,18 @@ export async function POST(req: Request) {
     const clampCourt = (c: unknown) =>
       Number.isFinite(Number(c)) ? Math.max(1, Math.min(9, Number(c))) : 1;
 
+    const normalizedSlots = slots.map((s) => {
+      let court = s.court;
+      if (sport === "cricket" || sport === "badminton") {
+        court = 1; // Cricket and Badminton are forced to Court 1
+      }
+      return { ...s, court };
+    });
+
     // All-or-nothing availability pre-check: if ANY requested slot was taken
     // between order creation and payment confirmation, refund and book nothing
     // (the partial unique index is the hard backstop for races past this point).
-    for (const s of slots) {
-      const court = clampCourt(s.court);
+    for (const s of normalizedSlots) {
       try {
         const ex = await turso.execute({
           sql: "SELECT slot_time, duration_min, court_number, notes FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
@@ -159,7 +151,7 @@ export async function POST(req: Request) {
       const totals = calculateTotals(price, addonTotal / slotCount);
       const id = uuid();
       bookingIds.push(id);
-      const court = Number.isFinite(Number(s.court)) ? Math.max(1, Math.min(9, Number(s.court))) : 1;
+      const court = clampCourt(s.court);
 
       const notesObj = {
         razorpay_order_id: orderId,
@@ -205,12 +197,16 @@ export async function POST(req: Request) {
         const msg = String((insertErr as Error)?.message ?? "").toLowerCase();
         const isCollision = msg.includes("unique") || msg.includes("constraint");
         for (const bid of bookingIds.filter((b) => b !== id)) {
-          await turso
-            .execute({
+          await turso.batch([
+            {
               sql: "UPDATE bookings SET status = 'cancelled', cancelled_at = ? WHERE id = ?",
               args: [now, bid],
-            })
-            .catch(() => {});
+            },
+            {
+              sql: "DELETE FROM booking_courts WHERE booking_id = ?",
+              args: [bid],
+            }
+          ], "write").catch(() => {});
         }
         const refunded = await refundFull(isCollision ? "slot collision" : "insert failed");
         return NextResponse.json(
@@ -243,6 +239,7 @@ export async function POST(req: Request) {
             amount_paid: amtPaidForThisBooking,
             status: "confirmed",
             source: "online",
+            sport,
             notes: JSON.stringify(notesObj),
             created_at: now,
           });

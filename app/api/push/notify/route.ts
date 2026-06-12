@@ -1,58 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { turso } from "@/lib/turso";
 import { getAdminSession } from "@/lib/auth";
+import { sendPushToAll, pushConfigured } from "@/lib/push";
+import { recordNotification } from "@/lib/notify-store";
 
 export const runtime = "nodejs";
 
+/** Admin-only broadcast push to the installed PWA. */
 export async function POST(req: NextRequest) {
   try {
-    // Only admins can send broadcast push notifications
     const admin = await getAdminSession();
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (!pushConfigured()) {
+      return NextResponse.json(
+        { error: "Push is not configured. Add VAPID_PRIVATE_KEY to the environment." },
+        { status: 503 },
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
-    const { title, message, url } = body;
+    const title = String(body.title ?? "").trim();
+    const message = String(body.message ?? "").trim();
+    const url = body.url ? String(body.url) : "/";
+    const audience: "all" | "users" = body.audience === "users" ? "users" : "all";
 
     if (!title || !message) {
       return NextResponse.json({ error: "title and message are required" }, { status: 400 });
     }
 
-    // Fetch all active subscriptions
-    let subs;
-    try {
-      subs = await turso.execute({
-        sql: "SELECT endpoint, keys_p256dh, keys_auth FROM push_subscriptions LIMIT 1000",
-        args: [],
-      });
-    } catch {
-      return NextResponse.json({ error: "No subscriptions table found" }, { status: 500 });
-    }
-
-    if (subs.rows.length === 0) {
-      return NextResponse.json({ ok: true, sent: 0, message: "No subscribers yet" });
-    }
-
-    // NOTE: True web push requires a VAPID library (web-push).
-    // This route prepares the payload structure and returns subscriber count.
-    // To enable actual delivery: install `npm i web-push`, add VAPID_PUBLIC_KEY
-    // and VAPID_PRIVATE_KEY env vars, and replace this stub with web-push.sendNotification().
-
-    const payload = JSON.stringify({
-      title,
-      body: message,
-      url: url ?? "/",
-      icon: "/icons/icon-192.png",
-    });
-
-    console.log(`[push/notify] Would send to ${subs.rows.length} subscribers:`, payload);
-
-    return NextResponse.json({
-      ok: true,
-      sent: subs.rows.length,
-      note: "Payload prepared. Add web-push VAPID keys to enable actual delivery.",
-    });
+    const sent = await sendPushToAll({ title, body: message, url, tag: "broadcast" }, audience);
+    // Record it in the in-app inbox for everyone who'll see the bell. Admins
+    // always get the broadcast in their feed; players get it unless "users"-only
+    // is implied (it's a general announcement, so record to the user feed too).
+    await recordNotification({ role: "admin", title, body: message, url });
+    return NextResponse.json({ ok: true, sent });
   } catch (err) {
     console.error("[push/notify error]", err);
     return NextResponse.json({ error: "Failed to send notifications" }, { status: 500 });

@@ -1,8 +1,6 @@
 export type PricingRule = {
   id: number;
   label: string;
-  start_time: string;
-  end_time: string;
   price: number;
 };
 
@@ -63,3 +61,4 @@ export function calculateTotals(base: number, equipmentTotal = 0) {
   const taxes = 0;
   return { subtotal, taxes, total: subtotal };
 }
+

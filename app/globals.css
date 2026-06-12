@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   /* Display + body font stacks. next/font/google injects the CSS vars on <html>
      (Bricolage Grotesque + Inter). Fallback strings keep things readable if a
      font fails to load. --font-sans aliases --font-body for back-compat with
@@ -22,6 +22,15 @@
 
 * {
   box-sizing: border-box;
+  /* Kill the browser tap-highlight flash — some Android browsers flash a
+     yellow/orange box on the tapped element during navigation. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Keyboard focus stays visible and on-brand (never a stray yellow box). */
+:focus-visible {
+  outline: 2px solid #2f5bff;
+  outline-offset: 2px;
 }
 
 /* Avoid 300ms tap delay + double-tap zoom on interactive elements. */
@@ -38,8 +47,10 @@ html {
 }
 
 body {
-  background: #ffffff;
-  color: #0d1426;
+  /* DARK-ONLY theme: the .dark class is permanent on <html>; these base values
+     match it so there is never a light flash on first paint. */
+  background: #0b1530;
+  color: rgba(255, 255, 255, 0.9);
   /* Safer viewport units: svh on iOS Safari avoids the URL-bar collapse jump,
      dvh keeps height correct on browsers that animate it. */
   min-height: 100svh;
@@ -524,4 +535,185 @@ p, li {
     #0d1426 14px,
     #0d1426 28px
   );
+}
+
+/* ============================================================
+   3D PICKLEBALL ARENA BACKDROP (dark-only redesign)
+   A GPU-friendly, pure-CSS 3D scene: a perspective court floor
+   sweeping to the horizon, a pickleball flying serve arcs in 3D
+   with a matched ground shadow, drifting stadium glow, and a
+   floodlight sweep. Used behind heroes + portals via
+   <ArenaBackdrop />. Everything is aria-hidden + pointer-events
+   -none; prefers-reduced-motion freezes it below.
+   ============================================================ */
+.arena-floor {
+  position: absolute;
+  left: -25%;
+  right: -25%;
+  bottom: -12%;
+  height: 70%;
+  transform: perspective(900px) rotateX(62deg);
+  transform-origin: 50% 100%;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.12) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1.5px, transparent 1.5px);
+  background-size: 64px 64px;
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.9), transparent 85%);
+  mask-image: linear-gradient(to top, rgba(0,0,0,0.9), transparent 85%);
+  animation: arena-floor-scroll 16s linear infinite;
+}
+@keyframes arena-floor-scroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 128px; }
+}
+
+/* The ball: layered gradients fake a lit 3D sphere with pickleball holes. */
+.arena-ball {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.95) 0 6%, transparent 28%),
+    radial-gradient(circle at 30% 32%, #eaff7a 0 35%, #c6f432 60%, #7e9a10 100%);
+  box-shadow:
+    inset -6px -8px 14px rgba(0, 0, 0, 0.35),
+    0 0 24px rgba(198, 244, 50, 0.45);
+  animation: arena-serve 7.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  will-change: transform;
+}
+.arena-ball::after {
+  /* hole pattern that spins with the flight for a rolling-ball read */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image:
+    radial-gradient(circle 3px at 30% 55%, rgba(13, 20, 38, 0.5) 98%, transparent),
+    radial-gradient(circle 3px at 55% 35%, rgba(13, 20, 38, 0.45) 98%, transparent),
+    radial-gradient(circle 3px at 70% 62%, rgba(13, 20, 38, 0.5) 98%, transparent),
+    radial-gradient(circle 2.5px at 45% 75%, rgba(13, 20, 38, 0.4) 98%, transparent);
+  animation: arena-ball-spin 1.6s linear infinite;
+}
+@keyframes arena-ball-spin {
+  to { transform: rotate(360deg); }
+}
+/* Full 3D serve: near-left → high mid (smaller = farther) → near-right, then back. */
+@keyframes arena-serve {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  25%  { transform: translate3d(22vw, -34vh, 0) scale(0.62); }
+  50%  { transform: translate3d(46vw, -6vh, 0) scale(0.92); }
+  75%  { transform: translate3d(24vw, -28vh, 0) scale(0.58); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+/* Ground shadow tracking the serve horizontally, fading as the ball rises. */
+.arena-ball-shadow {
+  position: absolute;
+  width: 56px;
+  height: 12px;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55), transparent 70%);
+  filter: blur(2px);
+  animation: arena-serve-shadow 7.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  will-change: transform, opacity;
+}
+@keyframes arena-serve-shadow {
+  0%   { transform: translate3d(0, 0, 0) scale(1); opacity: 0.8; }
+  25%  { transform: translate3d(22vw, 0, 0) scale(0.55); opacity: 0.25; }
+  50%  { transform: translate3d(46vw, 0, 0) scale(0.9); opacity: 0.7; }
+  75%  { transform: translate3d(24vw, 0, 0) scale(0.5); opacity: 0.22; }
+  100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.8; }
+}
+
+/* Floodlight sweep across the arena. */
+.arena-sweep {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.05) 46%,
+    rgba(198, 244, 50, 0.07) 50%,
+    rgba(255, 255, 255, 0.05) 54%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  animation: arena-sweep-pan 9s ease-in-out infinite;
+}
+@keyframes arena-sweep-pan {
+  0%, 100% { background-position: 120% 0; }
+  50% { background-position: -20% 0; }
+}
+
+/* Drifting stadium glow orbs. */
+.arena-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  animation: arena-orb-drift 13s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes arena-orb-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(4vw, -3vh, 0) scale(1.15); }
+  66% { transform: translate3d(-3vw, 2vh, 0) scale(0.92); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arena-floor, .arena-ball, .arena-ball::after, .arena-ball-shadow,
+  .arena-sweep, .arena-orb {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   ANIMATED COURT SCENE — two players rallying (home hero).
+   A "motion-video" look built from SVG + CSS transforms. All
+   decorative, GPU-transform only, frozen for reduced-motion.
+   ============================================================ */
+/* Ball rallies across the net in an arc, left player -> right player -> back. */
+@keyframes rally-ball {
+  0%   { transform: translate(0, 0) scale(1); }
+  12%  { transform: translate(120px, -70px) scale(0.86); }
+  25%  { transform: translate(240px, 0) scale(1); }       /* right player */
+  37%  { transform: translate(120px, -78px) scale(0.84); }
+  50%  { transform: translate(0, 0) scale(1); }           /* left player */
+  62%  { transform: translate(120px, -64px) scale(0.88); }
+  75%  { transform: translate(240px, 4px) scale(1); }
+  87%  { transform: translate(120px, -72px) scale(0.85); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+.scene-ball { animation: rally-ball 4.4s cubic-bezier(0.4, 0, 0.6, 1) infinite; transform-origin: center; will-change: transform; }
+
+/* Left player: steps in to hit on the down-beats, recovers between. */
+@keyframes player-left {
+  0%, 50%, 100% { transform: translateX(0) skewX(0deg); }
+  46% { transform: translateX(10px) skewX(-4deg); }   /* lunge to hit */
+  60% { transform: translateX(-6px) skewX(2deg); }    /* recover */
+}
+.scene-player-left { animation: player-left 4.4s ease-in-out infinite; transform-origin: bottom center; will-change: transform; }
+
+/* Right player: mirror timing — hits on the off-beats. */
+@keyframes player-right {
+  0%, 25%, 75%, 100% { transform: translateX(0) skewX(0deg); }
+  21% { transform: translateX(-10px) skewX(4deg); }
+  35% { transform: translateX(6px) skewX(-2deg); }
+}
+.scene-player-right { animation: player-right 4.4s ease-in-out infinite; transform-origin: bottom center; will-change: transform; }
+
+/* Paddle arms swing on the hit. */
+@keyframes swing-left  { 0%,40%,100%{transform:rotate(-14deg);} 48%{transform:rotate(26deg);} }
+@keyframes swing-right { 0%,16%,76%,100%{transform:rotate(14deg);} 24%{transform:rotate(-26deg);} }
+.scene-arm-left  { animation: swing-left 4.4s ease-in-out infinite;  transform-origin: 50% 20%; }
+.scene-arm-right { animation: swing-right 4.4s ease-in-out infinite; transform-origin: 50% 20%; }
+
+/* Ball ground shadow pulses with the rally height. */
+@keyframes rally-shadow {
+  0%,25%,50%,75%,100% { transform: translateX(0) scale(1); opacity:.5; }
+  12%,37%,62%,87% { transform: translateX(120px) scale(.5); opacity:.18; }
+}
+.scene-ball-shadow { animation: rally-shadow 4.4s cubic-bezier(0.4,0,0.6,1) infinite; will-change: transform,opacity; }
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-ball,.scene-player-left,.scene-player-right,.scene-arm-left,.scene-arm-right,.scene-ball-shadow { animation: none !important; }
 }

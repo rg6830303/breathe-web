@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { ensureSchema } from "@/lib/db/ensure";
 import { turso } from "@/lib/turso";
 import { getCreditBalance, adjustCredit, SLOT_MINUTES } from "@/lib/credits";
-import { rangesOverlap, isWithinHours } from "@/lib/slots";
+import { rangesOverlap, isWithinHours, slotsClash, cellsFor } from "@/lib/slots";
+import { bookingRequestSchema, formatZodError } from "@/lib/validation";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -23,9 +25,23 @@ export async function POST(req: Request) {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const rl = await checkRateLimit(`redeem:${getClientIp(req)}`, 20, 60 * 1000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: `Too many attempts. Try again in ${rl.retryAfterSec}s.` },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
-    if (slots.length === 0) return NextResponse.json({ error: "No slots selected." }, { status: 400 });
+    const sport = ["pickleball", "cricket", "badminton"].includes(String(body.sport))
+      ? String(body.sport)
+      : "pickleball";
+    const parsed = bookingRequestSchema.safeParse({ slots, addons: [] });
+    if (!parsed.success) {
+      return NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 });
+    }
 
     for (const s of slots) {
       if (!isWithinHours(s.time, slotDur(s))) {
@@ -58,17 +74,34 @@ export async function POST(req: Request) {
     let booked = 0;
     let bookedMin = 0;
 
-    for (const s of slots) {
+    const normalizedSlots = slots.map((s) => {
+      let court = s.court;
+      if (sport === "cricket" || sport === "badminton") {
+        court = 1; // Cricket and Badminton are forced to Court 1
+      }
+      return { ...s, court };
+    });
+
+    for (const s of normalizedSlots) {
       const court = Number.isFinite(Number(s.court)) ? Math.max(1, Math.min(9, Number(s.court))) : 1;
       const duration = slotDur(s);
       // Skip if the range (incl. ±30-min extensions) overlaps a confirmed booking.
       try {
         const ex = await turso.execute({
-          sql: "SELECT slot_time, duration_min FROM bookings WHERE slot_date = ? AND court_number = ? AND status = 'confirmed'",
-          args: [s.date, court],
+          sql: "SELECT slot_time, duration_min, court_number, sport FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
+          args: [s.date],
         });
         const clash = ex.rows.some((row) =>
-          rangesOverlap(s.time, duration, String(row.slot_time), Number(row.duration_min) || 60),
+          slotsClash(
+            s.court,
+            s.time,
+            duration,
+            sport,
+            Number(row.court_number) || 1,
+            String(row.slot_time),
+            Number(row.duration_min) || 60,
+            row.sport ? String(row.sport) : "pickleball",
+          ),
         );
         if (clash) continue;
       } catch (e) { console.error("[redeem conflict check]", e); }
@@ -76,14 +109,30 @@ export async function POST(req: Request) {
       const id = uuid();
       const notes = JSON.stringify({ paid_with: "bulk_credit" });
       try {
-        await turso.execute({
-          sql: `INSERT INTO bookings (
-            id, user_id, slot_date, slot_time, duration_min, court_number,
-            guest_name, guest_phone, guest_email,
-            subtotal, gst, total, amount_paid, status, source, notes, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 'confirmed', 'online', ?, ?)`,
-          args: [id, session.id, s.date, s.time, duration, court, userName, userPhone, userEmail, notes, now],
-        });
+        const statements = [
+          {
+            sql: `INSERT INTO bookings (
+              id, user_id, slot_date, slot_time, duration_min, court_number,
+              guest_name, guest_phone, guest_email,
+              subtotal, gst, total, amount_paid, status, source, sport, notes, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 'confirmed', 'online', ?, ?, ?)`,
+            args: [id, session.id, s.date, s.time, duration, court, userName, userPhone, userEmail, sport, notes, now],
+          }
+        ];
+
+        const targetCourts = sport === "cricket" ? [1, 2, 3] : [court];
+        const intervals = cellsFor(s.time, duration);
+        for (const c of targetCourts) {
+          for (const cellTime of intervals) {
+            statements.push({
+              sql: "INSERT INTO booking_courts (booking_id, court_number, slot_date, slot_time) VALUES (?, ?, ?, ?)",
+              args: [id, c, s.date, cellTime],
+            });
+          }
+        }
+
+        await turso.batch(statements, "write");
+
         bookingIds.push(id);
         bookedSlots.push({ id, date: s.date, time: s.time, court, durationMin: duration });
         booked++;
@@ -97,7 +146,7 @@ export async function POST(req: Request) {
         const { supabase, hasSupabase } = require("@/lib/supabase");
         if (hasSupabase) {
           await supabase.from("bookings").insert({
-            id, user_id: session.id, slot_date: s.date, slot_time: s.time, duration_min: duration,
+            id, user_id: session.id, slot_date: s.date, slot_time: s.time, duration_min: duration, sport,
             court_number: court, guest_name: userName, guest_phone: userPhone, guest_email: userEmail,
             subtotal: 0, gst: 0, total: 0, amount_paid: 0, status: "confirmed", source: "online", notes, created_at: now,
           });
@@ -120,6 +169,7 @@ export async function POST(req: Request) {
       for (const bs of bookedSlots) {
         const run = notifyBookingConfirmed({
           id: bs.id,
+          userId: session.id,
           userEmail,
           userName,
           userPhone: userPhone || undefined,

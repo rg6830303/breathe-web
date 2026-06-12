@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { ensureSchema } from "@/lib/db/ensure";
 import bcrypt from "bcryptjs";
 import { v4 as uuid } from "uuid";
@@ -89,6 +89,17 @@ export async function POST(req: Request) {
       );
     }
     console.log("[signup] created", { email, tursoOk, supabaseOk });
+
+    // Welcome email — sent AFTER the response so signup stays instant, but still
+    // guaranteed to run on this serverless invocation (Next 15 `after`).
+    after(async () => {
+      try {
+        const { notifyWelcome } = require("@/lib/notifications");
+        await notifyWelcome({ email, name });
+      } catch (e) {
+        console.error("[signup welcome email error]", e);
+      }
+    });
 
     const token = await signToken({ id, email, name, role: "user" });
     const cookieStore = await cookies();
