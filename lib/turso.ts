@@ -123,32 +123,17 @@ async function pgBatch(statements: Array<string | { sql: string; args?: unknown[
   return [] as unknown;
 }
 
-let ensured = false;
-let ensuring = false;
-
-async function ensureSchemaLazy(): Promise<void> {
-  if (ensured || ensuring) return;
-  ensuring = true;
-  try {
-    const { applySchema } = await import("./db/ensure");
-    await applySchema();
-    ensured = true;
-  } catch (err) {
-    console.error("[lazy ensureSchema] failed", err);
-  } finally {
-    ensuring = false;
-  }
-}
-
+// IMPORTANT: turso.execute / batch run the query DIRECTLY — they do NOT trigger
+// a schema bootstrap. A previous "lazy ensureSchema on every execute" wrapped
+// EVERY query and, on each cold serverless instance, ran the full ~47-statement
+// CREATE TABLE/ALTER/INDEX bootstrap before the real query. That flooded
+// Supabase with redundant DDL and timed out cold-start logins ("Failed to
+// fetch"). The schema is provisioned by /api/db-init and by the explicit
+// ensureSchema()/ensure*Table() calls in the routes that need it, so the hot
+// path must stay lean.
 export const turso = {
-  execute: (async (arg: Parameters<typeof pgExecute>[0]) => {
-    await ensureSchemaLazy();
-    return pgExecute(arg);
-  }) as typeof pgExecute,
-  batch: async (statements: Parameters<typeof pgBatch>[0], mode?: string) => {
-    await ensureSchemaLazy();
-    return pgBatch(statements, mode);
-  },
+  execute: (arg: Parameters<typeof pgExecute>[0]) => pgExecute(arg),
+  batch: (statements: Parameters<typeof pgBatch>[0], mode?: string) => pgBatch(statements, mode),
 };
 
 /**

@@ -36,7 +36,8 @@ export function PresenceBeacon() {
     };
 
     beat();
-    const iv = setInterval(beat, 20_000);
+    // 45s cadence keeps DB write load minimal (the admin "live" window is 60s).
+    const iv = setInterval(beat, 45_000);
     const onVis = () => {
       if (document.visibilityState === "visible") beat();
     };

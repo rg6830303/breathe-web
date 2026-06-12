@@ -66,7 +66,8 @@ export function LiveTraffic() {
 
   useEffect(() => {
     load();
-    timer.current = setInterval(load, 5000);
+    // 12s poll keeps the view fresh without hammering the DB on the free tier.
+    timer.current = setInterval(load, 12_000);
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
