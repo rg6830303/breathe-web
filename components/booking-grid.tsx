@@ -17,19 +17,7 @@ type Addon = { id: string; label: string; price: number; qty: number; on: boolea
 
 const COURTS = [1, 2, 3] as const;
 
-type Band = "morning" | "afternoon" | "evening";
-const BANDS: { key: Band; label: string }[] = [
-  { key: "morning", label: "Morning · 5–12" },
-  { key: "afternoon", label: "Afternoon · 12–5" },
-  { key: "evening", label: "Evening · 5–11" },
-];
 
-function bandFor(time: string): Band {
-  const h = Number(time.slice(0, 2));
-  if (h < 12) return "morning";
-  if (h < 17) return "afternoon";
-  return "evening";
-}
 
 function todayIST() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -92,7 +80,6 @@ export function BookingGrid() {
   const [authLoaded, setAuthLoaded] = useState(false);
   const [addons] = useState(ADDONS);
   const [mobileCourt, setMobileCourt] = useState<number>(1);
-  const [band, setBand] = useState<Band>("evening");
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -257,11 +244,10 @@ export function BookingGrid() {
 
   const minDate = todayIST();
 
-  const filtered = useMemo(() => slots.filter((s) => bandFor(s.time) === band), [slots, band]);
-  const times = useMemo(() => Array.from(new Set(filtered.map((s) => s.time))).sort(), [filtered]);
+  const times = useMemo(() => Array.from(new Set(slots.map((s) => s.time))).sort(), [slots]);
 
   function findSlot(court: number, time: string) {
-    return filtered.find((s) => s.court === court && s.time === time);
+    return slots.find((s) => s.court === court && s.time === time);
   }
   function isSelected(s: Slot) {
     return selected.some((x) => x.court === s.court && x.time === s.time);
@@ -492,27 +478,7 @@ export function BookingGrid() {
             </div>
           </div>
 
-          {/* Band picker */}
-          <div className="flex gap-2 overflow-x-auto border-b border-ink/5 bg-ink/[0.02] px-5 py-3 dark:border-white/5 dark:bg-white/[0.02]">
-            {BANDS.map((b) => {
-              const isActive = band === b.key;
-              return (
-                <button
-                  key={b.key}
-                  type="button"
-                  onClick={() => setBand(b.key)}
-                  className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-extrabold uppercase tracking-wide transition ${
-                    isActive
-                      ? "bg-brand text-white"
-                      : "border-2 border-ink/10 bg-white text-ink/60 hover:border-brand/40 hover:text-brand dark:border-white/10 dark:bg-white/5 dark:text-white/50 dark:hover:border-brand-300/40 dark:hover:text-brand-300"
-                  }`}
-                  aria-pressed={isActive}
-                >
-                  {b.label}
-                </button>
-              );
-            })}
-          </div>
+
 
           {/* Mobile: court tabs */}
           <div className="lg:hidden">
@@ -723,7 +689,7 @@ export function BookingGrid() {
           disabled={selected.length === 0}
           className="btn-primary mt-4 w-full justify-center disabled:cursor-not-allowed disabled:bg-ink/30 disabled:shadow-none dark:disabled:bg-white/20"
         >
-          {selected.length === 0 ? "Select a slot to continue" : `Proceed to cart · ₹${totals.total}`}
+          {selected.length === 0 ? "Select a slot to continue" : `Proceed to booking · ₹${totals.total}`}
         </button>
 
         <p className="mt-3 text-[0.68rem] leading-5 text-slatey dark:text-white/40">
@@ -750,7 +716,7 @@ export function BookingGrid() {
               onClick={proceedToCart}
               className="btn-primary max-w-[60%] flex-1 justify-center disabled:opacity-60"
             >
-              Go to cart
+              Go to booking
             </button>
           </div>
         </motion.div>
