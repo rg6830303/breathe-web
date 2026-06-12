@@ -138,6 +138,18 @@ export async function POST(req: Request) {
     console.error("[bulk-block supabase sync error]", sbErr);
   }
 
+  try {
+    const { notifyAdminAction } = require("@/lib/notifications");
+    const span = fullDay ? "full day" : `${parsed.data.start_time}–${parsed.data.end_time}`;
+    await notifyAdminAction(
+      "Slots closed",
+      `${slot_date} · ${span} · courts ${courts.join(", ")} · ${inserted} slot(s)`,
+      { actor: admin.email },
+    );
+  } catch (e) {
+    console.error("[bulk-block notify error]", e);
+  }
+
   return NextResponse.json({
     ok: true,
     inserted,

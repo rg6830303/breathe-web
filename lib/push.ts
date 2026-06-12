@@ -57,6 +57,14 @@ export async function ensurePushTable(): Promise<void> {
   // column overflows on Date.now() (~1.78e12) → every subscribe INSERT 500s,
   // which is exactly the "couldn't enable notifications" failure.
   await turso.execute("ALTER TABLE push_subscriptions ALTER COLUMN created_at TYPE BIGINT").catch(() => {});
+  // The subscribe upsert uses ON CONFLICT(endpoint); that REQUIRES a unique
+  // index on endpoint. A table created by an older build (or a path that lost
+  // the inline UNIQUE) would have none → every upsert errors "no unique or
+  // exclusion constraint matching the ON CONFLICT specification" → 500 →
+  // "couldn't enable notifications". Guarantee the index exists.
+  await turso
+    .execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint ON push_subscriptions (endpoint)")
+    .catch(() => {});
 }
 
 async function deliver(rows: SubRow[], payload: PushPayload): Promise<number> {

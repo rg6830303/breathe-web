@@ -66,6 +66,14 @@ export async function POST(req: Request) {
   } catch (e) { console.error("[admin user create supabase insert]", e); }
 
   if (!ok) return NextResponse.json({ error: "Could not create the user." }, { status: 500 });
+
+  try {
+    const { notifyAdminAction } = require("@/lib/notifications");
+    await notifyAdminAction("Member added", `${full_name} · ${email}${phone ? ` · ${phone}` : ""}`, { actor: admin.email });
+  } catch (e) {
+    console.error("[admin user create notify error]", e);
+  }
+
   return NextResponse.json({ ok: true, id });
 }
 

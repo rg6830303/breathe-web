@@ -49,7 +49,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, id, role });
   } catch (err) {
     console.error("[push/subscribe error]", err);
-    return NextResponse.json({ error: "Failed to save subscription" }, { status: 500 });
+    // Surface a short, non-sensitive reason so the toggle can show WHY it
+    // failed (DB errors here name the column/constraint — no secrets).
+    const detail = (err instanceof Error ? err.message : String(err)).slice(0, 160);
+    return NextResponse.json({ error: "Failed to save subscription", detail }, { status: 500 });
   }
 }
 

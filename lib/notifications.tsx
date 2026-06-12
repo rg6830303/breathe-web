@@ -281,6 +281,60 @@ export async function notifyBookingCancelled(b: {
   }
 }
 
+/**
+ * Owner confirmation for an action taken in the admin console (slot blocks,
+ * walk-ins, user/expense/tournament/notice changes …). Emails ADMIN_EMAIL,
+ * drops a persistent inbox entry, and pushes to every admin device — so the
+ * owner has a durable record of "what changed" in their Gmail. Never throws.
+ */
+export async function notifyAdminAction(
+  action: string,
+  detail: string,
+  opts?: { actor?: string },
+): Promise<void> {
+  try {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in";
+    const when = new Date().toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Asia/Kolkata",
+    });
+    const actor = opts?.actor ? ` · ${opts.actor}` : "";
+
+    if (ADMIN_EMAIL) {
+      const html =
+        `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0d1426">` +
+        `<div style="text-align:center;margin-bottom:16px"><img src="${siteUrl}/icons/icon-192.png" alt="Breathe Pickleball" width="56" height="56" style="border-radius:14px"/></div>` +
+        `<h2 style="text-align:center;margin:0 0 4px">Admin action confirmed</h2>` +
+        `<p style="text-align:center;color:#64748b;margin:0 0 20px">${when} IST${actor}</p>` +
+        `<table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:14px">` +
+        `<tr><td style="padding:6px 0;color:#64748b">Action</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0d1426">${action}</td></tr>` +
+        `<tr><td style="padding:6px 0;color:#64748b">Details</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${detail}</td></tr>` +
+        `</table>` +
+        `<p style="text-align:center;margin:24px 0"><a href="${siteUrl}/admin" style="background:#2F5BFF;color:#fff;text-decoration:none;padding:12px 24px;border-radius:9999px;font-weight:700;display:inline-block">Open admin console</a></p>` +
+        `<hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0"/>` +
+        `<p style="color:#94a3b8;font-size:12px">Breathe Pickleball · automated admin confirmation</p>` +
+        `</div>`;
+      const text =
+        `Admin action confirmed (${when} IST)${actor}\n\n` +
+        `Action: ${action}\nDetails: ${detail}\n\n` +
+        `Console: ${siteUrl}/admin`;
+      await sendMail({ to: ADMIN_EMAIL, subject: `Admin: ${action} — ${detail}`.slice(0, 120), html, text })
+        .then((r) => {
+          if (!r.ok) console.error("[admin action email failed]", r.error);
+        })
+        .catch((e) => console.error("[admin action email error]", e));
+    } else {
+      console.warn("ADMIN_EMAIL not set — skipping admin action email.");
+    }
+
+    await recordNotification({ role: "admin", title: action, body: detail, url: "/admin" }).catch(() => {});
+    await sendPushToAdmins({ title: `Admin: ${action}`, body: detail, url: "/admin", tag: `admin-action-${Date.now()}` }).catch(() => {});
+  } catch (err) {
+    console.error("[notifyAdminAction error]", err);
+  }
+}
+
 function computeEndTime(hhmm: string, dur: number): string {
   const [h, m] = hhmm.split(":").map(Number);
   const t = h * 60 + m + dur;
