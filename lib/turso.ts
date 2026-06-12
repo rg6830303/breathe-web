@@ -15,6 +15,55 @@ import postgres from "postgres";
 const PG_URL = process.env.POSTGRES_URL || process.env.DATABASE_URL || "";
 export const USE_PG = true;
 
+/**
+ * Inspect POSTGRES_URL *without exposing the secret* — we only surface the port
+ * and a coarse "is this the pooler?" verdict. On Vercel serverless the URL MUST
+ * be the Supabase Transaction pooler (Supavisor, port 6543), which multiplexes
+ * many short-lived Lambda clients onto a small fixed set of server connections.
+ * If it points at the direct connection (port 5432, host db.<ref>.supabase.co)
+ * every concurrent Lambda opens its own real Postgres backend, so a burst of
+ * traffic blows past the free-tier connection ceiling (~60) → new connections
+ * stall up to connect_timeout (the "slow login") and then error with
+ * "remaining connection slots are reserved" / "Max client connections reached".
+ */
+export type DbConnInfo = {
+  configured: boolean;
+  /** Port in the URL, e.g. "6543" (pooler) or "5432" (direct/session). */
+  port: string | null;
+  /** "transaction-pooler" | "direct-or-session" | "unknown" — never the host. */
+  endpoint: "transaction-pooler" | "direct-or-session" | "unknown";
+  /** True only when we're confident the URL is the serverless-safe pooler. */
+  pooled: boolean;
+};
+
+export function dbConnInfo(): DbConnInfo {
+  if (!PG_URL) return { configured: false, port: null, endpoint: "unknown", pooled: false };
+  try {
+    const u = new URL(PG_URL);
+    const port = u.port || null;
+    const host = u.hostname.toLowerCase();
+    const isPooler = port === "6543" || host.includes("pooler.supabase");
+    const isDirect = port === "5432" || host.startsWith("db.");
+    const endpoint = isPooler ? "transaction-pooler" : isDirect ? "direct-or-session" : "unknown";
+    return { configured: true, port, endpoint, pooled: isPooler };
+  } catch {
+    return { configured: true, port: null, endpoint: "unknown", pooled: false };
+  }
+}
+
+// Loud one-time warning in the server logs when the URL is NOT the pooler — this
+// is the single biggest cause of connection-limit exhaustion + slow logins.
+{
+  const info = dbConnInfo();
+  if (info.configured && !info.pooled) {
+    console.warn(
+      `[turso] POSTGRES_URL is NOT the Supabase Transaction pooler (port=${info.port ?? "?"}, ` +
+        `endpoint=${info.endpoint}). On serverless this exhausts the free-tier connection ` +
+        `limit and slows logins. Use the :6543 transaction-pooler string.`,
+    );
+  }
+}
+
 type Pg = ReturnType<typeof postgres>;
 let pg: Pg | null = null;
 function getPg(): Pg {
@@ -22,12 +71,14 @@ function getPg(): Pg {
   if (!PG_URL) throw new Error("POSTGRES_URL is not set");
   // Serverless-tuned pool: one connection per instance (the pooler multiplexes),
   // no prepared statements (required for pgbouncer transaction mode), fail fast.
+  // idle_timeout is deliberately short so a warm-but-idle Lambda releases its
+  // server connection quickly instead of pinning a slot on the free tier.
   pg = postgres(PG_URL, {
     prepare: false,
     ssl: "require",
     max: 1,
-    idle_timeout: 20,
-    max_lifetime: 60 * 10,
+    idle_timeout: 10,
+    max_lifetime: 60 * 5,
     connect_timeout: 10,
   });
   return pg;
