@@ -91,6 +91,7 @@ export function AnalyticsDashboard() {
   };
 
   const fetchRecentEvents = async () => {
+    if (document.visibilityState !== "visible") return;
     try {
       const res = await fetch("/api/admin/bookings?limit=20");
       const data = await res.json();
@@ -99,7 +100,7 @@ export function AnalyticsDashboard() {
   };
 
   useEffect(() => { fetchData(); }, [from, to, compare]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchRecentEvents(); const t = setInterval(fetchRecentEvents, 30000); return () => clearInterval(t); }, []);
+  useEffect(() => { fetchRecentEvents(); const t = setInterval(fetchRecentEvents, 60000); return () => clearInterval(t); }, []);
 
   const kpiCards = useMemo(() => {
     if (!current) return [];

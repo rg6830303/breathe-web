@@ -48,8 +48,6 @@ export function NotificationBell({ onDark = false }: { onDark?: boolean }) {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 60000);
-    return () => clearInterval(t);
   }, [load]);
 
   // Close on outside click.
@@ -64,16 +62,26 @@ export function NotificationBell({ onDark = false }: { onDark?: boolean }) {
   async function toggle() {
     const next = !open;
     setOpen(next);
-    if (next && unread > 0) {
+    if (next) {
       setLoading(true);
       try {
-        await fetch("/api/notifications", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        });
-        setUnread(0);
-        setItems((cur) => cur.map((i) => ({ ...i, read_at: i.read_at ?? Date.now() })));
+        const res = await fetch("/api/notifications", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          setItems(data.items ?? []);
+          setUnread(data.unread ?? 0);
+          if (data.unread > 0) {
+            await fetch("/api/notifications", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({}),
+            });
+            setUnread(0);
+            setItems((cur) => cur.map((i) => ({ ...i, read_at: i.read_at ?? Date.now() })));
+          }
+        }
+      } catch {
+        /* ignore */
       } finally {
         setLoading(false);
       }

@@ -77,7 +77,7 @@ function getPg(): Pg {
     prepare: false,
     ssl: "require",
     max: 1,
-    idle_timeout: 10,
+    idle_timeout: 2,
     max_lifetime: 60 * 5,
     connect_timeout: 10,
   });

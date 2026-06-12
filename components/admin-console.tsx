@@ -347,16 +347,17 @@ function BookingsTab() {
   useEffect(reload, [date]);
 
   // Auto-refresh so new bookings (online or walk-in) appear without a manual
-  // reload — quietly re-fetch every 25s without flipping the loading state.
+  // reload — quietly re-fetch every 60s without flipping the loading state.
   useEffect(() => {
     const quiet = () => {
+      if (document.visibilityState !== "visible") return;
       const url = date ? `/api/admin/bookings?date=${date}` : "/api/admin/bookings";
       fetch(url)
         .then((r) => r.json())
         .then((data) => setBookings(data.bookings ?? []))
         .catch(() => {});
     };
-    const id = setInterval(quiet, 25000);
+    const id = setInterval(quiet, 60000);
     const onFocus = () => quiet();
     window.addEventListener("focus", onFocus);
     return () => {
