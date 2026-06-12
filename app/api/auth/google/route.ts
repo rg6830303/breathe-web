@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
-import { buildAuthUrl, googleConfigured } from "@/lib/google-oauth";
+import { buildAuthUrl, googleConfigured, originFromRequest } from "@/lib/google-oauth";
 
 export const runtime = "nodejs";
 
@@ -27,5 +27,5 @@ export async function GET(req: Request) {
   c.set("g_oauth_state", state, opts);
   c.set("g_oauth_next", next, opts);
 
-  return NextResponse.redirect(buildAuthUrl(state));
+  return NextResponse.redirect(buildAuthUrl(state, originFromRequest(req)));
 }
