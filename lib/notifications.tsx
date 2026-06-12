@@ -93,27 +93,33 @@ export async function notifyBookingConfirmed(b: {
     const subtotal = b.subtotal ?? total;
     const gst = 0;
 
-    // Render PDF invoice (best-effort — never block the email send if it fails).
+    // Render PDF invoice (best-effort). TIME-BOXED: @react-pdf/renderer can hang
+    // on the serverless runtime, and since the email send awaits this, a hang
+    // would silently swallow the entire confirmation email. Race it against an
+    // 8s timeout so the email ALWAYS goes out (with or without the attachment).
     let pdfBuffer: Buffer | null = null;
     try {
-      pdfBuffer = await renderToBuffer(
-        <BookingInvoice
-          customerName={b.userName}
-          customerEmail={b.userEmail}
-          customerPhone={b.userPhone}
-          bookingId={shortRef}
-          slotDate={dateStr}
-          slotTime={slotRange}
-          duration={`${b.durationMin} minutes`}
-          courtNumber={b.courtNumber}
-          subtotal={subtotal}
-          gst={gst}
-          total={total}
-          venueAddress={VENUE_ADDRESS}
-          amountPaid={amountPaid}
-          sport={sport}
-        />,
-      );
+      pdfBuffer = await Promise.race<Buffer>([
+        renderToBuffer(
+          <BookingInvoice
+            customerName={b.userName}
+            customerEmail={b.userEmail}
+            customerPhone={b.userPhone}
+            bookingId={shortRef}
+            slotDate={dateStr}
+            slotTime={slotRange}
+            duration={`${b.durationMin} minutes`}
+            courtNumber={b.courtNumber}
+            subtotal={subtotal}
+            gst={gst}
+            total={total}
+            venueAddress={VENUE_ADDRESS}
+            amountPaid={amountPaid}
+            sport={sport}
+          />,
+        ),
+        new Promise<Buffer>((_, reject) => setTimeout(() => reject(new Error("pdf render timeout")), 8000)),
+      ]);
     } catch (pdfErr) {
       console.error("[pdf render error]", pdfErr);
     }

@@ -254,61 +254,64 @@ export async function POST(req: Request) {
       }
     }
 
-    // Dispatch confirmation notifications.
-    let emailed = false;
-    try {
-      const { notifyBookingConfirmed } = require("@/lib/notifications");
-      const { waitUntil } = require("@vercel/functions");
-      if (notifyBookingConfirmed) {
-        const payloadFor = (idx: number) => {
-          const s = slots[idx];
-          const sSport = slotSport(s, sport);
-          const duration = slotDur(s);
-          const price = priceForRange(sSport, s.date, s.time, duration);
-          const totals = calculateTotals(price, addonTotal / slotCount);
-          const court = sSport === "cricket" || sSport === "badminton"
-            ? 1
-            : Number.isFinite(Number(s.court))
-              ? Math.max(1, Math.min(9, Number(s.court)))
-              : 1;
-          return {
-            id: bookingIds[idx],
-            userEmail,
-            userName,
-            userPhone: userPhone || undefined,
-            slotDate: s.date,
-            slotTime: s.time,
-            durationMin: duration,
-            amount: Math.round(totals.total),
-            courtNumber: court,
-            subtotal: Math.round(totals.subtotal),
-            gst: Math.round(totals.taxes),
-            amountPaid: idx === 0 ? 200 : 0,
-            sport: sSport,
-          };
-        };
+    // Dispatch confirmation notifications IN THE BACKGROUND. The PDF render +
+    // SMTP send can take a few seconds; blocking the response on them made the
+    // confirmation feel slow and, if the PDF hung, killed the request before
+    // the email left (the "booking confirmed but no email" bug). waitUntil lets
+    // the function return instantly and finish the emails after the response.
+    const payloadFor = (idx: number) => {
+      const s = slots[idx];
+      const sSport = slotSport(s, sport);
+      const duration = slotDur(s);
+      const price = priceForRange(sSport, s.date, s.time, duration);
+      const totals = calculateTotals(price, addonTotal / slotCount);
+      const court = sSport === "cricket" || sSport === "badminton"
+        ? 1
+        : Number.isFinite(Number(s.court))
+          ? Math.max(1, Math.min(9, Number(s.court)))
+          : 1;
+      return {
+        id: bookingIds[idx],
+        userEmail,
+        userName,
+        userPhone: userPhone || undefined,
+        slotDate: s.date,
+        slotTime: s.time,
+        durationMin: duration,
+        amount: Math.round(totals.total),
+        courtNumber: court,
+        subtotal: Math.round(totals.subtotal),
+        gst: Math.round(totals.taxes),
+        amountPaid: idx === 0 ? 200 : 0,
+        sport: sSport,
+      };
+    };
 
-        if (slots.length > 0) {
-          try {
-            const result = await notifyBookingConfirmed(payloadFor(0));
-            emailed = Boolean(result?.emailed);
-          } catch (e) {
-            console.error("[notify first error]", e);
-          }
-        }
-
-        for (let idx = 1; idx < slots.length; idx++) {
-          const run = notifyBookingConfirmed(payloadFor(idx)).catch((e: unknown) =>
+    const dispatchNotifications = (async () => {
+      try {
+        const { notifyBookingConfirmed } = require("@/lib/notifications");
+        if (!notifyBookingConfirmed) return;
+        for (let idx = 0; idx < slots.length; idx++) {
+          await notifyBookingConfirmed(payloadFor(idx)).catch((e: unknown) =>
             console.error("[notify error]", e),
           );
-          if (waitUntil) waitUntil(run);
         }
+      } catch (notifErr) {
+        console.error("[verify-payment notify dispatch error]", notifErr);
       }
-    } catch (notifErr) {
-      console.warn("Notifications deferred or module not loaded yet.", notifErr);
+    })();
+
+    try {
+      const { waitUntil } = require("@vercel/functions");
+      if (waitUntil) waitUntil(dispatchNotifications);
+      else await dispatchNotifications;
+    } catch {
+      // No waitUntil available (non-Vercel) → fall back to awaiting so the
+      // email still sends, just synchronously.
+      await dispatchNotifications;
     }
 
-    return NextResponse.json({ ok: true, bookingIds, emailed });
+    return NextResponse.json({ ok: true, bookingIds });
   } catch (err: unknown) {
     console.error("[verify-payment error]", err);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
