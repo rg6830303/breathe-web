@@ -113,7 +113,7 @@ async function pgExecute(arg: InStmt) {
   };
 }
 
-async function pgBatch(statements: Array<string | { sql: string; args?: unknown[] }>) {
+async function pgBatch(statements: Array<string | { sql: string; args?: unknown[] }>, _mode?: string) {
   const client = getPg();
   for (const st of statements) {
     const text = typeof st === "string" ? st : st.sql;
@@ -123,11 +123,32 @@ async function pgBatch(statements: Array<string | { sql: string; args?: unknown[
   return [] as unknown;
 }
 
+let ensured = false;
+let ensuring = false;
+
+async function ensureSchemaLazy(): Promise<void> {
+  if (ensured || ensuring) return;
+  ensuring = true;
+  try {
+    const { applySchema } = await import("./db/ensure");
+    await applySchema();
+    ensured = true;
+  } catch (err) {
+    console.error("[lazy ensureSchema] failed", err);
+  } finally {
+    ensuring = false;
+  }
+}
+
 export const turso = {
-  execute: (arg: InStmt) => pgExecute(arg),
-  // Second arg (libsql transaction mode) is accepted for call-site compatibility
-  // and ignored — pgBatch runs the statements sequentially.
-  batch: (statements: Array<string | { sql: string; args?: unknown[] }>, _mode?: string) => pgBatch(statements),
+  execute: (async (arg: Parameters<typeof pgExecute>[0]) => {
+    await ensureSchemaLazy();
+    return pgExecute(arg);
+  }) as typeof pgExecute,
+  batch: async (statements: Parameters<typeof pgBatch>[0], mode?: string) => {
+    await ensureSchemaLazy();
+    return pgBatch(statements, mode);
+  },
 };
 
 /**

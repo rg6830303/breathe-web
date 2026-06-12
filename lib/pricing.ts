@@ -2,60 +2,63 @@ export type PricingRule = {
   id: number;
   label: string;
   price: number;
+  start_time?: string;
+  end_time?: string;
 };
 
 export const fallbackPricingRules: PricingRule[] = [
-  { id: 1, label: "Pickleball/Badminton Weekday Day (5 AM - 5 PM)", price: 600 },
-  { id: 2, label: "Pickleball/Badminton Weekday Night (5 PM - 11 PM)", price: 800 },
-  { id: 3, label: "Pickleball/Badminton Weekend & Holidays", price: 1000 },
-  { id: 4, label: "Cricket Weekday Day (5 AM - 5 PM)", price: 1500 },
-  { id: 5, label: "Cricket Weekday Night (5 PM - 11 PM)", price: 2000 },
-  { id: 6, label: "Cricket Weekend & Holidays", price: 2500 },
+  { id: 1, label: "Off peak (5 AM - 5 PM)", start_time: "05:00", end_time: "17:00", price: 600 },
+  { id: 2, label: "Peak (5 PM - 11 PM)", start_time: "17:00", end_time: "23:00", price: 800 },
+  { id: 3, label: "Weekend & Holidays", start_time: "05:00", end_time: "23:00", price: 1000 },
 ];
 
-export function getSlotPrice(
-  timeStr: string,
-  dateStr?: string,
-  sport: "pickleball" | "badminton" | "cricket" = "pickleball",
-): number {
-  const [h, m] = timeStr.split(":").map(Number);
-  const minutes = h * 60 + m;
+export function isWeekendOrHoliday(dateStr: string): boolean {
+  if (!dateStr) return false;
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length !== 3) return false;
+  const year = parts[0];
+  const month = parts[1] - 1; // 0-indexed
+  const day = parts[2];
+  const date = new Date(year, month, day);
+  const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-  // 1. Determine if it's weekend (Saturday or Sunday)
-  let isWeekend = false;
-  if (dateStr) {
-    const d = new Date(`${dateStr}T00:00:00`);
-    const day = d.getDay();
-    isWeekend = day === 0 || day === 6; // 0 = Sunday, 6 = Saturday
+  const shortDate = `${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const holidays = [
+    "01-26", // Republic Day
+    "08-15", // Independence Day
+    "10-02", // Gandhi Jayanti
+    "12-25", // Christmas
+  ];
+  return isWeekend || holidays.includes(shortDate);
+}
+
+export function getSlotPrice(sportOrTime: string, date?: string, timeStr?: string): number {
+  if (!date || !timeStr) {
+    const time = sportOrTime;
+    const [h, m] = time.split(":").map(Number);
+    const minutes = h * 60 + m;
+    if (minutes >= 300 && minutes < 1020) return 600; // 5 AM - 5 PM
+    return 800; // 5 PM - 11 PM
   }
 
-  // 2. Return price based on sport and day type
+  const sport = sportOrTime;
+  const [h, m] = timeStr.split(":").map(Number);
+  const minutes = h * 60 + m;
+  const isWeekend = isWeekendOrHoliday(date);
+
   if (sport === "cricket") {
-    if (isWeekend) {
-      return 2500;
-    } else {
-      if (minutes >= 300 && minutes < 1020) { // 5 AM - 5 PM
-        return 1500;
-      } else { // 5 PM - 11 PM
-        return 2000;
-      }
-    }
+    if (isWeekend) return 2500;
+    if (minutes >= 300 && minutes < 1020) return 1500;
+    return 2000;
   } else {
-    // Pickleball or Badminton
-    if (isWeekend) {
-      return 1000;
-    } else {
-      if (minutes >= 300 && minutes < 1020) { // 5 AM - 5 PM
-        return 600;
-      } else { // 5 PM - 11 PM
-        return 800;
-      }
-    }
+    if (isWeekend) return 1000;
+    if (minutes >= 300 && minutes < 1020) return 600;
+    return 800;
   }
 }
 
 export function calculateTotals(base: number, equipmentTotal = 0) {
-  // The club does not currently charge GST, so taxes are 0 and total == subtotal.
   const subtotal = base + equipmentTotal;
   const taxes = 0;
   return { subtotal, taxes, total: subtotal };

@@ -112,3 +112,32 @@ are operational:
   sends when the email matches a real user in the DB — so test with a real
   signed-up account.)
 - Booking confirmation + admin notification fire on a completed booking.
+
+---
+
+## 4. Vercel Database Branching (Turso / Neon / Supabase)
+
+If your Vercel deployments fail during the "Provisioning Integrations" phase or build phase due to a database branch issue, it is typically caused by naming restrictions or quota limits.
+
+### Common Root Causes
+1. **Invalid characters in Git branch name:** Database providers like Turso and Neon have strict naming requirements (only lowercase letters, numbers, and hyphens are allowed; no slashes `/`, underscores `_`, or uppercase letters). When Vercel automatically attempts to create a database branch matching Git branches like `claude/breathe-pickleball-ui-tOvOK`, the database creation fails and blocks the deployment.
+2. **Branch limits reached:** Most free tiers limit the number of active database branches (e.g. max 10 database branches). When the limit is reached, Vercel fails to provision a new branch, blocking the deployment.
+
+### Recommended Resolutions
+To resolve this issue thoroughly so deployments run reliably:
+
+1. **Disable database branching in the Vercel Integration (Recommended):**
+   - Go to your Vercel Dashboard and select the **breathe-web** project.
+   - Go to **Settings > Integrations**.
+   - Click **Manage** on your database integration (e.g., Turso or Neon).
+   - Toggle **"Enable database branching"** or **"Enable preview database branching"** to **OFF**.
+   - This prevents Vercel from trying to automatically create a database branch for every Git branch, allowing preview deployments to deploy instantly and share the main database credentials (or a single dedicated development/preview database).
+
+2. **Renaming Git Branches:**
+   - If you want database branching enabled, avoid using slashes (`/`), underscores (`_`), or capital letters in your Git branch names.
+   - Use clean, hyphen-separated branch names (e.g., `feature-login` or `claude-db-hotfix` instead of `feature/login` or `claude/db_hotfix`).
+
+3. **Delete Unused Branches:**
+   - Log in to your database provider's console (e.g. Turso, Neon, or Supabase).
+   - Manually delete old, stale preview database branches that are no longer active to free up slots.
+

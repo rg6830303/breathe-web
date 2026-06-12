@@ -158,7 +158,7 @@ export function BookingGrid() {
         court: s.court,
         time: ef.startTime,
         durationMin: ef.durationMin,
-        price: priceForRange(ef.startTime, ef.durationMin, date, sport),
+        price: priceForRange(sport, date, ef.startTime, ef.durationMin),
       };
     });
     saveCart({ date, sport, items });
@@ -272,7 +272,7 @@ export function BookingGrid() {
   const equipmentTotal = addons.filter((a) => a.on).reduce((sum, a) => sum + a.price * a.qty, 0);
   const base = selected.reduce((sum, s) => {
     const ef = effective(s);
-    return sum + priceForRange(ef.startTime, ef.durationMin, date, sport);
+    return sum + priceForRange(sport, date, ef.startTime, ef.durationMin);
   }, 0);
   const totals = calculateTotals(base, equipmentTotal);
 
@@ -603,7 +603,7 @@ export function BookingGrid() {
                         ? "Badminton Court"
                         : `Court ${s.court}`}
                   </span>
-                  <span className="text-brand dark:text-brand-300">₹{priceForRange(ef.startTime, ef.durationMin, date, sport)}</span>
+                  <span className="text-brand dark:text-brand-300">₹{priceForRange(sport, date, ef.startTime, ef.durationMin)}</span>
                 </div>
                 <p className="text-xs text-slatey dark:text-white/50">
                   {timeLabel(ef.startTime)} – {timeLabel(endTime)} · {ef.durationMin} min
@@ -689,7 +689,7 @@ export function BookingGrid() {
           disabled={selected.length === 0}
           className="btn-primary mt-4 w-full justify-center disabled:cursor-not-allowed disabled:bg-ink/30 disabled:shadow-none dark:disabled:bg-white/20"
         >
-          {selected.length === 0 ? "Select a slot to continue" : `Proceed to booking · ₹${totals.total}`}
+          {selected.length === 0 ? "Select a slot to continue" : `Proceed to booking · Pay ₹200 Advance`}
         </button>
 
         <p className="mt-3 text-[0.68rem] leading-5 text-slatey dark:text-white/40">
@@ -707,9 +707,9 @@ export function BookingGrid() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-slatey dark:text-white/50">
-                {selected.length} slot{selected.length > 1 ? "s" : ""} selected
+                {selected.length} slot{selected.length > 1 ? "s" : ""} · Total ₹{totals.total}
               </div>
-              <div className="font-display text-2xl font-extrabold text-ink dark:text-white">₹{totals.total}</div>
+              <div className="font-display text-2xl font-extrabold text-ink dark:text-white">₹200 Advance</div>
             </div>
             <button
               type="button"

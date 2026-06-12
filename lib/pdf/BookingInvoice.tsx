@@ -64,6 +64,7 @@ export type InvoiceProps = {
   total: number;
   venueAddress: string;
   invoiceDate?: string;
+  amountPaid?: number;
   sport?: string;
 };
 
@@ -86,6 +87,7 @@ export function BookingInvoice(props: InvoiceProps) {
     total,
     venueAddress,
     invoiceDate,
+    amountPaid,
     sport,
   } = props;
 
@@ -93,20 +95,12 @@ export function BookingInvoice(props: InvoiceProps) {
     invoiceDate ??
     new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
 
-  let sportName = "Pickleball";
-  let courtLabel = courtNumber ? ` · Court ${courtNumber}` : "";
-  if (sport === "cricket") {
-    sportName = "Cricket Turf";
-    courtLabel = " · Cricket Turf (Courts 1, 2 & 3)";
-  } else if (sport === "badminton") {
-    sportName = "Badminton";
-    courtLabel = " · Badminton Court (Court 1)";
-  } else if (sport === "pickleball") {
-    sportName = "Pickleball";
-    courtLabel = courtNumber ? ` · Court ${courtNumber}` : "";
-  }
-
+  const sportName = sport ? sport.charAt(0).toUpperCase() + sport.slice(1) : "Pickleball";
+  const courtLabel = sport === "cricket" ? " · Full Turf" : courtNumber ? ` · Court ${courtNumber}` : "";
   const description = `${sportName} booking — ${slotDate}, ${slotTime}${courtLabel}, ${duration}`;
+
+  const resolvedPaid = amountPaid !== undefined ? amountPaid : total;
+  const resolvedDue = Math.max(0, total - resolvedPaid);
 
   return (
     <Document>
@@ -116,7 +110,7 @@ export function BookingInvoice(props: InvoiceProps) {
             {LOGO_DATA_URI && <Image src={LOGO_DATA_URI} style={{ width: 40, height: 40, borderRadius: 8, marginRight: 10 }} />}
             <View>
               <Text style={styles.brand}>BREATHE PICKLEBALL</Text>
-              <Text style={styles.tagline}>North Kolkata&apos;s home of pickleball</Text>
+              <Text style={styles.tagline}>North Kolkata&apos;s home of sports</Text>
             </View>
           </View>
           <View>
@@ -137,7 +131,7 @@ export function BookingInvoice(props: InvoiceProps) {
           </View>
           <View style={{ flex: 1, paddingLeft: 12 }}>
             <Text style={styles.colLabel}>Venue</Text>
-            <Text style={styles.colValue}>Breathe Pickleball</Text>
+            <Text style={styles.colValue}>Breathe Club</Text>
             <Text style={styles.colValue}>{venueAddress}</Text>
           </View>
         </View>
@@ -149,18 +143,22 @@ export function BookingInvoice(props: InvoiceProps) {
           </View>
           <View style={styles.trow}>
             <Text style={[styles.td, styles.tdDesc]}>{description}</Text>
-            <Text style={[styles.td, styles.tdAmount]}>{fmtMoney(subtotal)}</Text>
+            <Text style={[styles.td, styles.tdAmount]}>{fmtMoney(total)}</Text>
           </View>
         </View>
 
         <View style={styles.totals}>
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Subtotal</Text>
-            <Text style={styles.totalValue}>{fmtMoney(subtotal)}</Text>
+            <Text style={styles.totalLabel}>Total Court Bill</Text>
+            <Text style={styles.totalValue}>{fmtMoney(total)}</Text>
+          </View>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Amount Paid Online</Text>
+            <Text style={styles.totalValue}>{fmtMoney(resolvedPaid)}</Text>
           </View>
           <View style={styles.grandRow}>
-            <Text style={styles.grandLabel}>Total paid</Text>
-            <Text style={styles.grandValue}>{fmtMoney(total)}</Text>
+            <Text style={styles.grandLabel}>Due at Venue</Text>
+            <Text style={styles.grandValue}>{fmtMoney(resolvedDue)}</Text>
           </View>
         </View>
 

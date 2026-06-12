@@ -48,7 +48,7 @@ export function clearCart(): void {
 
 export function cartTotal(cart: Cart | null): number {
   if (!cart) return 0;
-  return cart.items.reduce((sum, i) => sum + priceForRange(i.time, i.durationMin, cart.date, cart.sport), 0);
+  return cart.items.reduce((sum, i) => sum + priceForRange(cart.sport, cart.date, i.time, i.durationMin), 0);
 }
 
 export function cartMinutes(cart: Cart | null): number {

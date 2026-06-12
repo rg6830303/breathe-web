@@ -5,7 +5,7 @@ import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { calculateTotals } from "@/lib/pricing";
-import { priceForRange, rangesOverlap, slotsClash, cellsFor } from "@/lib/slots";
+import { priceForRange, rangesOverlap } from "@/lib/slots";
 import { refundPayment, razorpayConfigured } from "@/lib/razorpay";
 import { adjustCredit, BULK_PACKAGE } from "@/lib/credits";
 
@@ -23,14 +23,17 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
+    const sport: "pickleball" | "cricket" | "badminton" = ["pickleball", "cricket", "badminton"].includes(
+      String(body.sport),
+    )
+      ? (body.sport as "pickleball" | "cricket" | "badminton")
+      : "pickleball";
     let orderId = String(body.orderId ?? "");
     let paymentId = String(body.paymentId ?? "");
     const signature = String(body.signature ?? "");
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
     const addons: AddonInput[] = Array.isArray(body.addons) ? body.addons : [];
-    const sport = ["pickleball", "cricket", "badminton"].includes(String(body.sport))
-      ? String(body.sport)
-      : "pickleball";
+
 
     // Verify the Razorpay payment signature (HMAC of order_id|payment_id).
     if (!orderId || !paymentId || !signature) {
@@ -106,21 +109,27 @@ export async function POST(req: Request) {
     for (const s of normalizedSlots) {
       try {
         const ex = await turso.execute({
-          sql: "SELECT slot_time, duration_min, court_number, sport FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
+          sql: "SELECT slot_time, duration_min, court_number, notes FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
           args: [s.date],
         });
-        const clash = ex.rows.some((row) =>
-          slotsClash(
-            s.court,
-            s.time,
-            slotDur(s),
-            sport,
-            Number(row.court_number) || 1,
-            String(row.slot_time),
-            Number(row.duration_min) || 60,
-            row.sport ? String(row.sport) : "pickleball",
-          ),
-        );
+        const clash = ex.rows.some((row) => {
+          const rowNotes = row.notes ? JSON.parse(String(row.notes)) : {};
+          const rowSport = rowNotes.sport || "pickleball";
+          const rowCourt = Number(row.court_number) || 1;
+
+          // Resolve courts occupied by existing booking
+          const rowCourts = rowSport === "cricket" ? [1, 2, 3] : [rowCourt];
+          // Resolve courts requested by the new booking
+          const requestedCourts = sport === "cricket" ? [1, 2, 3] : [s.court];
+
+          const sharesCourt = requestedCourts.some((c) => rowCourts.includes(c));
+
+          return (
+            sharesCourt &&
+            rangesOverlap(s.time, slotDur(s), String(row.slot_time), Number(row.duration_min) || 60)
+          );
+        });
+
         if (clash) {
           const refunded = await refundFull("slot taken before confirmation");
           return NextResponse.json(
@@ -137,9 +146,10 @@ export async function POST(req: Request) {
       }
     }
 
-    for (const s of normalizedSlots) {
+    let i = 0;
+    for (const s of slots) {
       const duration = slotDur(s);
-      const price = priceForRange(s.time, duration, s.date, sport as any);
+      const price = priceForRange(sport, s.date, s.time, duration);
       const totals = calculateTotals(price, addonTotal / slotCount);
       const id = uuid();
       bookingIds.push(id);
@@ -151,56 +161,43 @@ export async function POST(req: Request) {
         razorpay_signature: signature,
         addons,
         requested_court: court,
+        sport,
       };
 
+      // Pay exactly ₹200 advance for the first slot; subsequent slots in this order have ₹0 paid online.
+      const amtPaidForThisBooking = i === 0 ? 200 : 0;
+      i++;
+
       try {
-        const statements = [
-          {
-            sql: `INSERT INTO bookings (
-              id, user_id, slot_date, slot_time, duration_min, court_number,
-              guest_name, guest_phone, guest_email,
-              subtotal, gst, total, amount_paid,
-              status, source, sport, notes, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'online', ?, ?, ?)`,
-            args: [
-              id,
-              session.id,
-              s.date,
-              s.time,
-              duration,
-              court,
-              userName,
-              userPhone,
-              userEmail,
-              Math.round(totals.subtotal),
-              Math.round(totals.taxes),
-              Math.round(totals.total),
-              Math.round(totals.total),
-              sport,
-              JSON.stringify(notesObj),
-              now,
-            ],
-          }
-        ];
-
-        const targetCourts = sport === "cricket" ? [1, 2, 3] : [court];
-        const intervals = cellsFor(s.time, duration);
-        for (const c of targetCourts) {
-          for (const cellTime of intervals) {
-            statements.push({
-              sql: "INSERT INTO booking_courts (booking_id, court_number, slot_date, slot_time) VALUES (?, ?, ?, ?)",
-              args: [id, c, s.date, cellTime],
-            });
-          }
-        }
-
-        await turso.batch(statements, "write");
+        await turso.execute({
+          sql: `INSERT INTO bookings (
+            id, user_id, slot_date, slot_time, duration_min, court_number,
+            guest_name, guest_phone, guest_email,
+            subtotal, gst, total, amount_paid,
+            status, source, notes, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'online', ?, ?)`,
+          args: [
+            id,
+            session.id,
+            s.date,
+            s.time,
+            duration,
+            court,
+            userName,
+            userPhone,
+            userEmail,
+            Math.round(totals.subtotal),
+            Math.round(totals.taxes),
+            Math.round(totals.total),
+            amtPaidForThisBooking,
+            JSON.stringify(notesObj),
+            now,
+          ],
+        });
       } catch (insertErr) {
         console.error("[verify-payment db-insert error]", insertErr);
         const msg = String((insertErr as Error)?.message ?? "").toLowerCase();
         const isCollision = msg.includes("unique") || msg.includes("constraint");
-        // Roll back any sibling slots already inserted in this request so we
-        // never leave a partial booking, then refund the entire payment.
         for (const bid of bookingIds.filter((b) => b !== id)) {
           await turso.batch([
             {
@@ -241,7 +238,7 @@ export async function POST(req: Request) {
             subtotal: Math.round(totals.subtotal),
             gst: Math.round(totals.taxes),
             total: Math.round(totals.total),
-            amount_paid: Math.round(totals.total),
+            amount_paid: amtPaidForThisBooking,
             status: "confirmed",
             source: "online",
             sport,
@@ -254,26 +251,22 @@ export async function POST(req: Request) {
       }
     }
 
-    // Dispatch confirmation notifications. The FIRST booking's email is awaited
-    // so we can report real delivery status to the UI (no more "email sent"
-    // when it actually failed); any additional bookings + admin/telegram alerts
-    // run best-effort in the background.
+    // Dispatch confirmation notifications.
     let emailed = false;
     try {
       const { notifyBookingConfirmed } = require("@/lib/notifications");
       const { waitUntil } = require("@vercel/functions");
       if (notifyBookingConfirmed) {
-        const payloadFor = (i: number) => {
-          const s = slots[i];
+        const payloadFor = (idx: number) => {
+          const s = slots[idx];
           const duration = slotDur(s);
-          const price = priceForRange(s.time, duration, s.date, sport as any);
+          const price = priceForRange(sport, s.date, s.time, duration);
           const totals = calculateTotals(price, addonTotal / slotCount);
           const court = Number.isFinite(Number(s.court))
             ? Math.max(1, Math.min(9, Number(s.court)))
             : 1;
           return {
-            id: bookingIds[i],
-            userId: session.id,
+            id: bookingIds[idx],
             userEmail,
             userName,
             userPhone: userPhone || undefined,
@@ -284,6 +277,7 @@ export async function POST(req: Request) {
             courtNumber: court,
             subtotal: Math.round(totals.subtotal),
             gst: Math.round(totals.taxes),
+            amountPaid: idx === 0 ? 200 : 0,
             sport,
           };
         };
@@ -297,8 +291,8 @@ export async function POST(req: Request) {
           }
         }
 
-        for (let i = 1; i < slots.length; i++) {
-          const run = notifyBookingConfirmed(payloadFor(i)).catch((e: unknown) =>
+        for (let idx = 1; idx < slots.length; idx++) {
+          const run = notifyBookingConfirmed(payloadFor(idx)).catch((e: unknown) =>
             console.error("[notify error]", e),
           );
           if (waitUntil) waitUntil(run);

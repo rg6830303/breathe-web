@@ -28,8 +28,9 @@ type Row = {
   slot_time: string;
   duration_min: number;
   total_amount: number;
-  status: string;
+  amount_paid: number;
   sport: string;
+  status: string;
   created_at: string;
 };
 
@@ -70,31 +71,37 @@ async function getProfile(userId: string): Promise<Profile | null> {
 }
 
 async function getBookings(userId: string): Promise<Row[]> {
-  const query = (withSport: boolean) =>
-    `SELECT id, court_number, slot_date, slot_time, duration_min,
-            amount_paid as total_amount, status, ${withSport ? "sport," : ""} created_at
-     FROM bookings WHERE user_id = ?
-     ORDER BY slot_date DESC, slot_time DESC LIMIT 500`;
   try {
-    let result;
-    try {
-      result = await turso.execute({ sql: query(true), args: [userId] });
-    } catch {
-      // `sport` column may not be migrated onto the live DB yet — fall back so
-      // the dashboard never shows an empty list during that brief window.
-      result = await turso.execute({ sql: query(false), args: [userId] });
-    }
-    return result.rows.map((r) => ({
-      id: String(r.id),
-      court_number: Number(r.court_number) || 1,
-      slot_date: String(r.slot_date),
-      slot_time: String(r.slot_time).slice(0, 5),
-      duration_min: Number(r.duration_min) || 60,
-      total_amount: Number(r.total_amount),
-      status: String(r.status),
-      sport: r.sport ? String(r.sport) : "pickleball",
-      created_at: String(r.created_at),
-    }));
+    const result = await turso.execute({
+      sql: `SELECT id, court_number, slot_date, slot_time, duration_min,
+                   total, amount_paid, notes, status, created_at
+            FROM bookings
+            WHERE user_id = ?
+            ORDER BY slot_date DESC, slot_time DESC
+            LIMIT 500`,
+      args: [userId],
+    });
+    return result.rows.map((r) => {
+      const notesStr = r.notes ? String(r.notes) : "";
+      let notesObj: any = {};
+      try {
+        if (notesStr) notesObj = JSON.parse(notesStr);
+      } catch {}
+      const sport = notesObj.sport || "pickleball";
+
+      return {
+        id: String(r.id),
+        court_number: Number(r.court_number) || 1,
+        slot_date: String(r.slot_date),
+        slot_time: String(r.slot_time).slice(0, 5),
+        duration_min: Number(r.duration_min) || 60,
+        total_amount: Number(r.total) || Number(r.amount_paid) || 0,
+        amount_paid: Number(r.amount_paid) || 0,
+        sport,
+        status: String(r.status),
+        created_at: String(r.created_at),
+      };
+    });
   } catch (err) {
     console.error("[dashboard getBookings error]", err);
     return [];
@@ -216,7 +223,8 @@ export default async function DashboardPage() {
   const thisMonthIso = todayIso.slice(0, 7);
   const thisMonth = confirmedAll.filter((b) => b.slot_date.slice(0, 7) === thisMonthIso).length;
   const streak = computeStreak(confirmedAll);
-  const totalSpent = confirmedAll.reduce((s, b) => s + b.total_amount, 0);
+  const totalSpent = confirmedAll.reduce((s, b) => s + b.amount_paid, 0);
+  const totalDue = confirmedAll.reduce((s, b) => s + (b.total_amount - b.amount_paid), 0);
 
   const countsByDate: Record<string, number> = {};
   for (const b of confirmedAll) countsByDate[b.slot_date] = (countsByDate[b.slot_date] ?? 0) + 1;
@@ -291,6 +299,26 @@ export default async function DashboardPage() {
         </PortalHero>
 
         <Container className="py-8">
+          {totalDue > 0 && (
+            <ScrollReveal>
+              <div className="mb-6 rounded-3xl border-2 border-amber-300 bg-amber-50 p-5 dark:border-amber-900/40 dark:bg-amber-900/10">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-amber-100 p-2 text-amber-800 dark:bg-amber-950/20 dark:text-amber-300">
+                    <IndianRupee className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-base font-extrabold text-amber-800 dark:text-amber-300">
+                      Outstanding Balance due at Venue
+                    </h3>
+                    <p className="mt-1 text-sm text-amber-700/80 dark:text-amber-400/80">
+                      You have an outstanding due amount of <strong>₹{totalDue.toLocaleString("en-IN")}</strong> for your sessions. Please pay this at the premises after your play.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+          )}
+
           {/* Game stats / achievements */}
           <ScrollReveal>
             <div className="mb-6">
@@ -417,10 +445,21 @@ export default async function DashboardPage() {
                                 {b.status}
                               </span>
                             </div>
-                            <div className="mt-4 flex items-center justify-between border-t-2 border-ink/8 pt-3 text-sm dark:border-white/8">
-                              <span className="font-display text-lg font-extrabold text-brand dark:text-brand-300">
-                                ₹{b.total_amount.toLocaleString("en-IN")}
-                              </span>
+                            <div className="mt-3 text-xs space-y-1 text-slatey dark:text-white/50 border-t border-ink/5 pt-3 dark:border-white/5">
+                              <div className="flex justify-between">
+                                <span>Total court bill:</span>
+                                <span className="font-bold text-ink dark:text-white">₹{b.total_amount}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Paid online (Advance):</span>
+                                <span className="font-bold text-lime-dark">₹{b.amount_paid}</span>
+                              </div>
+                              <div className="flex justify-between font-bold text-red-600 dark:text-red-400">
+                                <span>Remaining due at venue:</span>
+                                <span>₹{Math.max(0, b.total_amount - b.amount_paid)}</span>
+                              </div>
+                            </div>
+                            <div className="mt-4 flex items-center justify-between pt-2">
                               <CancelBookingButton
                                 bookingId={b.id}
                                 disabled={!canCancel}
@@ -461,9 +500,11 @@ export default async function DashboardPage() {
                             <td className="p-3.5 font-semibold text-ink dark:text-white">{formatDate(b.slot_date)}</td>
                             <td className="p-3.5 text-slatey dark:text-white/50">{format12h(b.slot_time)}</td>
                             <td className="p-3.5 text-slatey dark:text-white/50">Court {b.court_number}</td>
-                            <td className="p-3.5 font-extrabold text-ink dark:text-white">
-                              <IndianRupee className="mr-0.5 inline h-3 w-3" />
-                              {b.total_amount.toLocaleString("en-IN")}
+                            <td className="p-3.5 text-ink dark:text-white">
+                              <div className="font-extrabold">₹{b.total_amount.toLocaleString("en-IN")}</div>
+                              <div className="text-[10px] text-slatey dark:text-white/40">
+                                Paid: ₹{b.amount_paid} · Due: ₹{Math.max(0, b.total_amount - b.amount_paid)}
+                              </div>
                             </td>
                             <td className="p-3.5">
                               <span className={`inline-block rounded-full px-2.5 py-0.5 text-[0.6rem] font-extrabold uppercase tracking-[0.15em] ${statusBadge(b.status)}`}>

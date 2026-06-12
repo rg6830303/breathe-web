@@ -25,7 +25,7 @@ type Customer = {
   created_at: number;
 };
 
-type Stats = { sessions: number; hours: number; spent: number };
+type Stats = { sessions: number; hours: number; spent: number; due: number };
 
 async function loadCustomer(id: string): Promise<{ customer: Customer; bookings: Booking[]; stats: Stats } | null> {
   // 1. Fetch the user from Turso, then Supabase. A genuine "not found in EITHER
@@ -69,7 +69,7 @@ async function loadCustomer(id: string): Promise<{ customer: Customer; bookings:
   // 2. Bookings + stats are best-effort — a query hiccup must NOT turn a real
   //    customer into a 404. Degrade to an empty list instead.
   let bookings: Booking[] = [];
-  let stats: Stats = { sessions: 0, hours: 0, spent: 0 };
+  let stats: Stats = { sessions: 0, hours: 0, spent: 0, due: 0 };
 
   try {
     const bookingsRes = await turso.execute({
@@ -97,7 +97,8 @@ async function loadCustomer(id: string): Promise<{ customer: Customer; bookings:
       sql: `SELECT
               COUNT(CASE WHEN status='confirmed' THEN 1 END) as sessions,
               COALESCE(SUM(CASE WHEN status='confirmed' THEN duration_min ELSE 0 END), 0) as minutes,
-              COALESCE(SUM(CASE WHEN status='confirmed' THEN amount_paid ELSE 0 END), 0) as spent
+              COALESCE(SUM(CASE WHEN status='confirmed' THEN amount_paid ELSE 0 END), 0) as spent,
+              COALESCE(SUM(CASE WHEN status='confirmed' THEN (total - amount_paid) ELSE 0 END), 0) as due
             FROM bookings WHERE user_id = ?`,
       args: [id],
     });
@@ -106,6 +107,7 @@ async function loadCustomer(id: string): Promise<{ customer: Customer; bookings:
       sessions: Number(s?.sessions ?? 0),
       hours: Math.round((Number(s?.minutes ?? 0) / 60) * 10) / 10,
       spent: Number(s?.spent ?? 0),
+      due: Number(s?.due ?? 0),
     };
   } catch (err) {
     console.error("[admin customer stats error]", err);
@@ -193,32 +195,41 @@ export default async function AdminCustomerPage({ params }: { params: Promise<{ 
             <h2 className="mt-1 mb-4 font-display text-base font-extrabold tracking-tight text-ink dark:text-white">
               Performance stats
             </h2>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-2xl border-2 border-ink/10 p-4 dark:border-white/10">
+            <div className="grid grid-cols-4 gap-2 text-center">
+              <div className="rounded-2xl border-2 border-ink/10 p-3 dark:border-white/10">
                 <ListChecks className="mx-auto h-4 w-4 text-brand" aria-hidden />
-                <div className="mt-2 font-display text-2xl font-extrabold tracking-tight text-ink dark:text-white">
+                <div className="mt-2 font-display text-lg font-extrabold tracking-tight text-ink dark:text-white sm:text-2xl">
                   {stats.sessions}
                 </div>
-                <div className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.15em] text-ink/40 dark:text-white/40">
+                <div className="mt-1 text-[8px] font-extrabold uppercase tracking-[0.12em] text-ink/40 dark:text-white/40 sm:text-[10px] sm:tracking-[0.15em]">
                   Sessions
                 </div>
               </div>
-              <div className="rounded-2xl border-2 border-ink/10 p-4 dark:border-white/10">
+              <div className="rounded-2xl border-2 border-ink/10 p-3 dark:border-white/10">
                 <Clock className="mx-auto h-4 w-4 text-brand" aria-hidden />
-                <div className="mt-2 font-display text-2xl font-extrabold tracking-tight text-ink dark:text-white">
+                <div className="mt-2 font-display text-lg font-extrabold tracking-tight text-ink dark:text-white sm:text-2xl">
                   {stats.hours}
                 </div>
-                <div className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.15em] text-ink/40 dark:text-white/40">
+                <div className="mt-1 text-[8px] font-extrabold uppercase tracking-[0.12em] text-ink/40 dark:text-white/40 sm:text-[10px] sm:tracking-[0.15em]">
                   Hours
                 </div>
               </div>
-              <div className="rounded-2xl border-2 border-brand/20 bg-brand/[0.04] p-4 dark:border-brand/30 dark:bg-brand/10">
+              <div className="rounded-2xl border-2 border-ink/10 p-3 dark:border-white/10">
                 <IndianRupee className="mx-auto h-4 w-4 text-brand" aria-hidden />
-                <div className="mt-2 font-display text-2xl font-extrabold tracking-tight text-brand">
+                <div className="mt-2 font-display text-lg font-extrabold tracking-tight text-ink dark:text-white sm:text-2xl">
                   {stats.spent.toLocaleString("en-IN")}
                 </div>
-                <div className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.15em] text-brand/60">
+                <div className="mt-1 text-[8px] font-extrabold uppercase tracking-[0.12em] text-ink/40 dark:text-white/40 sm:text-[10px] sm:tracking-[0.15em]">
                   Spent
+                </div>
+              </div>
+              <div className={`rounded-2xl border-2 p-3 ${stats.due > 0 ? "border-red-500/30 bg-red-50/10 dark:border-red-500/20" : "border-ink/10 dark:border-white/10"}`}>
+                <IndianRupee className={`mx-auto h-4 w-4 ${stats.due > 0 ? "text-red-500" : "text-ink/40 dark:text-white/40"}`} aria-hidden />
+                <div className={`mt-2 font-display text-lg font-extrabold tracking-tight sm:text-2xl ${stats.due > 0 ? "text-red-500" : "text-ink/60 dark:text-white/60"}`}>
+                  {stats.due.toLocaleString("en-IN")}
+                </div>
+                <div className={`mt-1 text-[8px] font-extrabold uppercase tracking-[0.12em] sm:text-[10px] sm:tracking-[0.15em] ${stats.due > 0 ? "text-red-500/80" : "text-ink/40 dark:text-white/40"}`}>
+                  Due
                 </div>
               </div>
             </div>
