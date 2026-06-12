@@ -24,6 +24,7 @@ export async function notifyBookingConfirmed(b: {
   courtNumber?: number;
   subtotal?: number;
   gst?: number;
+  sport?: string;
 }): Promise<{ emailed: boolean }> {
   try {
     const date = new Date(b.slotDate);
@@ -62,6 +63,7 @@ export async function notifyBookingConfirmed(b: {
           gst={gst}
           total={total}
           venueAddress={VENUE_ADDRESS}
+          sport={b.sport}
         />,
       );
     } catch (pdfErr) {
@@ -78,20 +80,31 @@ export async function notifyBookingConfirmed(b: {
         ]
       : undefined;
 
+    let sportEmoji = "🎾";
+    let sportName = "Pickleball";
+    let displayCourt = b.courtNumber ? `Court ${b.courtNumber}` : "";
+    if (b.sport === "cricket") {
+      sportEmoji = "🏏";
+      sportName = "Cricket Turf";
+      displayCourt = "Cricket Turf (Courts 1, 2 & 3)";
+    } else if (b.sport === "badminton") {
+      sportEmoji = "🏸";
+      sportName = "Badminton";
+      displayCourt = "Badminton Court (Court 1)";
+    }
+
     // 1. Player confirmation email with PDF attached.
-    // Plain inline HTML (NOT @react-email/render, which can throw/hang on the
-    // serverless runtime — the reason confirmation mails never sent while the
-    // simple test email did). Mirrors the working test-email approach.
-    const courtRow = b.courtNumber
-      ? `<tr><td style="padding:6px 0;color:#64748b">Court</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">Court ${b.courtNumber}</td></tr>`
+    const courtRow = displayCourt
+      ? `<tr><td style="padding:6px 0;color:#64748b">Court / Turf</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${displayCourt}</td></tr>`
       : "";
     const playerHtml =
       `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0d1426">` +
       `<div style="text-align:center;margin-bottom:16px"><img src="${siteUrl}/icons/icon-192.png" alt="Breathe Pickleball" width="56" height="56" style="border-radius:14px"/></div>` +
-      `<h2 style="text-align:center;margin:0 0 4px">Booking confirmed 🎾</h2>` +
+      `<h2 style="text-align:center;margin:0 0 4px">${sportName} Booking Confirmed ${sportEmoji}</h2>` +
       `<p style="text-align:center;color:#64748b;margin:0 0 20px">Reference ${shortRef}</p>` +
-      `<p style="color:#475569;line-height:1.6">Hi ${b.userName}, your court is booked. Here are your details:</p>` +
+      `<p style="color:#475569;line-height:1.6">Hi ${b.userName}, your booking is confirmed. Here are the details:</p>` +
       `<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">` +
+      `<tr><td style="padding:6px 0;color:#64748b">Sport</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${sportName}</td></tr>` +
       `<tr><td style="padding:6px 0;color:#64748b">Date</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${dateStr}</td></tr>` +
       `<tr><td style="padding:6px 0;color:#64748b">Time</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${slotRange}</td></tr>` +
       courtRow +
@@ -106,10 +119,11 @@ export async function notifyBookingConfirmed(b: {
 
     const playerText =
       `Hi ${b.userName},\n\n` +
-      `Your booking is confirmed.\n\n` +
+      `Your ${sportName} booking is confirmed.\n\n` +
+      `Sport: ${sportName}\n` +
       `Date: ${dateStr}\n` +
       `Time: ${slotRange}\n` +
-      (b.courtNumber ? `Court: ${b.courtNumber}\n` : "") +
+      (displayCourt ? `Location: ${displayCourt}\n` : "") +
       `Amount: Rs. ${total.toLocaleString("en-IN")}\n` +
       `Reference: ${shortRef}\n\n` +
       `Venue: ${VENUE_ADDRESS}\n\n` +
@@ -118,7 +132,7 @@ export async function notifyBookingConfirmed(b: {
 
     const playerResult = await sendMail({
       to: b.userEmail,
-      subject: `Confirmed: ${dateStr} at ${format12h(b.slotTime)} | Ref ${shortRef}`,
+      subject: `Confirmed: ${sportName} - ${dateStr} at ${format12h(b.slotTime)} | Ref ${shortRef}`,
       html: playerHtml,
       text: playerText,
       attachments,
@@ -129,13 +143,14 @@ export async function notifyBookingConfirmed(b: {
 
     // 2. Admin notification email with the same PDF attached.
     if (ADMIN_EMAIL) {
-      const courtLine = b.courtNumber ? `Court: ${b.courtNumber}\n` : "";
+      const courtLine = displayCourt ? `Location: ${displayCourt}\n` : "";
       const phoneLine = b.userPhone ? `Phone: ${b.userPhone}\n` : "";
       const adminText =
-        `New booking received.\n\n` +
+        `New ${sportName} booking received.\n\n` +
         `Customer: ${b.userName}\n` +
         `${phoneLine}` +
         `Email: ${b.userEmail}\n` +
+        `Sport: ${sportName}\n` +
         `Date: ${dateStr}\n` +
         `Time: ${slotRange}\n` +
         `${courtLine}` +
@@ -145,7 +160,7 @@ export async function notifyBookingConfirmed(b: {
 
       const adminResult = await sendMail({
         to: ADMIN_EMAIL,
-        subject: `New booking: ${b.userName} — ${b.slotDate} ${b.slotTime}`,
+        subject: `New booking: ${b.userName} (${sportName}) — ${b.slotDate} ${b.slotTime}`,
         text: adminText,
         attachments,
       });
@@ -157,9 +172,9 @@ export async function notifyBookingConfirmed(b: {
 
     // 3. Telegram alert (unchanged).
     if (TG_TOKEN && TG_CHAT) {
-      const courtText = b.courtNumber ? ` · Court ${b.courtNumber}` : "";
+      const courtText = displayCourt ? ` · ${displayCourt}` : "";
       const phoneText = b.userPhone ? ` (${b.userPhone})` : "";
-      const msg = `🎾 *New Booking*\n${b.userName}${phoneText}\n📅 ${dateStr}\n⏰ ${slotRange}${courtText}\n💰 ₹${total.toLocaleString("en-IN")}\nRef: ${shortRef}`;
+      const msg = `🎾 *New ${sportName} Booking*\n${b.userName}${phoneText}\n📅 ${dateStr}\n⏰ ${slotRange}${courtText}\n💰 ₹${total.toLocaleString("en-IN")}\nRef: ${shortRef}`;
 
       fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
         method: "POST",
@@ -179,9 +194,9 @@ export async function notifyBookingConfirmed(b: {
 
     // 4. Web-push + persistent inbox: the player's PWA + every admin device.
     try {
-      const courtText = b.courtNumber ? ` · Court ${b.courtNumber}` : "";
-      const userBody = `${dateStr} · ${slotRange}${courtText}`;
-      const adminBody = `${b.userName} — ${dateStr} ${slotRange}${courtText} · ₹${total.toLocaleString("en-IN")}`;
+      const courtText = displayCourt ? ` · ${displayCourt}` : "";
+      const userBody = `${sportName} · ${dateStr} · ${slotRange}${courtText}`;
+      const adminBody = `${b.userName} booked ${sportName} — ${dateStr} ${slotRange}${courtText} · ₹${total.toLocaleString("en-IN")}`;
       if (b.userId) {
         await sendPushToUser(b.userId, {
           title: "Booking confirmed 🎾",
@@ -191,8 +206,8 @@ export async function notifyBookingConfirmed(b: {
         }).catch(() => {});
         await recordNotification({ userId: b.userId, role: "user", title: "Booking confirmed 🎾", body: userBody, url: `/dashboard?booking=${b.id}` });
       }
-      await sendPushToAdmins({ title: "New booking", body: adminBody, url: "/admin", tag: `admin-booking-${b.id}` }).catch(() => {});
-      await recordNotification({ role: "admin", title: "New booking", body: adminBody, url: "/admin" });
+      await sendPushToAdmins({ title: `New ${sportName} booking`, body: adminBody, url: "/admin", tag: `admin-booking-${b.id}` }).catch(() => {});
+      await recordNotification({ role: "admin", title: `New ${sportName} booking`, body: adminBody, url: "/admin" });
     } catch (pushErr) {
       console.error("[push dispatch error]", pushErr);
     }
@@ -215,6 +230,7 @@ export async function notifyBookingCancelled(b: {
   courtNumber?: number;
   amount?: number;
   refunded?: boolean;
+  sport?: string;
 }): Promise<{ emailed: boolean }> {
   try {
     const dateStr = new Date(b.slotDate).toLocaleDateString("en-IN", {
@@ -226,13 +242,24 @@ export async function notifyBookingCancelled(b: {
     });
     const shortRef = b.id.slice(0, 8).toUpperCase();
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in";
-    const court = b.courtNumber ? ` · Court ${b.courtNumber}` : "";
+
+    let sportName = "Pickleball";
+    let displayCourt = b.courtNumber ? `Court ${b.courtNumber}` : "";
+    if (b.sport === "cricket") {
+      sportName = "Cricket Turf";
+      displayCourt = "Cricket Turf (Courts 1, 2 & 3)";
+    } else if (b.sport === "badminton") {
+      sportName = "Badminton";
+      displayCourt = "Badminton Court (Court 1)";
+    }
+
+    const court = displayCourt ? ` · ${displayCourt}` : "";
 
     const html =
       `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0d1426">` +
       `<div style="text-align:center;margin-bottom:16px"><img src="${siteUrl}/icons/icon-192.png" alt="Breathe Pickleball" width="64" height="64" style="border-radius:16px"/></div>` +
       `<h2 style="text-align:center;margin:0 0 8px">Booking cancelled</h2>` +
-      `<p style="color:#475569;line-height:1.6">Hi ${b.userName}, your booking for <strong>${dateStr}</strong> at <strong>${format12h(b.slotTime)}</strong>${court} has been cancelled. The slot is now open again.</p>` +
+      `<p style="color:#475569;line-height:1.6">Hi ${b.userName}, your booking for <strong>${sportName}</strong> on <strong>${dateStr}</strong> at <strong>${format12h(b.slotTime)}</strong>${court} has been cancelled. The slot is now open again.</p>` +
       (b.amount ? `<p style="color:#475569">Any eligible refund will be processed per our cancellation policy.</p>` : "") +
       `<p style="color:#94a3b8;font-size:13px">Reference: ${shortRef}</p>` +
       `<p style="text-align:center;margin-top:20px"><a href="${siteUrl}/book" style="background:#2F5BFF;color:#fff;text-decoration:none;padding:12px 24px;border-radius:9999px;font-weight:700">Book another slot</a></p>` +
@@ -241,21 +268,21 @@ export async function notifyBookingCancelled(b: {
       `</div>`;
     const text =
       `Hi ${b.userName},\n\n` +
-      `Your booking for ${dateStr} at ${format12h(b.slotTime)}${court} has been cancelled. The slot is now open again.\n\n` +
+      `Your booking for ${sportName} on ${dateStr} at ${format12h(b.slotTime)}${court} has been cancelled. The slot is now open again.\n\n` +
       (b.amount ? `Any eligible refund will be processed per our cancellation policy.\n\n` : "") +
       `Reference: ${shortRef}\n\nBook another slot: ${siteUrl}/book`;
 
     const result = await sendMail({
       to: b.userEmail,
-      subject: `Cancelled: ${dateStr} at ${format12h(b.slotTime)} | Ref ${shortRef}`,
+      subject: `Cancelled: ${sportName} - ${dateStr} at ${format12h(b.slotTime)} | Ref ${shortRef}`,
       html,
       text,
     });
     if (ADMIN_EMAIL) {
       await sendMail({
         to: ADMIN_EMAIL,
-        subject: `Booking cancelled: ${b.userName} — ${b.slotDate} ${b.slotTime}`,
-        text: `${b.userName} (${b.userEmail}) cancelled their booking on ${dateStr} at ${format12h(b.slotTime)}${court}. Ref ${shortRef}.`,
+        subject: `Booking cancelled: ${b.userName} (${sportName}) — ${b.slotDate} ${b.slotTime}`,
+        text: `${b.userName} (${b.userEmail}) cancelled their booking for ${sportName} on ${dateStr} at ${format12h(b.slotTime)}${court}. Ref ${shortRef}.`,
       }).catch((e) => console.error("[cancel admin email error]", e));
     }
 

@@ -64,6 +64,7 @@ export type InvoiceProps = {
   total: number;
   venueAddress: string;
   invoiceDate?: string;
+  sport?: string;
 };
 
 function fmtMoney(n: number): string {
@@ -85,14 +86,27 @@ export function BookingInvoice(props: InvoiceProps) {
     total,
     venueAddress,
     invoiceDate,
+    sport,
   } = props;
 
   const dateStr =
     invoiceDate ??
     new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
 
-  const courtLabel = courtNumber ? ` · Court ${courtNumber}` : "";
-  const description = `Pickleball court booking — ${slotDate}, ${slotTime}${courtLabel}, ${duration}`;
+  let sportName = "Pickleball";
+  let courtLabel = courtNumber ? ` · Court ${courtNumber}` : "";
+  if (sport === "cricket") {
+    sportName = "Cricket Turf";
+    courtLabel = " · Cricket Turf (Courts 1, 2 & 3)";
+  } else if (sport === "badminton") {
+    sportName = "Badminton";
+    courtLabel = " · Badminton Court (Court 1)";
+  } else if (sport === "pickleball") {
+    sportName = "Pickleball";
+    courtLabel = courtNumber ? ` · Court ${courtNumber}` : "";
+  }
+
+  const description = `${sportName} booking — ${slotDate}, ${slotTime}${courtLabel}, ${duration}`;
 
   return (
     <Document>

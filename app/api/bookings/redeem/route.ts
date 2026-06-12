@@ -5,7 +5,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { ensureSchema } from "@/lib/db/ensure";
 import { turso } from "@/lib/turso";
 import { getCreditBalance, adjustCredit, SLOT_MINUTES } from "@/lib/credits";
-import { rangesOverlap, isWithinHours, slotsClash } from "@/lib/slots";
+import { rangesOverlap, isWithinHours, slotsClash, cellsFor } from "@/lib/slots";
 import { bookingRequestSchema, formatZodError } from "@/lib/validation";
 
 export const runtime = "nodejs";
@@ -109,14 +109,30 @@ export async function POST(req: Request) {
       const id = uuid();
       const notes = JSON.stringify({ paid_with: "bulk_credit" });
       try {
-        await turso.execute({
-          sql: `INSERT INTO bookings (
-            id, user_id, slot_date, slot_time, duration_min, court_number,
-            guest_name, guest_phone, guest_email,
-            subtotal, gst, total, amount_paid, status, source, sport, notes, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 'confirmed', 'online', ?, ?, ?)`,
-          args: [id, session.id, s.date, s.time, duration, court, userName, userPhone, userEmail, sport, notes, now],
-        });
+        const statements = [
+          {
+            sql: `INSERT INTO bookings (
+              id, user_id, slot_date, slot_time, duration_min, court_number,
+              guest_name, guest_phone, guest_email,
+              subtotal, gst, total, amount_paid, status, source, sport, notes, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 'confirmed', 'online', ?, ?, ?)`,
+            args: [id, session.id, s.date, s.time, duration, court, userName, userPhone, userEmail, sport, notes, now],
+          }
+        ];
+
+        const targetCourts = sport === "cricket" ? [1, 2, 3] : [court];
+        const intervals = cellsFor(s.time, duration);
+        for (const c of targetCourts) {
+          for (const cellTime of intervals) {
+            statements.push({
+              sql: "INSERT INTO booking_courts (booking_id, court_number, slot_date, slot_time) VALUES (?, ?, ?, ?)",
+              args: [id, c, s.date, cellTime],
+            });
+          }
+        }
+
+        await turso.batch(statements, "write");
+
         bookingIds.push(id);
         bookedSlots.push({ id, date: s.date, time: s.time, court, durationMin: duration });
         booked++;

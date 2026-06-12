@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       let row: Record<string, unknown> | undefined;
       try {
         const r = await turso.execute({
-          sql: "SELECT id, user_id, slot_date, slot_time, court_number, amount_paid, duration_min, notes, guest_name, guest_email, status FROM bookings WHERE id = ? LIMIT 1",
+          sql: "SELECT id, user_id, slot_date, slot_time, court_number, amount_paid, duration_min, notes, guest_name, guest_email, status, sport FROM bookings WHERE id = ? LIMIT 1",
           args: [bookingId],
         });
         row = r.rows[0] as Record<string, unknown> | undefined;
@@ -47,13 +47,32 @@ export async function POST(req: Request) {
 
       const now = Date.now();
       try {
-        await turso.execute({
-          sql: "UPDATE bookings SET status = 'cancelled', cancelled_at = ? WHERE id = ?",
-          args: [now, bookingId],
-        });
+        await turso.batch([
+          {
+            sql: "UPDATE bookings SET status = 'cancelled', cancelled_at = ? WHERE id = ?",
+            args: [now, bookingId],
+          },
+          {
+            sql: "DELETE FROM booking_courts WHERE booking_id = ?",
+            args: [bookingId],
+          }
+        ], "write");
       } catch (dbErr) {
         console.error("[admin cancel booking db error]", dbErr);
         return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+      }
+
+      // Sync cancelled status to Supabase if enabled
+      try {
+        const { supabase, hasSupabase } = require("@/lib/supabase");
+        if (hasSupabase) {
+          await supabase
+            .from("bookings")
+            .update({ status: "cancelled", cancelled_at: now })
+            .eq("id", bookingId);
+        }
+      } catch (sbErr) {
+        console.error("[admin cancel supabase sync error]", sbErr);
       }
 
       // Reverse the money: Razorpay refund for paid bookings, or restore prepaid
@@ -92,6 +111,7 @@ export async function POST(req: Request) {
           courtNumber: row.court_number ? Number(row.court_number) : undefined,
           amount: row.amount_paid ? Number(row.amount_paid) : undefined,
           refunded,
+          sport: row.sport ? String(row.sport) : undefined,
         }).catch((e: unknown) => console.error("[admin cancel notify error]", e));
         if (waitUntil) waitUntil(run);
       } catch (e) {
