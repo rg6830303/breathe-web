@@ -6,6 +6,7 @@ import { Nav } from "@/components/nav";
 import { Container } from "@/components/ui";
 import { PortalHero } from "@/components/ui/portal-hero";
 import { AdminConsole } from "@/components/admin-console";
+import { LiveTraffic } from "@/components/admin/live-traffic";
 import { getAdminSession } from "@/lib/auth";
 import { TodayPanel } from "./today-panel";
 
@@ -53,6 +54,7 @@ export default async function AdminPage() {
         />
 
         <Container className="space-y-6 py-8">
+          <LiveTraffic />
           <TodayPanel />
           <AdminConsole />
         </Container>

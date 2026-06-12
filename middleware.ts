@@ -48,8 +48,10 @@ export async function middleware(req: NextRequest) {
     // deny-all robots.txt for this host, and we tag every response noindex.
     const res = NextResponse.next();
     res.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-    // Still apply the admin auth gate below by returning after gating.
-    if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
+    // Still apply the admin auth gate below by returning after gating. Skip
+    // asset-like paths (e.g. /admin.webmanifest) so the installed admin app's
+    // manifest/icons load without being bounced to login.
+    if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login") && !pathname.includes(".")) {
       const token = req.cookies.get("breathe_admin_session")?.value;
       const payload = token ? await verifyToken(token) : null;
       if (!payload || payload.role !== "admin") {
