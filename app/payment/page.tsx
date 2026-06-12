@@ -175,7 +175,7 @@ export default function PaymentPage() {
                   {cart!.items.map((it, idx) => (
                     <li key={idx} className="flex justify-between text-slatey dark:text-white/60">
                       <span>Court {it.court} · {fmt(it.time)}–{fmt(addMin(it.time, it.durationMin))}</span>
-                      <span className="font-bold text-ink dark:text-white">₹{priceForRange(it.time, it.durationMin)}</span>
+                      <span className="font-bold text-ink dark:text-white">₹{priceForRange(it.time, it.durationMin, cart!.date, cart!.sport)}</span>
                     </li>
                   ))}
                 </ul>

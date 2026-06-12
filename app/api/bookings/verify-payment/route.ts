@@ -5,7 +5,7 @@ import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { calculateTotals } from "@/lib/pricing";
-import { priceForRange, rangesOverlap } from "@/lib/slots";
+import { priceForRange, rangesOverlap, slotsClash } from "@/lib/slots";
 import { refundPayment, razorpayConfigured } from "@/lib/razorpay";
 import { adjustCredit, BULK_PACKAGE } from "@/lib/credits";
 
@@ -92,18 +92,34 @@ export async function POST(req: Request) {
     const clampCourt = (c: unknown) =>
       Number.isFinite(Number(c)) ? Math.max(1, Math.min(9, Number(c))) : 1;
 
+    const normalizedSlots = slots.map((s) => {
+      let court = s.court;
+      if (sport === "cricket" || sport === "badminton") {
+        court = 1; // Cricket and Badminton are forced to Court 1
+      }
+      return { ...s, court };
+    });
+
     // All-or-nothing availability pre-check: if ANY requested slot was taken
     // between order creation and payment confirmation, refund and book nothing
     // (the partial unique index is the hard backstop for races past this point).
-    for (const s of slots) {
-      const court = clampCourt(s.court);
+    for (const s of normalizedSlots) {
       try {
         const ex = await turso.execute({
-          sql: "SELECT slot_time, duration_min FROM bookings WHERE slot_date = ? AND court_number = ? AND status = 'confirmed'",
-          args: [s.date, court],
+          sql: "SELECT slot_time, duration_min, court_number, sport FROM bookings WHERE slot_date = ? AND status = 'confirmed'",
+          args: [s.date],
         });
         const clash = ex.rows.some((row) =>
-          rangesOverlap(s.time, slotDur(s), String(row.slot_time), Number(row.duration_min) || 60),
+          slotsClash(
+            s.court,
+            s.time,
+            slotDur(s),
+            sport,
+            Number(row.court_number) || 1,
+            String(row.slot_time),
+            Number(row.duration_min) || 60,
+            row.sport ? String(row.sport) : "pickleball",
+          ),
         );
         if (clash) {
           const refunded = await refundFull("slot taken before confirmation");
@@ -121,13 +137,13 @@ export async function POST(req: Request) {
       }
     }
 
-    for (const s of slots) {
+    for (const s of normalizedSlots) {
       const duration = slotDur(s);
-      const price = priceForRange(s.time, duration);
+      const price = priceForRange(s.time, duration, s.date, sport as any);
       const totals = calculateTotals(price, addonTotal / slotCount);
       const id = uuid();
       bookingIds.push(id);
-      const court = Number.isFinite(Number(s.court)) ? Math.max(1, Math.min(9, Number(s.court))) : 1;
+      const court = clampCourt(s.court);
 
       const notesObj = {
         razorpay_order_id: orderId,
@@ -231,7 +247,7 @@ export async function POST(req: Request) {
         const payloadFor = (i: number) => {
           const s = slots[i];
           const duration = slotDur(s);
-          const price = priceForRange(s.time, duration);
+          const price = priceForRange(s.time, duration, s.date, sport as any);
           const totals = calculateTotals(price, addonTotal / slotCount);
           const court = Number.isFinite(Number(s.court))
             ? Math.max(1, Math.min(9, Number(s.court)))

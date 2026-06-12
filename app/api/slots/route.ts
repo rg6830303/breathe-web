@@ -133,22 +133,30 @@ export async function GET(request: NextRequest) {
     const occupancy = new Map<string, CellState>();
     const key = (court: number, time: string) => `${court}@${time}`;
 
+    const targetSport = (params.get("sport") ?? "pickleball") as "pickleball" | "badminton" | "cricket";
+
     // 1. Confirmed bookings → booked (60-min overlap honored)
     for (const b of bookingsResult.rows) {
       const startTime = String(b.slot_time).slice(0, 5);
       const dur = Number(b.duration_min) || 60;
       const court = Number(b.court_number) || 1;
+      const bSport = b.sport ? String(b.sport) : "pickleball";
       const notes = b.notes ? String(b.notes) : null;
       const isAdminBlockLegacy =
         notes === "Admin block" || (notes ?? "").toLowerCase().includes("admin block");
       const state: CellState = isAdminBlockLegacy ? "blocked" : "booked";
 
-      for (let offset = 0; offset < dur; offset += 30) {
-        const cellTime = addMinutes(startTime, offset);
-        const k = key(court, cellTime);
-        const prev = occupancy.get(k);
-        if (prev === "blocked") continue;
-        occupancy.set(k, state);
+      // Cricket takes courts 1, 2, and 3
+      const targetCourts = bSport === "cricket" ? [1, 2, 3] : [court];
+
+      for (const targetCourt of targetCourts) {
+        for (let offset = 0; offset < dur; offset += 30) {
+          const cellTime = addMinutes(startTime, offset);
+          const k = key(targetCourt, cellTime);
+          const prev = occupancy.get(k);
+          if (prev === "blocked") continue;
+          occupancy.set(k, state);
+        }
       }
     }
 
@@ -177,21 +185,75 @@ export async function GET(request: NextRequest) {
     // A neighbour's ±30-min extension occupies just one half of an hour, but it
     // still makes that hour un-bookable as a full slot — so we OR the two cells.
     const slots: Slot[] = [];
+    const responseCourts = targetSport === "cricket" ? [1] : targetSport === "badminton" ? [1] : [...COURTS];
+
     for (const time of allTimes) {
-      for (const court of COURTS) {
-        const first = occupancy.get(key(court, time));
-        const second = occupancy.get(key(court, addMinutes(time, 30)));
+      if (targetSport === "cricket") {
+        // Cricket: combined status of courts 1, 2, and 3
+        const states: Slot["status"][] = [];
+        for (const court of [1, 2, 3]) {
+          const first = occupancy.get(key(court, time));
+          const second = occupancy.get(key(court, addMinutes(time, 30)));
+          const st: Slot["status"] =
+            first === "booked" || second === "booked"
+              ? "booked"
+              : first === "blocked" || second === "blocked"
+                ? "blocked"
+                : "open";
+          states.push(st);
+        }
+
+        const status: Slot["status"] = states.includes("booked")
+          ? "booked"
+          : states.includes("blocked")
+            ? "blocked"
+            : "open";
+
+        slots.push({
+          court: 1,
+          time,
+          status,
+          price: getSlotPrice(time, date, "cricket"),
+        });
+      } else if (targetSport === "badminton") {
+        // Badminton: Court 1 only
+        const first = occupancy.get(key(1, time));
+        const second = occupancy.get(key(1, addMinutes(time, 30)));
         const status: Slot["status"] =
           first === "booked" || second === "booked"
             ? "booked"
             : first === "blocked" || second === "blocked"
               ? "blocked"
               : "open";
-        slots.push({ court, time, status, price: getSlotPrice(time) });
+
+        slots.push({
+          court: 1,
+          time,
+          status,
+          price: getSlotPrice(time, date, "badminton"),
+        });
+      } else {
+        // Pickleball: all courts individually
+        for (const court of COURTS) {
+          const first = occupancy.get(key(court, time));
+          const second = occupancy.get(key(court, addMinutes(time, 30)));
+          const status: Slot["status"] =
+            first === "booked" || second === "booked"
+              ? "booked"
+              : first === "blocked" || second === "blocked"
+                ? "blocked"
+                : "open";
+          slots.push({
+            court,
+            time,
+            status,
+            price: getSlotPrice(time, date, "pickleball"),
+          });
+        }
       }
     }
 
-    return NextResponse.json({ date, courts: [...COURTS], slots });
+    return NextResponse.json({ date, courts: responseCourts, slots });
   } catch (err: unknown) {
     console.error("[slots route error]", err);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });

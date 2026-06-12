@@ -30,9 +30,16 @@ export function cellsFor(startTime: string, durationMin: number): string[] {
 /** Authoritative price for an arbitrary range, charged per half-hour so a
  *  standard 60-min slot equals getSlotPrice() and each ±30-min extension adds
  *  exactly half of the hour it lands in. */
-export function priceForRange(startTime: string, durationMin: number): number {
+export function priceForRange(
+  startTime: string,
+  durationMin: number,
+  dateStr?: string,
+  sport: "pickleball" | "badminton" | "cricket" = "pickleball",
+): number {
   let total = 0;
-  for (const cell of cellsFor(startTime, durationMin)) total += getSlotPrice(cell) / 2;
+  for (const cell of cellsFor(startTime, durationMin)) {
+    total += getSlotPrice(cell, dateStr, sport) / 2;
+  }
   return Math.round(total);
 }
 
@@ -49,6 +56,28 @@ export function rangesOverlap(
   return a < b + (bDur || 60) && b < a + (aDur || 60);
 }
 
+/** Check if slot A overlaps with slot B in both time and courts, considering
+ *  that Cricket takes courts 1, 2, 3, and Badminton is on Court 1. */
+export function slotsClash(
+  aCourt: number,
+  aStart: string,
+  aDur: number,
+  aSport: string,
+  bCourt: number,
+  bStart: string,
+  bDur: number,
+  bSport: string,
+): boolean {
+  // 1. Time overlap check
+  if (!rangesOverlap(aStart, aDur, bStart, bDur)) return false;
+
+  // 2. Court overlap check
+  const aCourts = aSport === "cricket" ? [1, 2, 3] : [aCourt];
+  const bCourts = bSport === "cricket" ? [1, 2, 3] : [bCourt];
+
+  return aCourts.some((ac) => bCourts.includes(ac));
+}
+
 /** Clamp/validate a requested range against club hours. Returns null if it
  *  falls outside 05:00–23:00 or has a bad duration. */
 export function isWithinHours(startTime: string, durationMin: number): boolean {
@@ -56,3 +85,4 @@ export function isWithinHours(startTime: string, durationMin: number): boolean {
   const end = start + (durationMin || 60);
   return start >= OPEN_MIN && end <= CLOSE_MIN && durationMin >= 30 && durationMin % 30 === 0;
 }
+
