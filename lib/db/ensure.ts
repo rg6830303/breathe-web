@@ -293,6 +293,18 @@ export async function ensureSchema(): Promise<void> {
   if (ensuring) return ensuring;
   ensuring = (async () => {
     try {
+      // FAST PATH: if a core table already exists, the schema is provisioned —
+      // mark ensured and skip applySchema entirely. applySchema runs ~47
+      // CREATE TABLE/ALTER/INDEX statements PLUS a booking_courts backfill scan;
+      // running that on every cold serverless instance is what made admin tabs
+      // (and logins) crawl. One cheap existence check replaces all of it.
+      try {
+        await turso.execute("SELECT 1 FROM users LIMIT 1");
+        ensured = true;
+        return;
+      } catch {
+        // Core table missing (genuinely fresh DB) → fall through to full setup.
+      }
       await applySchema();
       ensured = true;
     } catch (err) {
