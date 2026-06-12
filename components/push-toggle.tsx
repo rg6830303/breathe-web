@@ -135,6 +135,26 @@ export function PushToggle({ className = "" }: { className?: string }) {
     }
   }
 
+  async function sendTest() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/push/test", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; sent?: number; error?: string };
+      if (!res.ok || data.ok === false) {
+        setMsg(data.error || `Test failed (HTTP ${res.status}).`);
+      } else if ((data.sent ?? 0) > 0) {
+        setMsg(`Test sent to ${data.sent} device(s) — check your notification shade.`);
+      } else {
+        setMsg("No subscribed device found for your account. Toggle off and on, then retry.");
+      }
+    } catch {
+      setMsg("Couldn't send a test notification. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function disable() {
     setBusy(true);
     setMsg(null);
@@ -213,6 +233,18 @@ export function PushToggle({ className = "" }: { className?: string }) {
             ? "On iPhone/iPad: open in Safari → Share → Add to Home Screen, then open the installed app."
             : "Notifications are blocked at the browser level."}
         </div>
+      )}
+
+      {on && (
+        <button
+          type="button"
+          onClick={sendTest}
+          disabled={busy}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full border-2 border-ink/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-wide text-ink transition hover:border-brand hover:text-brand disabled:opacity-60 dark:border-white/15 dark:text-white dark:hover:border-brand-300 dark:hover:text-brand-300"
+        >
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />}
+          Send a test notification
+        </button>
       )}
 
       {msg && <p className="mt-3 text-xs font-semibold text-brand dark:text-brand-300">{msg}</p>}

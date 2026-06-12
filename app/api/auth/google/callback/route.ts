@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { cookies } from "next/headers";
 import { v4 as uuid } from "uuid";
 import bcrypt from "bcryptjs";
@@ -160,6 +160,20 @@ export async function GET(req: Request) {
         } catch (e) {
           console.error("[google supabase mirror error]", e);
         }
+      }
+      // First-time Google account → welcome email (after the response, so the
+      // redirect to the dashboard isn't delayed by SMTP).
+      if (createdNew) {
+        const welcomeName = name;
+        const welcomeEmail = email;
+        after(async () => {
+          try {
+            const { notifyWelcome } = require("@/lib/notifications");
+            await notifyWelcome({ email: welcomeEmail, name: welcomeName });
+          } catch (e) {
+            console.error("[google welcome email error]", e);
+          }
+        });
       }
     }
 

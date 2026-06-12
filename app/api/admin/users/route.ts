@@ -68,8 +68,10 @@ export async function POST(req: Request) {
   if (!ok) return NextResponse.json({ error: "Could not create the user." }, { status: 500 });
 
   try {
-    const { notifyAdminAction } = require("@/lib/notifications");
+    const { notifyAdminAction, notifyWelcome } = require("@/lib/notifications");
     await notifyAdminAction("Member added", `${full_name} · ${email}${phone ? ` · ${phone}` : ""}`, { actor: admin.email });
+    // The new member gets the same welcome email as a self-signup.
+    await notifyWelcome({ email, name: full_name }).catch(() => {});
   } catch (e) {
     console.error("[admin user create notify error]", e);
   }
