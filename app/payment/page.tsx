@@ -175,7 +175,7 @@ export default function PaymentPage() {
                   {cart!.items.map((it, idx) => (
                     <li key={idx} className="flex justify-between text-slatey dark:text-white/60">
                       <span>Court {it.court} · {fmt(it.time)}–{fmt(addMin(it.time, it.durationMin))}</span>
-                      <span className="font-bold text-ink dark:text-white">₹{priceForRange(it.time, it.durationMin, cart!.date, cart!.sport)}</span>
+                      <span className="font-bold text-ink dark:text-white">₹{priceForRange(cart!.sport, cart!.date, it.time, it.durationMin)}</span>
                     </li>
                   ))}
                 </ul>
@@ -198,7 +198,7 @@ export default function PaymentPage() {
                       </button>
                     )}
                     <button type="button" onClick={payNow} disabled={paying} className={`${hasCredit ? "btn-outline" : "btn-primary"} w-full justify-center`}>
-                      {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Pay ₹{total} with Razorpay
+                      {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Pay ₹200 Advance · Due ₹{Math.max(0, total - 200)} at venue
                     </button>
                   </div>
                 )}

@@ -88,7 +88,6 @@ export async function notifyBookingConfirmed(b: {
     const amountPaid = b.amountPaid !== undefined ? b.amountPaid : total;
     const dueAmount = Math.max(0, total - amountPaid);
     const sport = b.sport || "pickleball";
-    const sportName = sport.charAt(0).toUpperCase() + sport.slice(1);
 
     // No GST charged — subtotal equals total.
     const subtotal = b.subtotal ?? total;
@@ -132,18 +131,17 @@ export async function notifyBookingConfirmed(b: {
     let sportEmoji = "🎾";
     let sportName = "Pickleball";
     let displayCourt = b.courtNumber ? `Court ${b.courtNumber}` : "";
-    if (b.sport === "cricket") {
+    if (sport === "cricket") {
       sportEmoji = "🏏";
       sportName = "Cricket Turf";
       displayCourt = "Cricket Turf (Courts 1, 2 & 3)";
-    } else if (b.sport === "badminton") {
+    } else if (sport === "badminton") {
       sportEmoji = "🏸";
       sportName = "Badminton";
       displayCourt = "Badminton Court (Court 1)";
     }
 
     // 1. Player confirmation email with PDF attached.
-    const sportEmoji = sport === "cricket" ? "🏏" : sport === "badminton" ? "🏸" : "🎾";
     const courtRow = sport === "cricket"
       ? `<tr><td style="padding:6px 0;color:#64748b">Court</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">Cricket Turf (Full Arena)</td></tr>`
       : b.courtNumber

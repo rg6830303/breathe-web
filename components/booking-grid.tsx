@@ -71,7 +71,6 @@ const ADDONS: Addon[] = [];
 export function BookingGrid() {
   const router = useRouter();
   const [date, setDate] = useState<string>(todayIST());
-  const [sport, setSport] = useState<"pickleball" | "badminton" | "cricket">("pickleball");
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selected, setSelected] = useState<Slot[]>([]);
   // Per-slot ±30-min extensions, keyed by `${court}-${time}`.
@@ -90,12 +89,6 @@ export function BookingGrid() {
   // cricket and badminton on the same courts).
   const [sport, setSport] = useState<"pickleball" | "cricket" | "badminton">("pickleball");
   const [activeCourts, setActiveCourts] = useState<number[]>([1, 2, 3]);
-
-  const activeCourts = useMemo(() => {
-    if (sport === "badminton") return [1];
-    if (sport === "cricket") return [1];
-    return [1, 2, 3];
-  }, [sport]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -165,7 +158,7 @@ export function BookingGrid() {
         court: s.court,
         time: ef.startTime,
         durationMin: ef.durationMin,
-        price: priceForRange(ef.startTime, ef.durationMin, date, sport),
+        price: priceForRange(sport, date, ef.startTime, ef.durationMin),
       };
     });
     saveCart({ date, sport, items });
@@ -222,6 +215,32 @@ export function BookingGrid() {
   }
 
   useEffect(refreshSlots, [date, sport]);
+
+  // Live availability: quietly re-fetch slots (without disturbing the user's
+  // current selection) every 25s and whenever the tab regains focus, so a slot
+  // booked by someone else shows as taken almost immediately.
+  useEffect(() => {
+    let active = true;
+    const quiet = () => {
+      fetch(`/api/slots?date=${date}&sport=${sport}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (active && Array.isArray(d.slots)) setSlots(d.slots);
+          if (active && d.courts) setActiveCourts(d.courts);
+        })
+        .catch(() => {});
+    };
+    const id = setInterval(quiet, 25000);
+    const onVis = () => document.visibilityState === "visible" && quiet();
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", quiet);
+    return () => {
+      active = false;
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", quiet);
+    };
+  }, [date, sport]);
 
   const minDate = todayIST();
 
@@ -292,7 +311,7 @@ export function BookingGrid() {
         amount: order.amount,
         currency: order.currency,
         name: "Breathe Pickleball",
-        description: `${sport.charAt(0).toUpperCase() + sport.slice(1)} booking · ${selected.length} slot${selected.length > 1 ? "s" : ""}`,
+        description: `Court booking · ${selected.length} slot${selected.length > 1 ? "s" : ""}`,
         order_id: order.orderId,
         prefill: { name: account.name, email: account.email },
         theme: { color: "#2F5BFF" },
@@ -350,99 +369,20 @@ export function BookingGrid() {
   }
 
   return (
-    <div className="grid gap-6 pb-24 lg:grid-cols-[1fr_360px] lg:pb-0">
-      {/* ---- Grid panel ---- */}
-      <section className="overflow-hidden rounded-3xl border-2 border-ink/10 bg-white dark:border-white/10 dark:bg-[#111c38]">
-
-        {/* Login nudge banner */}
-        {authLoaded && !account && (
-          <div className="flex items-center justify-between gap-3 border-b-2 border-brand/10 bg-brand/5 px-4 py-3 text-xs dark:border-white/10 dark:bg-white/5 sm:text-sm">
-            <span className="font-bold text-ink dark:text-white">Log in to confirm a booking. You can still browse availability.</span>
-            <Link
-              href="/login?next=/book"
-              className="btn-primary py-1.5 text-xs"
-            >
-              <LogIn className="h-3.5 w-3.5" /> Log in
-            </Link>
-          </div>
-        )}
-
-        {/* Header row */}
-        <div className="flex flex-col gap-4 border-b-2 border-ink/10 p-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <div className="hidden items-center gap-3 sm:flex">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-white">
-              <CalendarDays className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="font-display text-xl font-extrabold tracking-tight text-ink dark:text-white">Book a court</h2>
-              <p className="text-xs font-semibold text-slatey dark:text-white/50">1-hour slots · extend ±30 min · 3 courts</p>
-            </div>
-          </div>
-          <div className="flex items-center justify-between gap-3 sm:justify-end">
-            <span className="flex items-center gap-2 text-sm font-bold text-ink dark:text-white sm:hidden">
-              <CalendarDays className="h-4 w-4 text-brand" /> Date:
-            </span>
-            <input
-              type="date"
-              min={minDate}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="rounded-xl border-2 border-ink/10 bg-white px-3 py-2.5 text-sm font-bold text-ink outline-none transition focus:border-brand dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-brand-300"
-            />
-          </div>
-        </div>
-
-        {/* Sport selector */}
-        <div className="flex flex-wrap gap-2 border-b border-ink/5 bg-ink/[0.01] px-5 py-3.5 dark:border-white/5 dark:bg-white/[0.01]">
-          {(["pickleball", "badminton", "cricket"] as const).map((s) => {
-            const label = s === "pickleball" ? "🎾 Pickleball" : s === "badminton" ? "🏸 Badminton" : "🏏 Cricket Turf";
-            const isSel = sport === s;
-            return (
-              <button
-                key={s}
-                type="button"
-                onClick={() => {
-                  setSport(s);
-                  setMobileCourt(1);
-                }}
-                className={`rounded-xl px-4 py-2 text-xs font-extrabold uppercase tracking-wide transition ${
-                  isSel
-                    ? "bg-brand text-white shadow-md shadow-brand/20 dark:bg-brand-300 dark:text-ink"
-                    : "border-2 border-ink/10 bg-white text-ink/60 hover:border-brand/40 hover:text-brand dark:border-white/10 dark:bg-white/5 dark:text-white/50 dark:hover:border-brand-300/40 dark:hover:text-brand-300"
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
-          <div className="ml-auto flex items-center text-[10px] font-extrabold uppercase tracking-wider text-lime-dark bg-lime/10 px-3 py-1.5 rounded-xl dark:bg-lime/20">
-            ₹200 Advance Only
-          </div>
-        </div>
-
-        {/* Date + legend row */}
-        <div className="flex flex-col gap-3 border-b border-ink/5 bg-ink/[0.02] px-5 py-3 text-xs dark:border-white/5 dark:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-between">
-          <span className="font-extrabold text-ink dark:text-white">{dateLabel(date)}</span>
-          <div className="flex flex-wrap items-center gap-3 text-slatey dark:text-white/50">
-            <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded border-2 border-lime/60 bg-lime/20" /> Open
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded bg-brand" /> Selected
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded bg-[#E24B4A]" /> Booked
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded bg-ink/30 dark:bg-white/20" /> Blocked
-            </span>
-          </div>
-        </div>
-
-        {/* Band picker */}
-        <div className="flex gap-2 overflow-x-auto border-b border-ink/5 bg-ink/[0.02] px-5 py-3 dark:border-white/5 dark:bg-white/[0.02]">
-          {BANDS.map((b) => {
-            const isActive = band === b.key;
+    <div className="space-y-6 pb-24">
+      {/* Step 1: Choose Sport */}
+      <section className="overflow-hidden rounded-3xl border-2 border-ink/10 bg-white p-5 dark:border-white/10 dark:bg-[#111c38]">
+        <h2 className="font-display text-lg font-extrabold tracking-tight text-ink dark:text-white mb-4 flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-brand text-white text-xs font-bold animate-pulse">1</span>
+          Choose your sport
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {([
+            { key: "pickleball", label: "Pickleball", emoji: "🎾", sub: "3 Courts Available", desc: "Book individual courts. Complimentary paddles & balls included.", price: "₹600 – ₹1000 / hr" },
+            { key: "badminton", label: "Badminton", emoji: "🏸", sub: "Court 1 Only", desc: "Book Court 1 for badminton games. Same pricing as pickleball.", price: "₹600 – ₹1000 / hr" },
+            { key: "cricket", label: "Cricket Turf", emoji: "🏏", sub: "Entire Turf (3 Courts)", desc: "Book all 3 courts combined. Premium turf experience.", price: "₹1500 – ₹2500 / hr" },
+          ] as const).map((s) => {
+            const isActive = sport === s.key;
             return (
               <button
                 key={s.key}
@@ -473,56 +413,36 @@ export function BookingGrid() {
         </div>
       </section>
 
-        {/* Mobile: court tabs */}
-        <div className="lg:hidden">
-          {activeCourts.length > 1 && (
-            <div className="flex gap-1 border-b-2 border-ink/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#111c38]">
-              {activeCourts.map((c) => {
-                const isActive = mobileCourt === c;
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setMobileCourt(c)}
-                    className={`flex-1 rounded-full px-3 py-2 text-xs font-extrabold uppercase tracking-wide transition ${
-                      isActive
-                        ? "bg-brand text-white"
-                        : "text-ink/60 hover:bg-brand/5 dark:text-white/50 dark:hover:bg-white/5"
-                    }`}
-                  >
-                    Court {c}
-                  </button>
-                );
-              })}
+      {/* Step 2: Slot booking */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:pb-0">
+        {/* ---- Grid panel ---- */}
+        <section className="overflow-hidden rounded-3xl border-2 border-ink/10 bg-white dark:border-white/10 dark:bg-[#111c38]">
+
+          {/* Login nudge banner */}
+          {authLoaded && !account && (
+            <div className="flex items-center justify-between gap-3 border-b-2 border-brand/10 bg-brand/5 px-4 py-3 text-xs dark:border-white/10 dark:bg-white/5 sm:text-sm">
+              <span className="font-bold text-ink dark:text-white">Log in to confirm a booking. You can still browse availability.</span>
+              <Link
+                href="/login?next=/book"
+                className="btn-primary py-1.5 text-xs"
+              >
+                <LogIn className="h-3.5 w-3.5" /> Log in
+              </Link>
             </div>
-          )}
-          {loading ? (
-            <div className="space-y-2 p-3">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-14 animate-pulse rounded-xl bg-ink/5 dark:bg-white/5" />
-              ))}
-            </div>
-          ) : (
-            <ul className="divide-y divide-ink/5 dark:divide-white/5">
-              {times.map((t) => {
-                const targetCourt = activeCourts.length === 1 ? 1 : mobileCourt;
-                const cell = findSlot(targetCourt, t);
-                if (!cell) return null;
-                return <MobileRow key={t} slot={cell} selected={isSelected(cell)} onToggle={() => toggle(cell)} />;
-              })}
-            </ul>
           )}
 
-        {/* Desktop grid */}
-        <div className="hidden lg:block">
-          <div
-            className="grid border-y border-ink/5 bg-ink/[0.02] text-center text-[0.65rem] font-extrabold uppercase tracking-[0.15em] text-slatey dark:border-white/5 dark:bg-white/[0.02]"
-            style={{ gridTemplateColumns: `72px repeat(${activeCourts.length}, minmax(0, 1fr))` }}
-          >
-            <div className="p-3">Time</div>
-            {activeCourts.map((c) => (
-              <div key={c} className="border-l border-ink/5 p-3 text-brand dark:border-white/5 dark:text-brand-300">
-                {sport === "cricket" ? "Cricket Turf" : sport === "badminton" ? "Badminton Court" : `Court ${c}`}
+          {/* Header row */}
+          <div className="flex flex-col gap-4 border-b-2 border-ink/10 p-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div className="hidden items-center gap-3 sm:flex">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-white">
+                <CalendarDays className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="font-display text-xl font-extrabold tracking-tight text-ink dark:text-white flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand/20 text-brand text-xs font-bold dark:bg-brand-300/20 dark:text-brand-300">2</span>
+                  Select slots
+                </h2>
+                <p className="text-xs font-semibold text-slatey dark:text-white/50">1-hour slots · extend ±30 min</p>
               </div>
             </div>
             <div className="flex items-center justify-between gap-3 sm:justify-end">
@@ -590,27 +510,14 @@ export function BookingGrid() {
                 ))}
               </div>
             ) : (
-              times.map((t) => (
-                <div
-                  key={t}
-                  className="grid border-b border-ink/5 dark:border-white/5"
-                  style={{ gridTemplateColumns: `72px repeat(${activeCourts.length}, minmax(0, 1fr))` }}
-                >
-                  <div className="sticky left-0 z-10 flex items-center justify-center bg-white p-2 text-center text-[0.65rem] font-extrabold uppercase tracking-wide text-slatey dark:bg-[#111c38] dark:text-white/40">
-                    {timeLabel(t)}
-                  </div>
-                  {activeCourts.map((c) => {
-                    const cell = findSlot(c, t);
-                    if (!cell) return <div key={c} className="border-l border-ink/5 dark:border-white/5" />;
-                    const sel = isSelected(cell);
-                    return (
-                      <div key={`${c}-${t}`} className="m-1.5">
-                        <SlotButton slot={cell} selected={sel} onClick={() => toggle(cell)} />
-                      </div>
-                    );
-                  })}
-                </div>
-              ))
+              <ul className="divide-y divide-ink/5 dark:divide-white/5">
+                {times.map((t) => {
+                  const activeCourt = activeCourts.includes(mobileCourt) ? mobileCourt : activeCourts[0] || 1;
+                  const cell = findSlot(activeCourt, t);
+                  if (!cell) return null;
+                  return <MobileRow key={t} slot={cell} selected={isSelected(cell)} onToggle={() => toggle(cell)} sport={sport} />;
+                })}
+              </ul>
             )}
           </div>
 
@@ -689,7 +596,13 @@ export function BookingGrid() {
                 className="rounded-2xl border-2 border-brand/15 bg-brand/5 p-3 dark:border-brand-300/15 dark:bg-brand/10"
               >
                 <div className="flex justify-between text-sm font-extrabold text-ink dark:text-white">
-                  <span>Court {s.court}</span>
+                  <span>
+                    {sport === "cricket"
+                      ? "Cricket Turf"
+                      : sport === "badminton"
+                        ? "Badminton Court"
+                        : `Court ${s.court}`}
+                  </span>
                   <span className="text-brand dark:text-brand-300">₹{priceForRange(sport, date, ef.startTime, ef.durationMin)}</span>
                 </div>
                 <p className="text-xs text-slatey dark:text-white/50">
@@ -730,22 +643,12 @@ export function BookingGrid() {
         {/* Totals */}
         <div className="mt-4 space-y-2 border-t-2 border-ink/10 pt-4 text-sm dark:border-white/10">
           <div className="flex justify-between text-slatey dark:text-white/50">
-            <span>Total Court Bill</span>
-            <span className="font-bold text-ink dark:text-white">₹{totals.total}</span>
-          </div>
-          <div className="flex justify-between text-slatey dark:text-white/50">
-            <span>Advance Paid Online</span>
-            <span className="font-bold text-lime-dark">₹{selected.length > 0 ? 200 : 0}</span>
-          </div>
-          <div className="flex justify-between border-t border-dashed border-ink/10 pt-2 text-slatey dark:border-white/10 dark:text-white/50">
-            <span>Due at Venue</span>
-            <span className="font-bold text-ink dark:text-white">
-              ₹{selected.length > 0 ? Math.max(0, totals.total - 200) : 0}
-            </span>
+            <span>Subtotal</span>
+            <span className="font-bold text-ink dark:text-white">₹{totals.subtotal}</span>
           </div>
           <div className="mt-2 flex items-center justify-between rounded-2xl bg-ink px-4 py-3 text-lg font-extrabold text-white dark:bg-white dark:text-ink">
-            <span>Payable Now</span>
-            <span>₹{selected.length > 0 ? 200 : 0}</span>
+            <span>Total</span>
+            <span>₹{totals.total}</span>
           </div>
         </div>
 
@@ -779,37 +682,18 @@ export function BookingGrid() {
           </div>
         )}
 
-        {/* CTA button */}
-        {hasEnoughCredit ? (
-          <button
-            type="button"
-            onClick={bookWithCredit}
-            disabled={paying}
-            className="btn-accent mt-4 w-full justify-center"
-          >
-            {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Book {selected.length} slot{selected.length > 1 ? "s" : ""} with prepaid hours
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={payNow}
-            disabled={selected.length === 0 || paying}
-            className="btn-primary mt-4 w-full justify-center disabled:cursor-not-allowed disabled:bg-ink/30 disabled:shadow-none dark:disabled:bg-white/20"
-          >
-            {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {selected.length === 0
-              ? "Select a slot to continue"
-              : !account || account.role !== "user"
-                ? "Log in to Confirm & Pay"
-                : `Confirm & Pay ₹200 Advance`}
-          </button>
-        )}
+        {/* CTA → review the cart before payment */}
+        <button
+          type="button"
+          onClick={proceedToCart}
+          disabled={selected.length === 0}
+          className="btn-primary mt-4 w-full justify-center disabled:cursor-not-allowed disabled:bg-ink/30 disabled:shadow-none dark:disabled:bg-white/20"
+        >
+          {selected.length === 0 ? "Select a slot to continue" : `Proceed to booking · Pay ₹200 Advance`}
+        </button>
 
         <p className="mt-3 text-[0.68rem] leading-5 text-slatey dark:text-white/40">
-          {hasEnoughCredit
-            ? "Booked instantly from your prepaid bulk-hours balance — no payment needed."
-            : "Pay ₹200 advance online to confirm slots. The remaining balance is payable at the venue after play."}
+          Review your slots in the cart, then pay securely by Razorpay or with prepaid bulk hours.
         </p>
       </aside>
 
@@ -823,17 +707,16 @@ export function BookingGrid() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-slatey dark:text-white/50">
-                Pay Advance · {selected.length} slot{selected.length > 1 ? "s" : ""}
+                {selected.length} slot{selected.length > 1 ? "s" : ""} · Total ₹{totals.total}
               </div>
-              <div className="font-display text-2xl font-extrabold text-ink dark:text-white">₹200</div>
+              <div className="font-display text-2xl font-extrabold text-ink dark:text-white">₹200 Advance</div>
             </div>
             <button
               type="button"
               onClick={proceedToCart}
               className="btn-primary max-w-[60%] flex-1 justify-center disabled:opacity-60"
             >
-              {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {!account || account.role !== "user" ? "Log in to Pay" : "Pay ₹200 Advance"}
+              Go to booking
             </button>
           </div>
         </motion.div>

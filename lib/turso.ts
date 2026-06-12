@@ -113,7 +113,7 @@ async function pgExecute(arg: InStmt) {
   };
 }
 
-async function pgBatch(statements: Array<string | { sql: string; args?: unknown[] }>) {
+async function pgBatch(statements: Array<string | { sql: string; args?: unknown[] }>, _mode?: string) {
   const client = getPg();
   for (const st of statements) {
     const text = typeof st === "string" ? st : st.sql;
@@ -141,14 +141,14 @@ async function ensureSchemaLazy(): Promise<void> {
 }
 
 export const turso = {
-  execute: (async (arg: Parameters<Client["execute"]>[0]) => {
+  execute: (async (arg: Parameters<typeof pgExecute>[0]) => {
     await ensureSchemaLazy();
-    return getClient().execute(arg);
-  }) as Client["execute"],
-  batch: (async (statements: Parameters<Client["batch"]>[0], mode?: Parameters<Client["batch"]>[1]) => {
+    return pgExecute(arg);
+  }) as typeof pgExecute,
+  batch: async (statements: Parameters<typeof pgBatch>[0], mode?: string) => {
     await ensureSchemaLazy();
-    return getClient().batch(statements, mode);
-  }) as Client["batch"],
+    return pgBatch(statements, mode);
+  },
 };
 
 /**

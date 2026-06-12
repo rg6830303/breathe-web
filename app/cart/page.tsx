@@ -85,7 +85,7 @@ export default function CartPage() {
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="font-display text-base font-extrabold text-brand dark:text-brand-300">
-                            ₹{priceForRange(it.time, it.durationMin, cart!.date, cart!.sport)}
+                            ₹{priceForRange(cart!.sport, cart!.date, it.time, it.durationMin)}
                           </span>
                           <button type="button" onClick={() => removeItem(idx)} aria-label="Remove" className="rounded-lg p-1.5 text-slatey transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20">
                             <Trash2 className="h-4 w-4" />

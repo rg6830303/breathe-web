@@ -129,26 +129,25 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const sportParam = params.get("sport") ?? "pickleball";
+    const sportParam = (params.get("sport") ?? "pickleball") as "pickleball" | "badminton" | "cricket";
 
     type CellState = "blocked" | "booked";
     const occupancy = new Map<string, CellState>();
     const key = (court: number, time: string) => `${court}@${time}`;
-
-    const targetSport = (params.get("sport") ?? "pickleball") as "pickleball" | "badminton" | "cricket";
 
     // 1. Confirmed bookings → booked (60-min overlap honored)
     for (const b of bookingsResult.rows) {
       const startTime = String(b.slot_time).slice(0, 5);
       const dur = Number(b.duration_min) || 60;
       const court = Number(b.court_number) || 1;
-      const bSport = b.sport ? String(b.sport) : "pickleball";
       const notes = b.notes ? String(b.notes) : null;
-      let notesObj: any = {};
+      let notesObj: Record<string, unknown> = {};
       try {
         if (notes) notesObj = JSON.parse(notes);
       } catch {}
-      const bSport = notesObj.sport || "pickleball";
+      // Prefer the dedicated sport column (newer bookings), fall back to notes JSON
+      const bSport = (b.sport ? String(b.sport) : null) || (notesObj.sport ? String(notesObj.sport) : "pickleball");
+
 
       const isAdminBlockLegacy =
         notes === "Admin block" || (notes ?? "").toLowerCase().includes("admin block");
@@ -191,7 +190,7 @@ export async function GET(request: NextRequest) {
 
     // Generate slots based on selected sport
     const slots: Slot[] = [];
-    const responseCourts = targetSport === "cricket" ? [1] : targetSport === "badminton" ? [1] : [...COURTS];
+    const responseCourts = sportParam === "cricket" ? [1] : sportParam === "badminton" ? [1] : [...COURTS];
 
     for (const time of allTimes) {
       if (sportParam === "cricket") {

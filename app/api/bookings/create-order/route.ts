@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { turso } from "@/lib/turso";
 import { calculateTotals } from "@/lib/pricing";
-import { priceForRange, rangesOverlap, isWithinHours, slotsClash } from "@/lib/slots";
+import { priceForRange, rangesOverlap, isWithinHours } from "@/lib/slots";
 import { bookingRequestSchema, formatZodError } from "@/lib/validation";
 import { BULK_PACKAGE } from "@/lib/credits";
 
@@ -41,7 +41,11 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const sport = String(body.sport ?? "pickleball");
+    const sport: "pickleball" | "cricket" | "badminton" = ["pickleball", "cricket", "badminton"].includes(
+      String(body.sport),
+    )
+      ? (body.sport as "pickleball" | "cricket" | "badminton")
+      : "pickleball";
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
     const addons: AddonInput[] = Array.isArray(body.addons) ? body.addons : [];
 
@@ -96,10 +100,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "That time is outside opening hours." }, { status: 400 });
       }
     }
-
-    const sport = ["pickleball", "cricket", "badminton"].includes(String(body.sport))
-      ? (body.sport as "pickleball" | "cricket" | "badminton")
-      : "pickleball";
 
     // Enforce sport constraints on slot courts
     const normalizedSlots = slots.map((s) => {

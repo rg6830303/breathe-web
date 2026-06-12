@@ -5,7 +5,7 @@ import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { calculateTotals } from "@/lib/pricing";
-import { priceForRange, rangesOverlap, slotsClash, cellsFor } from "@/lib/slots";
+import { priceForRange, rangesOverlap } from "@/lib/slots";
 import { refundPayment, razorpayConfigured } from "@/lib/razorpay";
 import { adjustCredit, BULK_PACKAGE } from "@/lib/credits";
 
@@ -23,15 +23,17 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const sport = String(body.sport ?? "pickleball");
+    const sport: "pickleball" | "cricket" | "badminton" = ["pickleball", "cricket", "badminton"].includes(
+      String(body.sport),
+    )
+      ? (body.sport as "pickleball" | "cricket" | "badminton")
+      : "pickleball";
     let orderId = String(body.orderId ?? "");
     let paymentId = String(body.paymentId ?? "");
     const signature = String(body.signature ?? "");
     const slots: SlotInput[] = Array.isArray(body.slots) ? body.slots : [];
     const addons: AddonInput[] = Array.isArray(body.addons) ? body.addons : [];
-    const sport = ["pickleball", "cricket", "badminton"].includes(String(body.sport))
-      ? String(body.sport)
-      : "pickleball";
+
 
     // Verify the Razorpay payment signature (HMAC of order_id|payment_id).
     if (!orderId || !paymentId || !signature) {
@@ -118,7 +120,7 @@ export async function POST(req: Request) {
           // Resolve courts occupied by existing booking
           const rowCourts = rowSport === "cricket" ? [1, 2, 3] : [rowCourt];
           // Resolve courts requested by the new booking
-          const requestedCourts = sport === "cricket" ? [1, 2, 3] : [court];
+          const requestedCourts = sport === "cricket" ? [1, 2, 3] : [s.court];
 
           const sharesCourt = requestedCourts.some((c) => rowCourts.includes(c));
 

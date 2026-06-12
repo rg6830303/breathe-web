@@ -2,6 +2,8 @@ export type PricingRule = {
   id: number;
   label: string;
   price: number;
+  start_time?: string;
+  end_time?: string;
 };
 
 export const fallbackPricingRules: PricingRule[] = [

@@ -31,7 +31,6 @@ type Row = {
   amount_paid: number;
   sport: string;
   status: string;
-  sport: string;
   created_at: string;
 };
 
@@ -72,11 +71,6 @@ async function getProfile(userId: string): Promise<Profile | null> {
 }
 
 async function getBookings(userId: string): Promise<Row[]> {
-  const query = (withSport: boolean) =>
-    `SELECT id, court_number, slot_date, slot_time, duration_min,
-            amount_paid as total_amount, status, ${withSport ? "sport," : ""} created_at
-     FROM bookings WHERE user_id = ?
-     ORDER BY slot_date DESC, slot_time DESC LIMIT 500`;
   try {
     const result = await turso.execute({
       sql: `SELECT id, court_number, slot_date, slot_time, duration_min,
