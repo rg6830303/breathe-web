@@ -22,7 +22,10 @@ const TEST_ONE_RUPEE = false;
 const TEST_AMOUNT_PAISE = 100; // ₹1
 const orderAmount = (paise: number) => (TEST_ONE_RUPEE ? TEST_AMOUNT_PAISE : paise);
 
-type SlotInput = { date: string; time: string; court: number; durationMin?: number };
+type Sport = "pickleball" | "cricket" | "badminton";
+type SlotInput = { date: string; time: string; court: number; durationMin?: number; sport?: Sport };
+const slotSport = (s: SlotInput, fallback: Sport): Sport =>
+  s.sport && ["pickleball", "cricket", "badminton"].includes(s.sport) ? s.sport : fallback;
 const dur = (s: SlotInput) => Math.max(30, Number(s.durationMin) || 60);
 type AddonInput = { id: string; label: string; price: number; qty?: number };
 
@@ -101,13 +104,12 @@ export async function POST(req: Request) {
       }
     }
 
-    // Enforce sport constraints on slot courts
+    // Enforce sport constraints on slot courts — PER slot, so a mixed-sport cart
+    // forces only its cricket/badminton lines onto Court 1.
     const normalizedSlots = slots.map((s) => {
-      let court = s.court;
-      if (sport === "cricket" || sport === "badminton") {
-        court = 1; // Cricket and Badminton are forced to Court 1
-      }
-      return { ...s, court };
+      const sSport = slotSport(s, sport);
+      const court = sSport === "cricket" || sSport === "badminton" ? 1 : s.court;
+      return { ...s, court, sport: sSport };
     });
 
     const dates = Array.from(new Set(normalizedSlots.map((s) => s.date)));
@@ -133,8 +135,9 @@ export async function POST(req: Request) {
 
           // Resolve courts occupied by existing booking
           const rowCourts = rowSport === "cricket" ? [1, 2, 3] : [rowCourt];
-          // Resolve courts requested by the new booking
-          const requestedCourts = sport === "cricket" ? [1, 2, 3] : [s.court];
+          // Resolve courts requested by the new booking (per its own sport)
+          const reqSport = (s as SlotInput).sport ?? sport;
+          const requestedCourts = reqSport === "cricket" ? [1, 2, 3] : [s.court];
 
           const sharesCourt = requestedCourts.some((c) => rowCourts.includes(c));
 
@@ -145,7 +148,8 @@ export async function POST(req: Request) {
         });
 
         if (clash) {
-          const displayCourt = sport === "cricket" ? "Cricket Turf" : `Court ${s.court}`;
+          const reqSport = (s as SlotInput).sport ?? sport;
+          const displayCourt = reqSport === "cricket" ? "Cricket Turf" : `Court ${s.court}`;
           return NextResponse.json(
             { error: `${displayCourt} at ${s.time.slice(0, 5)} is no longer available.` },
             { status: 409 },
@@ -154,7 +158,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const base = slots.reduce((sum, s) => sum + priceForRange(sport, s.date, s.time, dur(s)), 0);
+    const base = slots.reduce((sum, s) => sum + priceForRange(slotSport(s, sport), s.date, s.time, dur(s)), 0);
     const addonTotal = addons.reduce((sum, a) => sum + (Number(a.price) || 0) * (Number(a.qty) || 1), 0);
     const totals = calculateTotals(base, addonTotal);
 

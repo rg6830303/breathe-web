@@ -35,6 +35,8 @@ export const slotInputSchema = z.object({
   time: z.string().regex(/^\d{2}:\d{2}$/, "Bad time."),
   court: z.number().int().min(1).max(3),
   durationMin: z.number().int().min(30).max(180).optional(),
+  // Per-slot sport so a cart can mix sports; falls back to the order-level sport.
+  sport: z.enum(["pickleball", "cricket", "badminton"]).optional(),
 });
 
 /** Body for a slot booking (paid order or prepaid-credit redeem). */
