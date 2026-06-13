@@ -386,9 +386,9 @@ export function BookingGrid() {
   return (
     <div className="space-y-6 pb-24">
       {/* Step 1: Choose Sport */}
-      <section className="overflow-hidden rounded-3xl border-2 border-ink/10 bg-white p-5 dark:border-white/10 dark:bg-[#111c38]">
+      <section className="card-sport overflow-hidden p-5">
         <h2 className="font-display text-lg font-extrabold tracking-tight text-ink dark:text-white mb-4 flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-brand text-white text-xs font-bold animate-pulse">1</span>
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white text-xs font-bold">1</span>
           Choose your sport
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -431,7 +431,7 @@ export function BookingGrid() {
       {/* Step 2: Slot booking */}
       <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:pb-0">
         {/* ---- Grid panel ---- */}
-        <section className="overflow-hidden rounded-3xl border-2 border-ink/10 bg-white dark:border-white/10 dark:bg-[#111c38]">
+        <section className="card-sport overflow-hidden">
 
           {/* Login nudge banner */}
           {authLoaded && !account && (
@@ -584,7 +584,7 @@ export function BookingGrid() {
         </section>
 
       {/* ---- Summary aside ---- */}
-      <aside className="h-fit rounded-3xl border-2 border-ink/10 bg-white p-5 dark:border-white/10 dark:bg-[#111c38] lg:sticky lg:top-28">
+      <aside className="card-sport h-fit p-5 lg:sticky lg:top-28">
         {/* Tape stripe top */}
         <div aria-hidden className="tape-stripe -mx-5 -mt-5 mb-5 h-1" />
 

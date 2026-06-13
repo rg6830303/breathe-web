@@ -34,17 +34,19 @@ export function PageHero({ label, title, subtitle, bgClassName, children }: Prop
   };
 
   return (
-    <section className={`relative overflow-hidden bg-ink text-white ${bgClassName ?? ""}`}>
+    <section className={`relative overflow-hidden border-b border-white/10 bg-ink text-white ${bgClassName ?? ""}`}>
       <ArenaBackdrop />
-      {/* Court-tape accent stripe */}
-      <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90 z-10" />
+      {/* Legibility wash so the heading reads cleanly over the backdrop. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/40" />
+      {/* Slim court-tape accent at the top edge. */}
+      <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1 w-full opacity-70 z-10" />
 
-      {/* Signature paddle, right side on large screens */}
-      <div className="pointer-events-none absolute right-2 top-1/2 z-[1] hidden -translate-y-1/2 opacity-90 lg:block xl:right-12">
-        <PaddleScene size={340} />
+      {/* Signature paddle — subtle watermark on large screens. */}
+      <div className="pointer-events-none absolute right-4 top-1/2 z-[1] hidden -translate-y-1/2 opacity-45 lg:block xl:right-12">
+        <PaddleScene size={280} />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-6 pb-16 pt-24 sm:pb-20 sm:pt-28 md:pt-32 lg:px-8">
+      <div className="relative mx-auto max-w-7xl px-6 pb-14 pt-24 sm:pb-16 sm:pt-28 md:pt-32 lg:px-8">
         <div className="max-w-2xl">
           <motion.span
             initial={{ opacity: 0, y: 10 }}
