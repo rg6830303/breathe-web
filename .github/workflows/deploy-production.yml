@@ -1,0 +1,52 @@
+name: Deploy to Production (Vercel)
+
+# Promotes the production branch to a Vercel *production* deployment.
+#
+# Vercel's Git integration creates PREVIEW deployments for branches/PRs by
+# default; a merge to main does not necessarily promote to production unless
+# the project is configured to do so. This workflow makes that promotion
+# explicit by hitting a Vercel Deploy Hook that is bound to the production
+# branch, so every push to main publishes to the live site.
+#
+# One-time setup (no token scopes required):
+#   1. Vercel -> Project (breathe-web) -> Settings -> Git -> Deploy Hooks.
+#   2. Create a hook. Name: "GitHub main -> Production". Branch: main.
+#   3. Copy the generated URL.
+#   4. GitHub -> repo Settings -> Secrets and variables -> Actions ->
+#      New repository secret. Name: VERCEL_DEPLOY_HOOK_URL. Value: that URL.
+#
+# After the secret exists you can run this immediately via the "Run workflow"
+# button (workflow_dispatch) to publish the already-merged commit, or just
+# let it fire on the next push to main.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Avoid stacking redundant production builds if several pushes land quickly.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel production deploy
+        env:
+          HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK_URL" ]; then
+            echo "::error::Secret VERCEL_DEPLOY_HOOK_URL is not set. See the setup steps in this workflow file."
+            exit 1
+          fi
+          echo "Triggering Vercel production deploy hook…"
+          status=$(curl -sS -o response.json -w "%{http_code}" -X POST "$HOOK_URL")
+          echo "HTTP $status"
+          cat response.json || true
+          # Vercel returns 201 (created) on a successful trigger.
+          case "$status" in
+            2*) echo "Production deploy triggered. Track progress in the Vercel dashboard." ;;
+            *)  echo "::error::Deploy hook returned HTTP $status"; exit 1 ;;
+          esac
