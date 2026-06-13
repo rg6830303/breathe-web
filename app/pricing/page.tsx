@@ -108,7 +108,7 @@ export default function PricingPage() {
               {sportsPricing.map((item, idx) => (
                 <ScrollReveal key={item.sport} delay={idx * 0.1} direction="up">
                   <TiltCard maxTilt={4} className="h-full">
-                    <div className="card-sport flex h-full flex-col p-6 border-2 border-ink/10 bg-white dark:border-white/10 dark:bg-[#111c38]">
+                    <div className="card-sport flex h-full flex-col p-6">
                       <div className="flex items-center gap-3">
                         <span className="text-3xl">{item.icon}</span>
                         <div>
