@@ -23,13 +23,15 @@ export function PortalHero({
   children?: React.ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden bg-ink text-white">
+    <section className="relative overflow-hidden border-b border-white/10 bg-ink text-white">
       <ArenaBackdrop />
-      <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90 z-10" />
+      {/* Soft legibility wash + slim top accent (was a bold full tape stripe). */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/40" />
+      <div aria-hidden className="tape-stripe absolute left-0 top-0 z-10 h-1 w-full opacity-70" />
 
-      {/* Signature paddle accent */}
-      <div className="pointer-events-none absolute right-4 top-1/2 z-[1] hidden -translate-y-1/2 opacity-90 xl:block">
-        <PaddleScene size={240} />
+      {/* Signature paddle accent — subtler, so it reads as a watermark. */}
+      <div className="pointer-events-none absolute right-6 top-1/2 z-[1] hidden -translate-y-1/2 opacity-50 xl:block">
+        <PaddleScene size={200} />
       </div>
 
       <div className="relative mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-14 lg:px-8">
