@@ -22,7 +22,6 @@ import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { StatCounter } from "@/components/motion/stat-counter";
 import { TiltCard } from "@/components/motion/tilt-card";
 import { TestimonialsCarousel } from "@/components/testimonials-carousel";
-import { PaddleScene } from "@/components/ui/paddle-scene";
 import { CourtScene } from "@/components/ui/court-scene";
 import type { Notice } from "@/lib/types";
 
@@ -86,60 +85,39 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
 
   return (
     <>
-      {/* ── HERO — animated pickleball court scene (dark-only) ── */}
-      <section className="relative min-h-[88svh] overflow-hidden bg-ink text-white">
-        {/* Animated court: two players rallying, ball + paddles in motion */}
+      {/* ── HERO — single calm court backdrop, refined hierarchy ── */}
+      <section className="relative min-h-[86svh] overflow-hidden bg-ink text-white">
+        {/* One tasteful animated backdrop (no competing accents). */}
         <CourtScene />
-
-        {/* Court-tape accent stripe */}
-        <div aria-hidden className="tape-stripe absolute left-0 top-0 z-10 h-1.5 w-full opacity-90" />
-
-        {/* Lime corner wash */}
-        <div aria-hidden className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-lime/10 blur-3xl" />
-
-
-        {/* PaddleScene mini — mobile accent */}
-        <div className="pointer-events-none absolute right-3 top-20 opacity-30 sm:right-8 sm:top-16 lg:hidden">
-          <PaddleScene size={120} />
-        </div>
-
-        {/* Bouncing pickleball accent */}
-        <div
-          aria-hidden
-          className="animate-ball-bounce absolute bottom-10 left-4 z-0 h-7 w-7 rounded-full sm:left-10 sm:h-10 sm:w-10"
-          style={{
-            background: "radial-gradient(circle at 32% 28%, #f7ff8a, #c6f432 55%, #8fae12)",
-            boxShadow: "0 8px 20px rgba(198,242,62,0.4)",
-          }}
-        />
+        {/* Legibility gradient so the headline always reads cleanly. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/30" />
+        {/* Slim court-tape accent at the very top edge. */}
+        <div aria-hidden className="tape-stripe absolute left-0 top-0 z-10 h-1 w-full opacity-80" />
 
         <Container className="relative z-10 grid items-center gap-10 py-20 sm:py-28 lg:grid-cols-[1.1fr_0.9fr] lg:py-32">
           <motion.div variants={containerVariants} initial="hidden" animate="visible">
             {/* Location tag */}
             <motion.span
               variants={spanVariants}
-              className="tag-sport"
+              className="tag-sport border-white/15 bg-white/5 text-white/80"
             >
               <MapPin className="h-3 w-3" /> Kaikhali · North Kolkata
             </motion.span>
 
-            {/* Athletic stacked wordmark */}
+            {/* Wordmark — one confident headline, lime as a single accent word. */}
             <motion.h1 variants={containerVariants} className="mt-6">
               <motion.span
                 variants={spanVariants}
-                className="block text-[0.7rem] font-extrabold uppercase tracking-[0.32em] text-white/50"
+                className="block text-xs font-semibold uppercase tracking-[0.2em] text-white/45"
               >
                 Welcome to
               </motion.span>
-              <motion.span variants={spanVariants} className="heading-xl mt-2 block text-lime">
-                Breathe
-              </motion.span>
-              <motion.span variants={spanVariants} className="heading-xl block text-white">
-                Pickleball
+              <motion.span variants={spanVariants} className="heading-xl mt-3 block text-white">
+                Breathe <span className="text-lime">Pickleball</span>
               </motion.span>
             </motion.h1>
 
-            <motion.p variants={spanVariants} className="mt-6 max-w-md text-base leading-7 text-white/70 sm:text-lg">
+            <motion.p variants={spanVariants} className="mt-6 max-w-md text-base leading-7 text-white/65 sm:text-lg">
               Three professional courts, complimentary equipment, and a thriving community — all bookable in seconds from your phone.
             </motion.p>
 
@@ -174,11 +152,11 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
                 },
                 { value: "All", label: "Skill levels" },
               ].map(({ value, label }) => (
-                <div key={label} className="flex flex-col items-center rounded-2xl border-2 border-white/10 bg-white/5 px-2 py-4 text-center">
-                  <div className="flex h-9 items-center justify-center font-display text-xl font-extrabold leading-none text-lime sm:h-10 sm:text-2xl">
+                <div key={label} className="flex flex-col items-center rounded-xl border border-white/10 bg-white/[0.04] px-2 py-4 text-center">
+                  <div className="flex h-9 items-center justify-center font-display text-xl font-bold leading-none text-white sm:h-10 sm:text-2xl">
                     {value}
                   </div>
-                  <div className="mt-1.5 flex min-h-[2.1em] items-center text-[0.6rem] font-extrabold uppercase leading-tight tracking-wider text-white/50">
+                  <div className="mt-1.5 flex min-h-[2.1em] items-center text-[0.6rem] font-semibold uppercase leading-tight tracking-wider text-white/45">
                     {label}
                   </div>
                 </div>
