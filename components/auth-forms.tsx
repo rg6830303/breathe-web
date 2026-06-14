@@ -1,10 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight, Loader2, LogIn, ShieldCheck } from "lucide-react";
+
+/**
+ * True when the page is running as an installed PWA (standalone display mode,
+ * incl. iOS `navigator.standalone`). Installed-app logins get a longer session
+ * (≈5 days) than plain-browser logins (24h).
+ */
+function isStandalone(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia?.("(display-mode: standalone)")?.matches === true ||
+    (window.navigator as unknown as { standalone?: boolean }).standalone === true
+  );
+}
 
 /** Friendly messages for ?error=google_* redirects from the OAuth routes. */
 const OAUTH_ERRORS: Record<string, string> = {
@@ -27,9 +40,13 @@ const OAUTH_ERRORS: Record<string, string> = {
 /** "Continue with Google" — a plain link to the server-side OAuth start route,
  *  preserving the post-login `next` destination. */
 function GoogleButton({ next, label }: { next: string; label: string }) {
+  const [pwa, setPwa] = useState(false);
+  useEffect(() => {
+    setPwa(isStandalone());
+  }, []);
   return (
     <a
-      href={`/api/auth/google?next=${encodeURIComponent(next)}`}
+      href={`/api/auth/google?next=${encodeURIComponent(next)}${pwa ? "&pwa=1" : ""}`}
       className="inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-brand/15 bg-white px-5 py-3.5 text-sm font-bold text-ink transition hover:bg-brand/5 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
     >
       <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
@@ -94,7 +111,7 @@ export function SignupForm() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, pwa: isStandalone() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Signup failed");
@@ -178,7 +195,7 @@ export function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, pwa: isStandalone() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Login failed");

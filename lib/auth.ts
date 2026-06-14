@@ -23,16 +23,31 @@ export type AdminPayload = { id: string; email: string; role: "admin" };
 // Single source of truth for session lifetimes. The JWT `exp` (enforced by the
 // middleware on every request) and the cookie `maxAge` MUST agree, so always
 // reference these constants in the auth routes instead of hard-coding literals.
-// Admin sessions are deliberately short (12h) so the console re-authenticates
-// daily; player sessions last 7 days.
-export const USER_JWT_EXP = "7d";
+//
+// User sessions differ by surface: a plain browser login expires in 24h, while
+// an installed PWA ("add to home screen") login lasts ~5 days so the app stays
+// signed in like a native app. Admin sessions are always short (12h).
+export const USER_BROWSER_JWT_EXP = "24h";
+export const USER_PWA_JWT_EXP = "5d";
+export const USER_BROWSER_SESSION_MAX_AGE = 60 * 60 * 24; // 24 hours, in seconds
+export const USER_PWA_SESSION_MAX_AGE = 60 * 60 * 24 * 5; // 5 days, in seconds
 export const ADMIN_JWT_EXP = "12h";
-export const USER_SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days, in seconds
 export const ADMIN_SESSION_MAX_AGE = 60 * 60 * 12; // 12 hours, in seconds
+
+/**
+ * Pick the JWT expiry + cookie maxAge for a user session based on whether the
+ * login happened inside the installed PWA. Keep the two in lockstep so the
+ * cookie never outlives the token (or vice-versa).
+ */
+export function userSessionDurations(isPwa: boolean): { exp: string; maxAge: number } {
+  return isPwa
+    ? { exp: USER_PWA_JWT_EXP, maxAge: USER_PWA_SESSION_MAX_AGE }
+    : { exp: USER_BROWSER_JWT_EXP, maxAge: USER_BROWSER_SESSION_MAX_AGE };
+}
 
 export async function signToken(
   payload: UserPayload | AdminPayload,
-  expiresIn: string = (payload as { role?: string }).role === "admin" ? ADMIN_JWT_EXP : USER_JWT_EXP,
+  expiresIn: string = (payload as { role?: string }).role === "admin" ? ADMIN_JWT_EXP : USER_BROWSER_JWT_EXP,
 ) {
   return new SignJWT(payload as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: "HS256" })
