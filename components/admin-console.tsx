@@ -178,9 +178,9 @@ function todayIST() {
 const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "overview", label: "Overview", icon: BarChart3 },
   { key: "bookings", label: "All bookings", icon: Calendar },
+  { key: "dues", label: "Pending dues", icon: HandCoins },
   { key: "courts", label: "Court management", icon: Grid3x3 },
   { key: "users", label: "Users", icon: Users },
-  { key: "dues", label: "Pending dues", icon: HandCoins },
   { key: "expenses", label: "Expenses", icon: Wallet },
   { key: "tournaments", label: "Tournaments", icon: Trophy },
   { key: "email", label: "Email", icon: Mail },
@@ -406,6 +406,28 @@ function DuesTab() {
   }
 
   useEffect(reload, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Real-time: quietly re-fetch every 45s + on focus so newly-incurred dues
+  // appear and cleared ones drop off without a manual refresh.
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState !== "visible") return;
+      fetch("/api/admin/bookings/dues")
+        .then((r) => (r.ok ? r.json() : { bookings: [] }))
+        .then((data) => {
+          setRows(data.bookings ?? []);
+          setAdminCache("dues:", data.bookings ?? []);
+        })
+        .catch(() => {});
+    };
+    const id = setInterval(tick, 45000);
+    const onFocus = () => tick();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
 
   const totalOutstanding = useMemo(() => rows.reduce((a, r) => a + (Number(r.due) || 0), 0), [rows]);
 
