@@ -17,6 +17,12 @@ export type NotificationRow = {
 let ensured = false;
 export async function ensureNotificationsTable(): Promise<void> {
   if (ensured) return;
+  // CRITICAL: created_at / read_at hold `Date.now()` (~1.7e12 ms), which
+  // overflows Postgres INT4. They MUST be BIGINT — otherwise every INSERT
+  // throws "integer out of range" and is swallowed below, leaving the inbox
+  // permanently empty (the "notifications never show" bug). The main schema
+  // (lib/db/ensure.ts) avoids this by rewriting INTEGER→BIGINT; this table is
+  // created here, so it must declare BIGINT directly.
   await turso
     .execute(
       `CREATE TABLE IF NOT EXISTS notifications (
@@ -26,11 +32,15 @@ export async function ensureNotificationsTable(): Promise<void> {
         title TEXT NOT NULL,
         body TEXT,
         url TEXT,
-        read_at INTEGER,
-        created_at INTEGER NOT NULL
+        read_at BIGINT,
+        created_at BIGINT NOT NULL
       )`,
     )
     .catch(() => {});
+  // Widen columns on databases where the table was already created as INT4.
+  // No-op if already BIGINT.
+  await turso.execute("ALTER TABLE notifications ALTER COLUMN created_at TYPE BIGINT").catch(() => {});
+  await turso.execute("ALTER TABLE notifications ALTER COLUMN read_at TYPE BIGINT").catch(() => {});
   await turso
     .execute("CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications (user_id, created_at DESC)")
     .catch(() => {});
