@@ -48,6 +48,17 @@ export function NotificationBell({ onDark = false }: { onDark?: boolean }) {
 
   useEffect(() => {
     load();
+    // Poll quietly so notifications recorded server-side (bookings, dues,
+    // admin actions, pushes) surface in the bell without a manual refresh.
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") load();
+    }, 45000);
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [load]);
 
   // Close on outside click.

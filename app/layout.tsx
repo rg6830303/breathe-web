@@ -165,9 +165,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           dangerouslySetInnerHTML={{
             // Register + actively check for SW updates on every load, and reload
-            // once when a new SW takes control so fresh deploys appear immediately
-            // (fixes stale UI on mobile / installed PWAs).
-            __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').then(function(r){r.update();}).catch(function(){});var rl=false;navigator.serviceWorker.addEventListener('controllerchange',function(){if(rl)return;rl=true;window.location.reload();});});}`,
+            // once when a NEW sw replaces an existing one so fresh deploys appear
+            // immediately. We capture whether a controller already existed so the
+            // first-install claim() does NOT trigger a spurious reload — that
+            // reload-on-first-launch is what made the installed PWA feel broken.
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){var hadController=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('/sw.js').then(function(r){r.update();}).catch(function(){});var rl=false;navigator.serviceWorker.addEventListener('controllerchange',function(){if(rl||!hadController)return;rl=true;window.location.reload();});});}`,
           }}
         />
       </head>
