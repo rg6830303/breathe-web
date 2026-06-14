@@ -115,17 +115,17 @@ export function Nav() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative rounded-lg px-4 py-2.5 text-sm font-extrabold uppercase tracking-wide transition-colors duration-150 ${
+                  className={`relative rounded-lg px-3.5 py-2 text-sm font-semibold tracking-tight transition-colors duration-150 ${
                     active
                       ? "text-brand dark:text-lime"
-                      : "text-ink/60 hover:text-ink dark:text-white/60 dark:hover:text-white"
+                      : "text-ink/60 hover:text-ink dark:text-white/55 dark:hover:text-white"
                   }`}
                 >
                   {link.label}
                   {active && (
                     <motion.div
                       layoutId="nav-underline"
-                      className="absolute bottom-0.5 left-4 right-4 h-[3px] rounded-full bg-lime"
+                      className="absolute -bottom-0.5 left-3.5 right-3.5 h-[2px] rounded-full bg-brand dark:bg-lime"
                     />
                   )}
                 </Link>
@@ -139,7 +139,7 @@ export function Nav() {
               <div className="hidden items-center gap-2 lg:flex">
                 <Link
                   href={account.role === "admin" ? "/admin" : "/dashboard"}
-                  className="inline-flex items-center gap-2 rounded-full border-2 border-ink/10 bg-transparent px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-ink transition hover:border-brand hover:text-brand dark:border-white/15 dark:text-white dark:hover:border-lime dark:hover:text-lime"
+                  className="inline-flex items-center gap-2 rounded-lg border border-ink/10 bg-transparent px-3.5 py-2 text-sm font-semibold text-ink transition hover:border-brand/40 hover:text-brand dark:border-white/15 dark:text-white dark:hover:border-lime dark:hover:text-lime"
                 >
                   {account.role === "admin" ? <Shield className="h-3.5 w-3.5" /> : <User className="h-3.5 w-3.5" />}
                   <span className="max-w-[120px] truncate">{account.name}</span>
@@ -148,7 +148,7 @@ export function Nav() {
                   type="button"
                   onClick={handleLogout}
                   aria-label="Log out"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink/10 text-ink transition hover:border-brand hover:text-brand dark:border-white/15 dark:text-white dark:hover:border-lime dark:hover:text-lime"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-ink/10 text-ink/70 transition hover:border-brand/40 hover:text-brand dark:border-white/15 dark:text-white/70 dark:hover:border-lime dark:hover:text-lime"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>
@@ -157,7 +157,7 @@ export function Nav() {
               loaded && (
                 <Link
                   href="/login"
-                  className="hidden rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-ink/60 transition hover:text-brand dark:text-white/60 dark:hover:text-white lg:inline-flex"
+                  className="hidden rounded-lg px-3.5 py-2 text-sm font-semibold text-ink/60 transition hover:text-brand dark:text-white/60 dark:hover:text-white lg:inline-flex"
                 >
                   Log in
                 </Link>
@@ -237,9 +237,9 @@ export function Nav() {
                       >
                         <Link
                           href={link.href}
-                          className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-extrabold uppercase tracking-wide transition-colors ${
+                          className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold tracking-tight transition-colors ${
                             active
-                              ? "bg-lime text-ink"
+                              ? "bg-brand/10 text-brand dark:bg-lime/15 dark:text-lime"
                               : "text-ink hover:bg-ink/5 dark:text-white dark:hover:bg-white/10"
                           }`}
                         >

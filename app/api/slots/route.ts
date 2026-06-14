@@ -72,7 +72,10 @@ export async function GET(request: NextRequest) {
         booked: Number(r.booked),
       }));
 
-      return NextResponse.json({ from, to, slots });
+      return NextResponse.json(
+        { from, to, slots },
+        { headers: { "Cache-Control": "public, s-maxage=20, stale-while-revalidate=60" } },
+      );
     }
 
     const date = params.get("date") ?? todayIST();
@@ -263,7 +266,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ date, courts: sportParam === "pickleball" ? [...COURTS] : [1], slots });
+    // Short shared CDN cache: many homepage + booking-page visitors poll this
+    // for the SAME date, so a 20s edge cache (with SWR) serves the bulk of
+    // those reads from Vercel's CDN instead of hitting Supabase on every poll —
+    // the key free-tier protection under load. Availability tolerates ~20s lag;
+    // booking collisions are still enforced server-side at payment time.
+    return NextResponse.json(
+      { date, courts: sportParam === "pickleball" ? [...COURTS] : [1], slots },
+      { headers: { "Cache-Control": "public, s-maxage=20, stale-while-revalidate=60" } },
+    );
   } catch (err: unknown) {
     console.error("[slots route error]", err);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
