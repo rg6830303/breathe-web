@@ -33,7 +33,33 @@ import {
   Plus,
   HandCoins,
   Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Phone,
+  IndianRupee,
 } from "lucide-react";
+
+/** Shift a YYYY-MM-DD date string by N days using LOCAL components (no UTC
+ *  drift, which would otherwise shift the day for IST users). */
+function shiftDate(d: string, delta: number): string {
+  const [y, m, dd] = d.split("-").map(Number);
+  const dt = new Date(y, m - 1, dd + delta);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+}
+
+/** Add minutes to an HH:MM time, wrapping at 24h. */
+function addMins(hhmm: string, mins: number): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const t = h * 60 + m + mins;
+  return `${String(Math.floor(t / 60) % 24).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
+/** Pretty 12-hour label, e.g. "5:00 PM". */
+function label12(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
 
 type Tab = "overview" | "bookings" | "courts" | "users" | "dues" | "expenses" | "tournaments" | "email";
 type Stats = {
@@ -55,7 +81,10 @@ type Booking = {
   slot_date: string;
   slot_time: string;
   price: number;
-  total_amount: number;
+  total_amount: number; // amount paid online (the ₹200 advance)
+  total?: number; // full court bill
+  duration_min?: number;
+  source?: string;
   status: string;
   sport?: string;
   created_at: string;
@@ -464,169 +493,302 @@ function DuesTab() {
   );
 }
 
+/**
+ * All bookings = a LIVE court-slot board (mirrors Court management) showing,
+ * for the chosen day, every slot across the 3 courts as Booked / Open / Missed
+ * / Closed. Date-navigable (calendar) to review past days. Tapping a booked
+ * slot opens a detail popup (customer, advance paid, dues cleared/remaining,
+ * with a one-tap "mark dues cleared"). Auto-refreshes so it tracks real time.
+ */
 function BookingsTab() {
-  const toast = useToast();
-  const [date, setDate] = useState<string>("");
-  const cacheKey = `bookings:${date}`;
-  const [bookings, setBookings] = useState<Booking[]>(() => getAdminCache<Booking[]>(`bookings:`) ?? []);
-  // Spinner only when there's nothing cached to show — otherwise revalidate silently.
-  const [loading, setLoading] = useState(() => getAdminCache<Booking[]>(`bookings:`) === undefined);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [date, setDate] = useState<string>(todayIST());
+  const [data, setData] = useState<SlotResp | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Booking | null>(null);
 
-  function reload() {
-    const cached = getAdminCache<Booking[]>(cacheKey);
+  function load(opts?: { quiet?: boolean }) {
+    const ck = `allbookings:${date}`;
+    const cached = getAdminCache<{ slots: SlotResp; bookings: Booking[] }>(ck);
     if (cached) {
-      setBookings(cached);
+      setData(cached.slots);
+      setBookings(cached.bookings);
       setLoading(false);
-    } else {
+    } else if (!opts?.quiet) {
       setLoading(true);
     }
-    const url = date ? `/api/admin/bookings?date=${date}` : "/api/admin/bookings";
-    fetch(url)
-      .then((r) => r.json())
-      .then((data) => {
-        setBookings(data.bookings ?? []);
-        setAdminCache(cacheKey, data.bookings ?? []);
+    Promise.all([
+      fetch(`/api/slots?date=${date}`).then((r) => r.json()),
+      fetch(`/api/admin/bookings?date=${date}`).then((r) => r.json()),
+    ])
+      .then(([slots, bks]) => {
+        setData(slots);
+        setBookings(bks.bookings ?? []);
+        setAdminCache(ck, { slots, bookings: bks.bookings ?? [] });
       })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }
 
-  useEffect(reload, [date]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(load, [date]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-refresh so new bookings (online or walk-in) appear without a manual
-  // reload — quietly re-fetch every 60s without flipping the loading state.
+  // Real-time: quietly re-fetch every 45s + on focus so the board reflects new
+  // bookings / walk-ins / dues changes without a manual refresh.
   useEffect(() => {
-    const quiet = () => {
-      if (document.visibilityState !== "visible") return;
-      const url = date ? `/api/admin/bookings?date=${date}` : "/api/admin/bookings";
-      fetch(url)
-        .then((r) => r.json())
-        .then((data) => setBookings(data.bookings ?? []))
-        .catch(() => {});
+    const tick = () => {
+      if (document.visibilityState === "visible") load({ quiet: true });
     };
-    const id = setInterval(quiet, 60000);
-    const onFocus = () => quiet();
+    const id = setInterval(tick, 45000);
+    const onFocus = () => tick();
     window.addEventListener("focus", onFocus);
     return () => {
       clearInterval(id);
       window.removeEventListener("focus", onFocus);
     };
-  }, [date]);
+  }, [date]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function cancel(id: string) {
-    if (!confirm("Cancel this booking? The slot will reopen.")) return;
-    setBusy(id);
-    const res = await fetch("/api/admin/slots/unblock", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ booking_id: id }),
-    });
-    setBusy(null);
-    if (res.ok) toast.show("Booking cancelled — the slot is now open again", "success");
-    else toast.show("Could not cancel that booking.", "error");
-    reload();
-  }
+  const byCourt = useMemo(() => {
+    const map: Record<number, SlotResp["slots"]> = { 1: [], 2: [], 3: [] };
+    if (data) for (const s of data.slots) (map[s.court] ?? (map[s.court] = [])).push(s);
+    return map;
+  }, [data]);
+
+  const bookingForSlot = (court: number, time: string) =>
+    bookings.find((b) => b.court_number === court && b.slot_time === time && b.status === "confirmed");
+
+  const counts = useMemo(() => {
+    let booked = 0, open = 0, missed = 0;
+    if (data)
+      for (const s of data.slots) {
+        if (bookingForSlot(s.court, s.time)) booked++;
+        else if (s.status === "past") missed++;
+        else if (s.status === "open") open++;
+      }
+    return { booked, open, missed };
+  }, [data, bookings]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isToday = date === todayIST();
+  const dateLabel = new Date(date + "T00:00:00").toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 
   return (
     <div className="card-sport p-5">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <span className="eyebrow">All bookings</span>
-          <h3 className="mt-1 font-display text-xl font-extrabold tracking-tight text-ink dark:text-white">Booking log</h3>
-          <p className="text-xs text-ink/50 dark:text-white/50">Most recent first. Filter by slot date.</p>
-        </div>
-        <div className="flex items-center gap-2">
+      <PanelHeader
+        eyebrow="All bookings"
+        title="Live slot board"
+        subtitle={`${dateLabel}${isToday ? " · today" : ""} — ${counts.booked} booked · ${counts.open} open · ${counts.missed} missed`}
+      >
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            aria-label="Previous day"
+            onClick={() => setDate(shiftDate(date, -1))}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-ink/10 text-ink/70 transition hover:border-brand/40 hover:text-brand dark:border-white/10 dark:text-white/70"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
           <input
             type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white"
+            onChange={(e) => setDate(e.target.value || todayIST())}
+            className="rounded-lg border border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white"
           />
-          {date && (
-            <button
-              type="button"
-              onClick={() => setDate("")}
-              className="btn-outline px-2.5 py-2 text-xs"
-            >
-              <X className="h-3.5 w-3.5" /> Clear
-            </button>
-          )}
           <button
             type="button"
-            onClick={reload}
-            className="btn-outline px-2.5 py-2 text-xs"
+            aria-label="Next day"
+            onClick={() => setDate(shiftDate(date, 1))}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-ink/10 text-ink/70 transition hover:border-brand/40 hover:text-brand dark:border-white/10 dark:text-white/70"
           >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          {!isToday && (
+            <button type="button" onClick={() => setDate(todayIST())} className="btn-outline px-2.5 py-2 text-xs">
+              Today
+            </button>
+          )}
+          <button type="button" onClick={() => load()} className="btn-outline px-2.5 py-2 text-xs">
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </button>
         </div>
+      </PanelHeader>
+
+      {/* Legend */}
+      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-semibold text-ink/60 dark:text-white/55">
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand" /> Booked</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-ink/25 dark:border-white/25" /> Open</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-dashed border-ink/25 dark:border-white/25" /> Missed</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-ink/25 dark:bg-white/20" /> Closed</span>
+        <span className="ml-auto text-ink/40 dark:text-white/40">Tap a booked slot for details</span>
       </div>
 
-      {loading ? (
+      {loading || !data ? (
         <LoadingCard />
-      ) : bookings.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-ink/10 p-8 text-center text-sm text-ink/40 dark:border-white/10 dark:text-white/40">
-          No bookings found.
-        </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[940px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b-2 border-ink/10 dark:border-white/10">
-                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">User</th>
-                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Court</th>
-                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Sport</th>
-                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Date</th>
-                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Time</th>
-                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Amount</th>
-                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Status</th>
-                <th className="p-3 text-left text-[10px] font-extrabold uppercase tracking-[0.18em] text-ink/50 dark:text-white/50">Created</th>
-                <th className="p-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.map((b) => (
-                <tr key={b.id} className="border-b border-ink/5 transition-colors hover:bg-brand/[0.03] dark:border-white/5 dark:hover:bg-white/[0.03]">
-                  <td className="p-3">
-                    <div className="font-bold text-ink dark:text-white">{b.user_name}</div>
-                    <div className="text-[11px] text-ink/50 dark:text-white/50">{b.user_email}</div>
-                  </td>
-                  <td className="p-3 font-semibold text-ink dark:text-white">Court {b.court_number}</td>
-                  <td className="p-3 capitalize text-ink dark:text-white">{b.sport ?? "pickleball"}</td>
-                  <td className="p-3 text-ink dark:text-white">{b.slot_date}</td>
-                  <td className="p-3 text-ink dark:text-white">{b.slot_time}</td>
-                  <td className="p-3 font-extrabold text-ink dark:text-white">{money(b.total_amount)}</td>
-                  <td className="p-3">
-                    <span
-                      className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${
-                        b.status === "confirmed"
-                          ? "bg-lime/20 text-lime-dark"
-                          : b.status === "cancelled"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-ink/5 text-ink/60 dark:bg-white/5 dark:text-white/60"
-                      }`}
-                    >
-                      {b.status}
-                    </span>
-                  </td>
-                  <td className="p-3 text-[11px] text-ink/50 dark:text-white/50">{new Date(b.created_at + "Z").toLocaleString("en-IN")}</td>
-                  <td className="p-3 text-right">
-                    {b.status === "confirmed" && (
+        <div className="grid gap-4 md:grid-cols-3">
+          {[1, 2, 3].map((court) => (
+            <div key={court} className="rounded-2xl border border-ink/[0.08] bg-ink/[0.02] p-4 dark:border-white/[0.08] dark:bg-white/[0.02]">
+              <div className="mb-3 flex items-center justify-between border-b border-ink/10 pb-2 dark:border-white/10">
+                <span className="font-display text-sm font-extrabold tracking-tight text-ink dark:text-white">Court {court}</span>
+                <span className="tag-sport">
+                  {(byCourt[court] ?? []).filter((s) => bookingForSlot(court, s.time)).length} booked
+                </span>
+              </div>
+              <ul className="grid max-h-[460px] grid-cols-1 gap-1.5 overflow-y-auto pr-1">
+                {(byCourt[court] ?? []).map((s) => {
+                  const bk = bookingForSlot(court, s.time);
+                  let cls = "border border-ink/10 bg-white text-ink/70 dark:border-white/10 dark:bg-[#111c38] dark:text-white/60";
+                  let badge = "Open";
+                  if (bk) {
+                    cls = "cursor-pointer border border-brand/30 bg-brand/5 text-ink hover:border-brand hover:bg-brand/10 dark:border-brand-300/40 dark:bg-brand/10 dark:text-white";
+                    badge = "Booked";
+                  } else if (s.status === "blocked") {
+                    cls = "border border-ink/15 bg-ink/10 text-ink/45 dark:border-white/10 dark:bg-white/5 dark:text-white/35";
+                    badge = "Closed";
+                  } else if (s.status === "past") {
+                    cls = "border border-dashed border-ink/15 bg-transparent text-ink/30 dark:border-white/10 dark:text-white/25";
+                    badge = "Missed";
+                  }
+                  return (
+                    <li key={s.time}>
                       <button
                         type="button"
-                        onClick={() => cancel(b.id)}
-                        disabled={busy === b.id}
-                        className="inline-flex items-center gap-1 rounded-lg border-2 border-red-200 px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-60"
+                        disabled={!bk}
+                        onClick={() => bk && setSelected(bk)}
+                        title={bk ? `${bk.user_name} (${bk.user_email})` : badge}
+                        className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-[11px] font-bold transition ${cls}`}
                       >
-                        {busy === b.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />} Cancel
+                        <span className="flex items-center gap-1.5">
+                          <Clock3 className="h-3 w-3 opacity-60" /> {label12(s.time)}
+                        </span>
+                        {bk ? (
+                          <span className="max-w-[110px] truncate font-semibold">{bk.user_name}</span>
+                        ) : (
+                          <span className="text-[9px] font-extrabold uppercase tracking-wide opacity-70">{badge}</span>
+                        )}
                       </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
         </div>
       )}
+
+      {selected && (
+        <BookingDetailModal
+          booking={selected}
+          onClose={() => setSelected(null)}
+          onChanged={() => {
+            setSelected(null);
+            load();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Miniature detail popup for a booked slot, with one-tap dues clearance. */
+function BookingDetailModal({
+  booking,
+  onClose,
+  onChanged,
+}: {
+  booking: Booking;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const courtBill = booking.total ?? booking.total_amount;
+  const advance = booking.total_amount;
+  const due = Math.max(0, courtBill - advance);
+  const cleared = due <= 0;
+  const dur = booking.duration_min ?? 60;
+  const timeRange = `${label12(booking.slot_time)} – ${label12(addMins(booking.slot_time, dur))}`;
+
+  async function clearDues() {
+    setBusy(true);
+    const res = await fetch("/api/admin/bookings/dues", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ booking_id: booking.id }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      toast.show("Dues cleared — the customer has been notified.", "success");
+      onChanged();
+    } else {
+      toast.show("Could not clear those dues.", "error");
+    }
+  }
+
+  const Row = ({ label, value, tone }: { label: string; value: React.ReactNode; tone?: string }) => (
+    <div className="flex items-center justify-between gap-3 py-1.5">
+      <span className="text-xs text-ink/50 dark:text-white/50">{label}</span>
+      <span className={`text-sm font-semibold ${tone ?? "text-ink dark:text-white"}`}>{value}</span>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-ink/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-card dark:border-white/10 dark:bg-[#111c38]">
+        <div className="flex items-start justify-between gap-3 border-b border-ink/10 p-5 dark:border-white/10">
+          <div>
+            <div className="font-display text-lg font-extrabold tracking-tight text-ink dark:text-white">{booking.user_name}</div>
+            <div className="mt-0.5 text-xs text-ink/50 dark:text-white/50">{booking.user_email}</div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-ink/10 text-ink/60 transition hover:text-ink dark:border-white/10 dark:text-white/60 dark:hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="px-5 py-3">
+          {booking.user_phone && booking.user_phone !== "—" && (
+            <Row label="Phone" value={<span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {booking.user_phone}</span>} />
+          )}
+          <Row label="Sport" value={<span className="capitalize">{booking.sport ?? "pickleball"}</span>} />
+          <Row label="Court" value={`Court ${booking.court_number}`} />
+          <Row label="Date" value={new Date(booking.slot_date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })} />
+          <Row label="Time" value={timeRange} />
+          <Row label="Source" value={<span className="capitalize">{booking.source ?? "online"}</span>} />
+          <div className="my-2 border-t border-ink/10 dark:border-white/10" />
+          <Row label="Total court bill" value={money(courtBill)} />
+          <Row label="Advance paid" value={money(advance)} tone="text-lime-dark dark:text-lime" />
+          <Row
+            label="Balance due"
+            value={cleared ? "Cleared ✓" : money(due)}
+            tone={cleared ? "text-lime-dark dark:text-lime" : "text-red-600 dark:text-red-400"}
+          />
+        </div>
+
+        {!cleared && (
+          <div className="border-t border-ink/10 p-4 dark:border-white/10">
+            <button
+              type="button"
+              onClick={clearDues}
+              disabled={busy}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-lime/40 bg-lime/10 px-4 py-2.5 text-sm font-bold text-lime-dark transition hover:bg-lime/20 disabled:opacity-60 dark:text-lime"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <IndianRupee className="h-4 w-4" />}
+              Mark dues cleared ({money(due)})
+            </button>
+            <p className="mt-2 text-center text-[11px] text-ink/40 dark:text-white/40">
+              Settles the booking & emails the customer a receipt.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
