@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
-import { signToken, COOKIE_NAME, USER_SESSION_MAX_AGE } from "@/lib/auth";
+import { signToken, COOKIE_NAME, userSessionDurations } from "@/lib/auth";
 import { exchangeCode, fetchProfile, googleConfigured, originFromRequest } from "@/lib/google-oauth";
 
 export const runtime = "nodejs";
@@ -27,6 +27,7 @@ export async function GET(req: Request) {
     const res = NextResponse.redirect(new URL(`/login?error=${e}`, origin));
     res.cookies.set("g_oauth_state", "", { path: "/", maxAge: 0 });
     res.cookies.set("g_oauth_next", "", { path: "/", maxAge: 0 });
+    res.cookies.set("g_oauth_pwa", "", { path: "/", maxAge: 0 });
     return res;
   };
 
@@ -44,6 +45,7 @@ export async function GET(req: Request) {
     const savedState = c.get("g_oauth_state")?.value;
     const rawNext = c.get("g_oauth_next")?.value || "/dashboard";
     const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
+    const isPwa = c.get("g_oauth_pwa")?.value === "1";
     if (!savedState || savedState !== state) return fail("google_state");
 
     // Exchange the auth code → tokens. Distinguish the common misconfig causes
@@ -177,7 +179,9 @@ export async function GET(req: Request) {
       }
     }
 
-    const token = await signToken({ id: userId, email, name, role: "user" });
+    // Installed-PWA logins last ~5 days; plain-browser logins expire in 24h.
+    const { exp, maxAge } = userSessionDurations(isPwa);
+    const token = await signToken({ id: userId, email, name, role: "user" }, exp);
 
     // CRITICAL: set the session cookie on the redirect RESPONSE, not via the
     // next/headers cookies() store. In Next 15 route handlers, store mutations
@@ -189,12 +193,13 @@ export async function GET(req: Request) {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
-      maxAge: USER_SESSION_MAX_AGE,
+      maxAge,
       secure: process.env.NODE_ENV === "production",
     });
     // One-time flow cookies are now spent.
     res.cookies.set("g_oauth_state", "", { path: "/", maxAge: 0 });
     res.cookies.set("g_oauth_next", "", { path: "/", maxAge: 0 });
+    res.cookies.set("g_oauth_pwa", "", { path: "/", maxAge: 0 });
     return res;
   } catch (e) {
     console.error("[google callback error]", e);
