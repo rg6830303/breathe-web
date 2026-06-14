@@ -1,7 +1,7 @@
 // Breathe Pickleball Service Worker
 // Caches the app shell for offline support and fast repeat loads
 
-const CACHE_NAME = "breathe-pb-v3";
+const CACHE_NAME = "breathe-pb-v4";
 const OFFLINE_URL = "/offline";
 
 // Core app shell URLs to precache
@@ -111,7 +111,9 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Notification click → focus or open app
+// Notification click → focus an existing window (navigating it to the target)
+// or open a new one. Matching on exact URL is brittle (query strings, trailing
+// slashes), so we focus any same-origin client and navigate it instead.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url ?? "/";
@@ -119,10 +121,16 @@ self.addEventListener("notificationclick", (event) => {
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((windowClients) => {
-        const existing = windowClients.find(
-          (c) => c.url === targetUrl && "focus" in c
-        );
-        return existing ? existing.focus() : clients.openWindow(targetUrl);
+        for (const c of windowClients) {
+          if ("focus" in c) {
+            if ("navigate" in c) {
+              return c.navigate(targetUrl).then((nc) => (nc || c).focus());
+            }
+            return c.focus();
+          }
+        }
+        return clients.openWindow(targetUrl);
       })
+      .catch(() => clients.openWindow(targetUrl))
   );
 });
