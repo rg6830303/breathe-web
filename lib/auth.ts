@@ -20,10 +20,19 @@ const ADMIN_COOKIE = "breathe_admin_session";
 export type UserPayload = { id: string; email: string; name: string; role: "user" };
 export type AdminPayload = { id: string; email: string; role: "admin" };
 
+// Single source of truth for session lifetimes. The JWT `exp` (enforced by the
+// middleware on every request) and the cookie `maxAge` MUST agree, so always
+// reference these constants in the auth routes instead of hard-coding literals.
+// Admin sessions are deliberately short (12h) so the console re-authenticates
+// daily; player sessions last 7 days.
+export const USER_JWT_EXP = "7d";
+export const ADMIN_JWT_EXP = "12h";
+export const USER_SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days, in seconds
+export const ADMIN_SESSION_MAX_AGE = 60 * 60 * 12; // 12 hours, in seconds
+
 export async function signToken(
   payload: UserPayload | AdminPayload,
-  // Admin sessions are short-lived (24h); players get 7 days.
-  expiresIn: string = (payload as { role?: string }).role === "admin" ? "24h" : "7d",
+  expiresIn: string = (payload as { role?: string }).role === "admin" ? ADMIN_JWT_EXP : USER_JWT_EXP,
 ) {
   return new SignJWT(payload as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: "HS256" })

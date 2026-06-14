@@ -1,14 +1,17 @@
 import { turso } from "@/lib/turso";
 import { v4 as uuid } from "uuid";
 
-/** Bulk-hours package: 12 prepaid hours for ₹8,000. */
+/** Bulk-hours package: 13 prepaid hours for ₹8,000. */
 export const BULK_PACKAGE = {
+  // NOTE: `id` is also the wire tag matched in create-order/verify-payment.
+  // It is an opaque identifier, not user-facing, so it stays "bulk-12h" to
+  // avoid breaking in-flight purchases — only the hours/price/copy changed.
   id: "bulk-12h",
-  label: "12-Hour Bulk Pass",
-  hours: 12,
-  minutes: 12 * 60,
+  label: "13-Hour Bulk Pass",
+  hours: 13,
+  minutes: 13 * 60,
   price: 8000,
-  blurb: "Prepay 12 hours of court time and then book any open slot instantly — no payment needed each time.",
+  blurb: "Prepay 13 hours of court time and then book any open slot instantly — no payment needed each time.",
 } as const;
 
 /** Each booked slot consumes this many minutes of credit. Slots are 1 hour. */

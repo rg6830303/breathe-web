@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
-import { signToken, COOKIE_NAME } from "@/lib/auth";
+import { signToken, COOKIE_NAME, USER_SESSION_MAX_AGE } from "@/lib/auth";
 import { exchangeCode, fetchProfile, googleConfigured, originFromRequest } from "@/lib/google-oauth";
 
 export const runtime = "nodejs";
@@ -189,7 +189,7 @@ export async function GET(req: Request) {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: USER_SESSION_MAX_AGE,
       secure: process.env.NODE_ENV === "production",
     });
     // One-time flow cookies are now spent.

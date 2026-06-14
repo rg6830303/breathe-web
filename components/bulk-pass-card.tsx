@@ -55,7 +55,7 @@ export function BulkPassCard() {
         amount: order.amount,
         currency: order.currency,
         name: "Breathe Pickleball",
-        description: "12-Hour Bulk Pass",
+        description: "13-Hour Bulk Pass",
         order_id: order.orderId,
         prefill: { name: account.name, email: account.email },
         theme: { color: "#2F5BFF" },
@@ -74,7 +74,7 @@ export function BulkPassCard() {
             const v = await vr.json();
             if (!vr.ok) throw new Error(v.error ?? "Verification failed");
             setBalanceMin(Number(v.balanceMin) || 0);
-            toast.show("12 hours added! Book any open slot instantly — no payment needed.", "success");
+            toast.show("13 hours added! Book any open slot instantly — no payment needed.", "success");
           } catch (e) {
             toast.show(e instanceof Error ? e.message : "Verification failed", "error");
           } finally {
@@ -118,7 +118,7 @@ export function BulkPassCard() {
           </div>
 
           <h3 className="heading-lg mt-3 text-white">
-            12-Hour{" "}
+            13-Hour{" "}
             <span className="mark-lime">Bulk Pass</span>
           </h3>
 
@@ -127,9 +127,9 @@ export function BulkPassCard() {
           </div>
 
           <p className="mt-3 max-w-md text-sm leading-relaxed text-white/70">
-            Prepay 12 hours of court time, then book any open slot{" "}
+            Prepay 13 hours of court time, then book any open slot{" "}
             <strong className="font-extrabold text-white">instantly with no further payment</strong>.
-            Works out to ~₹667/hour.
+            Works out to ~₹615/hour.
           </p>
 
           {balanceMin > 0 && (
@@ -147,7 +147,7 @@ export function BulkPassCard() {
           className="btn-accent shrink-0 self-start sm:self-center"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-          {balanceMin > 0 ? "Top up 12 hours" : "Buy 12-Hour Pass"}
+          {balanceMin > 0 ? "Top up 13 hours" : "Buy 13-Hour Pass"}
         </button>
       </div>
     </div>
