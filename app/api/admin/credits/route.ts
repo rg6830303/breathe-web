@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     : Math.round((parsed.data.hours ?? 0) * 60);
   if (!minutes) return NextResponse.json({ error: "Specify hours or grantPackage." }, { status: 400 });
 
-  const reason = parsed.data.reason || (parsed.data.grantPackage ? "Admin granted 12h bulk pass" : "Admin credit adjustment");
+  const reason = parsed.data.reason || (parsed.data.grantPackage ? "Admin granted 13h bulk pass" : "Admin credit adjustment");
   const balance = await adjustCredit(parsed.data.user_id, minutes, reason);
   return NextResponse.json({ ok: true, balanceMin: balance });
 }

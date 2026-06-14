@@ -54,7 +54,7 @@ export async function POST(req: Request) {
 
     // Bulk-hours package purchase: grant prepaid credit instead of booking slots.
     if (body.purchase === "bulk-12h") {
-      const balanceMin = await adjustCredit(session.id, BULK_PACKAGE.minutes, "Purchased 12h bulk pass");
+      const balanceMin = await adjustCredit(session.id, BULK_PACKAGE.minutes, "Purchased 13h bulk pass");
       return NextResponse.json({ ok: true, purchased: "bulk-12h", balanceMin });
     }
 
@@ -272,6 +272,7 @@ export async function POST(req: Request) {
           : 1;
       return {
         id: bookingIds[idx],
+        userId: session.id,
         userEmail,
         userName,
         userPhone: userPhone || undefined,
@@ -282,7 +283,7 @@ export async function POST(req: Request) {
         courtNumber: court,
         subtotal: Math.round(totals.subtotal),
         gst: Math.round(totals.taxes),
-        amountPaid: idx === 0 ? 200 : 0,
+        amountPaid: 200,
         sport: sSport,
       };
     };
@@ -291,11 +292,29 @@ export async function POST(req: Request) {
       try {
         const { notifyBookingConfirmed } = require("@/lib/notifications");
         if (!notifyBookingConfirmed) return;
-        for (let idx = 0; idx < slots.length; idx++) {
-          await notifyBookingConfirmed(payloadFor(idx)).catch((e: unknown) =>
-            console.error("[notify error]", e),
-          );
-        }
+        // ONE consolidated confirmation per order. The ₹200 advance is a single
+        // flat charge for the whole booking (any number of slots), so we send a
+        // single email/notification showing the grand total, the ₹200 paid, and
+        // the balance due at the venue — never a per-slot "₹0 advance".
+        const perSlot = slots.map((_, idx) => payloadFor(idx));
+        const grandTotal = perSlot.reduce((a, p) => a + p.amount, 0);
+        const grandSubtotal = perSlot.reduce((a, p) => a + (p.subtotal || 0), 0);
+        const slotsSummary =
+          perSlot.length > 1
+            ? perSlot
+                .map((p) => `${p.slotDate} · ${p.slotTime} (${p.durationMin}m, Court ${p.courtNumber})`)
+                .join("; ")
+            : undefined;
+        const consolidated = {
+          ...perSlot[0],
+          amount: grandTotal,
+          subtotal: grandSubtotal,
+          amountPaid: 200,
+          slotsSummary,
+        };
+        await notifyBookingConfirmed(consolidated).catch((e: unknown) =>
+          console.error("[notify error]", e),
+        );
       } catch (notifErr) {
         console.error("[verify-payment notify dispatch error]", notifErr);
       }

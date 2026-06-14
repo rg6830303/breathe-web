@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { v4 as uuid } from "uuid";
 import { cookies } from "next/headers";
 import { turso } from "@/lib/turso";
-import { signToken, COOKIE_NAME } from "@/lib/auth";
+import { signToken, COOKIE_NAME, USER_SESSION_MAX_AGE } from "@/lib/auth";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { signupSchema, formatZodError } from "@/lib/validation";
 
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: USER_SESSION_MAX_AGE,
       secure: process.env.NODE_ENV === "production",
     });
 

@@ -68,6 +68,8 @@ export async function notifyBookingConfirmed(b: {
   gst?: number;
   amountPaid?: number;
   sport?: string;
+  /** When an order has several slots, a human summary of all of them. */
+  slotsSummary?: string;
 }): Promise<{ emailed: boolean }> {
   try {
     const date = new Date(b.slotDate);
@@ -165,6 +167,9 @@ export async function notifyBookingConfirmed(b: {
       `<tr><td style="padding:6px 0;color:#64748b">Date</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${dateStr}</td></tr>` +
       `<tr><td style="padding:6px 0;color:#64748b">Time</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${slotRange}</td></tr>` +
       courtRow +
+      (b.slotsSummary
+        ? `<tr><td style="padding:6px 0;color:#64748b;vertical-align:top">All slots</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${b.slotsSummary}</td></tr>`
+        : "") +
       `<tr><td style="padding:6px 0;color:#64748b">Total court bill</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">₹${total.toLocaleString("en-IN")}</td></tr>` +
       `<tr><td style="padding:6px 0;color:#64748b">Paid online (Advance)</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#22c55e">₹${amountPaid.toLocaleString("en-IN")}</td></tr>` +
       `<tr><td style="padding:6px 0;color:#64748b">Due amount at premises</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#ef4444">₹${dueAmount.toLocaleString("en-IN")}</td></tr>` +
@@ -451,6 +456,157 @@ export async function notifyOutstandingDue(b: {
     return { emailed: result.ok };
   } catch (err) {
     console.error("[notifyOutstandingDue error]", err);
+    return { emailed: false };
+  }
+}
+
+/**
+ * Fan-out for any admin-side action (member added, slot blocked, expense
+ * recorded, notice/tournament published, dues cleared, …). Writes the shared
+ * admin inbox feed, pushes to every admin device, and emails ADMIN_EMAIL.
+ * Best-effort: every channel is independently guarded so one failure never
+ * blocks the others, and the whole thing never throws to the caller.
+ *
+ * NOTE: this was previously imported by several admin routes but never defined,
+ * so admin-console notifications silently no-op'd. Defining it restores the
+ * admin inbox + push for those actions.
+ */
+export async function notifyAdminAction(
+  title: string,
+  body: string,
+  opts?: { actor?: string; url?: string },
+): Promise<void> {
+  const url = opts?.url || "/admin";
+  const detail = opts?.actor ? `${body} · by ${opts.actor}` : body;
+
+  // 1. Persistent admin inbox (drives the console notification bell).
+  try {
+    await recordNotification({ role: "admin", title, body: detail, url });
+  } catch (e) {
+    console.error("[notifyAdminAction inbox error]", e);
+  }
+
+  // 2. Web-push to every admin device.
+  try {
+    await sendPushToAdmins({ title, body: detail, url, tag: `admin-${Date.now()}` });
+  } catch (e) {
+    console.error("[notifyAdminAction push error]", e);
+  }
+
+  // 3. Email the owner (best-effort).
+  if (ADMIN_EMAIL) {
+    try {
+      await sendMail({
+        to: ADMIN_EMAIL,
+        subject: `Breathe Admin — ${title}`,
+        text: `${title}\n\n${detail}\n\nOpen the console: ${
+          process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in"
+        }${url}`,
+      });
+    } catch (e) {
+      console.error("[notifyAdminAction email error]", e);
+    }
+  }
+}
+
+/**
+ * Sent when the admin marks a booking's outstanding dues as cleared (paid at
+ * the club). Emails the player a thank-you / dues-cleared receipt and drops a
+ * confirmation into their portal inbox + a push to their devices.
+ */
+export async function notifyDuesCleared(b: {
+  id: string;
+  userId?: string;
+  userEmail: string;
+  userName: string;
+  slotDate: string;
+  slotTime: string;
+  durationMin?: number;
+  total: number;
+  sport?: string;
+  courtNumber?: number;
+}): Promise<{ emailed: boolean }> {
+  try {
+    const date = new Date(b.slotDate);
+    const dateStr = date.toLocaleDateString("en-IN", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "Asia/Kolkata",
+    });
+    const slotRange = b.durationMin
+      ? `${format12h(b.slotTime)} – ${format12h(computeEndTime(b.slotTime, b.durationMin))}`
+      : format12h(b.slotTime);
+    const shortRef = b.id.slice(0, 8).toUpperCase();
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in";
+    const firstName = (b.userName || "there").trim().split(" ")[0];
+    const sport = b.sport || "pickleball";
+    const sportName = sport.charAt(0).toUpperCase() + sport.slice(1);
+    const total = b.total;
+
+    const html =
+      `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0d1426">` +
+      `<div style="text-align:center;margin-bottom:16px"><img src="${siteUrl}/icons/icon-192.png" alt="Breathe Pickleball" width="56" height="56" style="border-radius:14px"/></div>` +
+      `<h2 style="text-align:center;margin:0 0 4px">Dues cleared ✅</h2>` +
+      `<p style="text-align:center;color:#64748b;margin:0 0 20px">Reference ${shortRef}</p>` +
+      `<p style="color:#475569;line-height:1.6">Hi ${firstName}, thank you! We've received the full payment for your ${sportName} session — your account is now fully settled. We hope you had a great game and look forward to seeing you on the court again soon. 🎾</p>` +
+      `<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">` +
+      `<tr><td style="padding:6px 0;color:#64748b">Sport</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${sportName}</td></tr>` +
+      `<tr><td style="padding:6px 0;color:#64748b">Date</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${dateStr}</td></tr>` +
+      `<tr><td style="padding:6px 0;color:#64748b">Time</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${slotRange}</td></tr>` +
+      `<tr><td style="padding:6px 0;color:#64748b">Total bill</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">₹${total.toLocaleString("en-IN")}</td></tr>` +
+      `<tr><td style="padding:6px 0;color:#64748b">Status</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#22c55e">Fully paid</td></tr>` +
+      `</table>` +
+      `<p style="background:#dcfce7;color:#166534;padding:12px;border-radius:12px;font-size:13px;line-height:1.5;margin:16px 0">No outstanding balance remains on this booking. Thank you for choosing Breathe Club!</p>` +
+      `<p style="text-align:center;margin:24px 0"><a href="${siteUrl}/dashboard" style="background:#2F5BFF;color:#fff;text-decoration:none;padding:13px 28px;border-radius:9999px;font-weight:700;display:inline-block">View my bookings</a></p>` +
+      `<hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0"/>` +
+      `<p style="color:#94a3b8;font-size:12px">Breathe Club · Panchwati Complex, Kaikhali, Kolkata</p>` +
+      `</div>`;
+
+    const text =
+      `Hi ${firstName},\n\n` +
+      `Thank you! We've received full payment for your ${sportName} session — your account is now fully settled.\n\n` +
+      `Date: ${dateStr}\n` +
+      `Time: ${slotRange}\n` +
+      `Total bill: Rs. ${total.toLocaleString("en-IN")}\n` +
+      `Status: Fully paid (no dues remaining)\n` +
+      `Reference: ${shortRef}\n\n` +
+      `We hope you had a great game and look forward to seeing you again soon!\n\n` +
+      `Venue: ${VENUE_ADDRESS}`;
+
+    const result = await sendMail({
+      to: b.userEmail,
+      subject: `Dues cleared — thank you! | Ref ${shortRef}`,
+      html,
+      text,
+    });
+
+    // Portal inbox + push to the player's devices.
+    try {
+      const inboxBody = `Your dues for ${sportName} on ${dateStr} are cleared. Account fully settled — thank you!`;
+      if (b.userId) {
+        await sendPushToUser(b.userId, {
+          title: "Dues cleared ✅",
+          body: inboxBody,
+          url: `/dashboard?booking=${b.id}`,
+          tag: `dues-${b.id}`,
+        }).catch(() => {});
+        await recordNotification({
+          userId: b.userId,
+          role: "user",
+          title: "Dues cleared ✅",
+          body: inboxBody,
+          url: `/dashboard?booking=${b.id}`,
+        });
+      }
+    } catch (pushErr) {
+      console.error("[notifyDuesCleared push error]", pushErr);
+    }
+
+    return { emailed: result.ok };
+  } catch (err) {
+    console.error("[notifyDuesCleared error]", err);
     return { emailed: false };
   }
 }

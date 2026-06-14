@@ -31,9 +31,11 @@ import {
   Trophy,
   Trash2,
   Plus,
+  HandCoins,
+  Check,
 } from "lucide-react";
 
-type Tab = "overview" | "bookings" | "courts" | "users" | "expenses" | "tournaments" | "email";
+type Tab = "overview" | "bookings" | "courts" | "users" | "dues" | "expenses" | "tournaments" | "email";
 type Stats = {
   total_users: number;
   total_bookings: number;
@@ -149,6 +151,7 @@ const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: s
   { key: "bookings", label: "All bookings", icon: Calendar },
   { key: "courts", label: "Court management", icon: Grid3x3 },
   { key: "users", label: "Users", icon: Users },
+  { key: "dues", label: "Pending dues", icon: HandCoins },
   { key: "expenses", label: "Expenses", icon: Wallet },
   { key: "tournaments", label: "Tournaments", icon: Trophy },
   { key: "email", label: "Email", icon: Mail },
@@ -254,6 +257,7 @@ export function AdminConsole() {
           {tab === "bookings" && <BookingsTab />}
           {tab === "courts" && <CourtTab />}
           {tab === "users" && <UsersTab />}
+          {tab === "dues" && <DuesTab />}
           {tab === "expenses" && <ExpensesTab />}
           {tab === "tournaments" && <TournamentsTab />}
           {tab === "email" && <EmailPanel />}
@@ -325,6 +329,137 @@ function OverviewTab() {
           Total confirmed revenue: <strong className="text-ink dark:text-white">{money(stats.total_revenue)}</strong>
         </p>
       </section>
+    </div>
+  );
+}
+
+type DueRow = {
+  id: string;
+  user_id: string | null;
+  user_name: string;
+  user_email: string;
+  slot_date: string;
+  slot_time: string;
+  duration_min: number;
+  court_number: number | null;
+  sport?: string;
+  total: number;
+  amount_paid: number;
+  due: number;
+};
+
+/**
+ * Pending-dues panel: every confirmed booking whose balance isn't fully paid.
+ * Dues are collected at the club; the admin marks them cleared here, which
+ * settles the booking and emails + notifies the player.
+ */
+function DuesTab() {
+  const toast = useToast();
+  const [rows, setRows] = useState<DueRow[]>(() => getAdminCache<DueRow[]>("dues:") ?? []);
+  const [loading, setLoading] = useState(() => getAdminCache<DueRow[]>("dues:") === undefined);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  function reload() {
+    const cached = getAdminCache<DueRow[]>("dues:");
+    if (cached) {
+      setRows(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+    fetch("/api/admin/bookings/dues")
+      .then((r) => (r.ok ? r.json() : { bookings: [] }))
+      .then((data) => {
+        setRows(data.bookings ?? []);
+        setAdminCache("dues:", data.bookings ?? []);
+      })
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(reload, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const totalOutstanding = useMemo(() => rows.reduce((a, r) => a + (Number(r.due) || 0), 0), [rows]);
+
+  async function clearDues(r: DueRow) {
+    if (!confirm(`Mark dues of ${money(r.due)} for ${r.user_name} as cleared? This emails the customer and settles the booking.`)) return;
+    setBusy(r.id);
+    const res = await fetch("/api/admin/bookings/dues", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ booking_id: r.id }),
+    });
+    setBusy(null);
+    if (res.ok) {
+      toast.show("Dues cleared — the customer has been notified.", "success");
+      // Drop it from the list immediately, then revalidate.
+      setRows((prev) => prev.filter((x) => x.id !== r.id));
+      setAdminCache("dues:", rows.filter((x) => x.id !== r.id));
+    } else {
+      toast.show("Could not clear those dues.", "error");
+    }
+    reload();
+  }
+
+  return (
+    <div className="card-sport p-5">
+      <PanelHeader
+        eyebrow="Pending dues"
+        title="Outstanding balances"
+        subtitle={`${rows.length} booking${rows.length === 1 ? "" : "s"} awaiting payment · ${money(totalOutstanding)} outstanding`}
+      >
+        <button type="button" onClick={reload} className="btn-outline px-2.5 py-2 text-xs">
+          <RefreshCw className="h-3.5 w-3.5" /> Refresh
+        </button>
+      </PanelHeader>
+
+      {loading ? (
+        <LoadingCard />
+      ) : rows.length === 0 ? (
+        <EmptyState>No pending dues — every booking is fully settled. 🎉</EmptyState>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b-2 border-ink/10 dark:border-white/10">
+                <th className={TH}>User</th>
+                <th className={TH}>Sport</th>
+                <th className={TH}>Date</th>
+                <th className={TH}>Time</th>
+                <th className={TH_RIGHT}>Total</th>
+                <th className={TH_RIGHT}>Paid</th>
+                <th className={TH_RIGHT}>Due</th>
+                <th className="p-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} className={TR_HOVER}>
+                  <td className="p-3">
+                    <div className="font-bold text-ink dark:text-white">{r.user_name}</div>
+                    <div className="text-[11px] text-ink/50 dark:text-white/50">{r.user_email}</div>
+                  </td>
+                  <td className="p-3 capitalize text-ink dark:text-white">{r.sport ?? "pickleball"}</td>
+                  <td className="p-3 text-ink dark:text-white">{r.slot_date}</td>
+                  <td className="p-3 text-ink dark:text-white">{String(r.slot_time).slice(0, 5)}</td>
+                  <td className="p-3 text-right font-semibold text-ink dark:text-white">{money(r.total)}</td>
+                  <td className="p-3 text-right text-lime-dark dark:text-lime">{money(r.amount_paid)}</td>
+                  <td className="p-3 text-right font-extrabold text-red-600 dark:text-red-400">{money(r.due)}</td>
+                  <td className="p-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => clearDues(r)}
+                      disabled={busy === r.id}
+                      className="inline-flex items-center gap-1 rounded-lg border-2 border-lime/40 bg-lime/10 px-2.5 py-1.5 text-xs font-bold text-lime-dark transition hover:bg-lime/20 disabled:opacity-60 dark:text-lime"
+                    >
+                      {busy === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Mark cleared
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

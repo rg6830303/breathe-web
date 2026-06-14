@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { v4 as uuid } from "uuid";
 import { cookies } from "next/headers";
 import { turso } from "@/lib/turso";
-import { signToken, ADMIN_COOKIE } from "@/lib/auth";
+import { signToken, ADMIN_COOKIE, ADMIN_SESSION_MAX_AGE } from "@/lib/auth";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { loginSchema, formatZodError } from "@/lib/validation";
 
@@ -193,8 +193,8 @@ export async function POST(req: Request) {
       // this fully neutralises CSRF on admin actions.
       sameSite: "strict",
       path: "/",
-      // Shorter admin session (24h) than player sessions — re-auth daily.
-      maxAge: 60 * 60 * 24,
+      // Shorter admin session (12h) than player sessions — re-auth twice daily.
+      maxAge: ADMIN_SESSION_MAX_AGE,
       secure: process.env.NODE_ENV === "production",
     });
 
