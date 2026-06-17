@@ -16,8 +16,15 @@ const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO = "https://www.googleapis.com/oauth2/v2/userinfo";
 
+// Read + TRIM the credentials. A trailing space or newline pasted into the
+// Vercel env (very common) makes Google's token endpoint reject the pair with
+// `invalid_client` → the "invalid Google client credentials" error, even when
+// the value looks correct. Trimming removes that whole class of failure.
+const clientId = (): string => (process.env.GOOGLE_CLIENT_ID || "").trim();
+const clientSecret = (): string => (process.env.GOOGLE_CLIENT_SECRET || "").trim();
+
 export function googleConfigured(): boolean {
-  return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+  return Boolean(clientId() && clientSecret());
 }
 
 /** Derive the public origin (https://host) from the incoming request, so OAuth
@@ -42,7 +49,7 @@ export function getRedirectUri(origin?: string): string {
 
 export function buildAuthUrl(state: string, origin?: string): string {
   const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID as string,
+    client_id: clientId(),
     redirect_uri: getRedirectUri(origin),
     response_type: "code",
     scope: "openid email profile",
@@ -63,8 +70,8 @@ export async function exchangeCode(code: string, origin?: string): Promise<Googl
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
-      client_id: process.env.GOOGLE_CLIENT_ID as string,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET as string,
+      client_id: clientId(),
+      client_secret: clientSecret(),
       redirect_uri: getRedirectUri(origin),
       grant_type: "authorization_code",
     }),
