@@ -168,18 +168,27 @@ export async function POST(req: Request) {
     const addonTotal = addons.reduce((sum, a) => sum + (Number(a.price) || 0) * (Number(a.qty) || 1), 0);
     const totals = calculateTotals(base, addonTotal);
 
-    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (!keyId || !keySecret) {
+    if (!keyId) {
       return NextResponse.json({ error: "Razorpay is not configured." }, { status: 500 });
+    }
+    // Charging exactly ₹200 (or ₹1 in TEST_ONE_RUPEE mode) as booking advance.
+    const payAmount = TEST_ONE_RUPEE ? 100 : 200 * 100;
+
+    // Two modes, by whether the server SECRET is configured:
+    //  • Secret present  → create a real Razorpay Order so the payment can be
+    //    cryptographically verified server-side (the secure path).
+    //  • Secret absent   → DIRECT checkout with just the public key id (the
+    //    original single-key setup): Razorpay still collects the money, but
+    //    there is no server-side order/signature. Returns no orderId.
+    if (!keySecret) {
+      return NextResponse.json({ amount: payAmount, currency: "INR", keyId, totals });
     }
 
     let order;
     try {
       const rzp = new Razorpay({ key_id: keyId, key_secret: keySecret });
-      // Charging exactly ₹200 (or ₹1 in TEST_ONE_RUPEE mode) as booking advance
-      const payAmount = TEST_ONE_RUPEE ? 100 : 200 * 100;
-
       order = await rzp.orders.create({
         amount: payAmount,
         currency: "INR",
