@@ -1,37 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Plus_Jakarta_Sans, Instrument_Serif } from "next/font/google";
+import { Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/app/providers";
 import { ScrollPaddle } from "@/components/motion/scroll-paddle";
 import { PresenceBeacon } from "@/components/presence-beacon";
 import { site, SITE_URL } from "@/lib/site";
 
-const display = Bricolage_Grotesque({
+// Space Grotesk — a modern, geometric grotesk with an athletic, techy edge.
+// Drives every heading (heading-xl / heading-lg / .font-display). It caps at
+// weight 700, so the display-heading utilities are pinned to 700 in globals.css
+// to stay crisp (no browser-synthesized fake-bold).
+const display = Space_Grotesk({
   subsets: ["latin"],
-  // 400/600/700 per spec, plus 800 because the existing headings use
-  // font-extrabold — without it the browser would synthesize fake-bold.
-  weight: ["400", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-display",
   display: "swap",
 });
 
-// Plus Jakarta Sans — a geometric humanist sans with more personality and a
-// more premium, contemporary feel than Inter, while staying highly legible at
-// small sizes on mobile. Drives all body + UI text.
-const body = Plus_Jakarta_Sans({
+// Inter — clean, contemporary, highly legible at small sizes. Drives all body +
+// UI text. Includes 800 so `font-extrabold` on body text renders as real weight.
+const body = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-body",
-  display: "swap",
-});
-
-// Editorial serif used for hero headings — gives the homepage a more premium,
-// appealing feel (paired with the bold display font for everything else).
-const serif = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-  variable: "--font-serif",
   display: "swap",
 });
 
@@ -153,7 +144,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // applies — the app ships a single dark theme (no toggle, no flash).
     <html
       lang="en"
-      className={`dark ${display.variable} ${body.variable} ${serif.variable}`}
+      className={`dark ${display.variable} ${body.variable}`}
       style={{ colorScheme: "dark" }}
     >
       <head>
@@ -164,12 +155,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <script
           dangerouslySetInnerHTML={{
-            // Register + actively check for SW updates on every load, and reload
-            // once when a NEW sw replaces an existing one so fresh deploys appear
-            // immediately. We capture whether a controller already existed so the
-            // first-install claim() does NOT trigger a spurious reload — that
-            // reload-on-first-launch is what made the installed PWA feel broken.
-            __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){var hadController=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('/sw.js').then(function(r){r.update();}).catch(function(){});var rl=false;navigator.serviceWorker.addEventListener('controllerchange',function(){if(rl||!hadController)return;rl=true;window.location.reload();});});}`,
+            // PRODUCTION: register + actively check for SW updates on every load,
+            // and reload once when a NEW sw replaces an existing one so fresh
+            // deploys appear immediately. We capture whether a controller already
+            // existed so the first-install claim() does NOT trigger a spurious
+            // reload — that reload-on-first-launch is what made the installed PWA
+            // feel broken.
+            //
+            // DEVELOPMENT: never register the SW. Next regenerates /_next/static
+            // chunks on every dev run, but sw.js serves them cache-first — a stale
+            // chunk + fresh HTML silently breaks hydration (the page renders as a
+            // blank dark shell). So in dev we instead UNREGISTER any SW left over
+            // from a previous prod/dev session and purge its caches, reloading once
+            // to drop the stale interception.
+            __html:
+              process.env.NODE_ENV === "production"
+                ? `if('serviceWorker' in navigator){window.addEventListener('load',function(){var hadController=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('/sw.js').then(function(r){r.update();}).catch(function(){});var rl=false;navigator.serviceWorker.addEventListener('controllerchange',function(){if(rl||!hadController)return;rl=true;window.location.reload();});});}`
+                : `if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){var had=rs.length>0;rs.forEach(function(r){r.unregister();});var done=function(){if(had)window.location.reload();};if(window.caches){caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}).then(done).catch(done);}else{done();}});}`,
           }}
         />
       </head>
