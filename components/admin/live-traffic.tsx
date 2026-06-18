@@ -21,7 +21,6 @@ const PRETTY_PATH: Record<string, string> = {
   "/cart": "Cart",
   "/payment": "Payment",
   "/tournaments": "Tournaments",
-  "/gallery": "Gallery",
   "/about": "About",
   "/contact": "Contact",
   "/login": "Login",

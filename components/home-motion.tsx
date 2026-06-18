@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
+  ArrowRightCircle,
   CalendarCheck,
   Coffee,
   MapPin,
@@ -23,15 +24,17 @@ import { StatCounter } from "@/components/motion/stat-counter";
 import { TiltCard } from "@/components/motion/tilt-card";
 import { TestimonialsCarousel } from "@/components/testimonials-carousel";
 import { CourtScene } from "@/components/ui/court-scene";
+import { SmartImage } from "@/components/ui/smart-image";
+import { photos, communityPhotos } from "@/lib/photos";
 import type { Notice } from "@/lib/types";
 
 const features = [
-  { icon: Sun, title: "3 premium asphalt courts", text: "Professional asphalt surface with tournament-grade net systems, floodlit for evening play." },
-  { icon: Trophy, title: "Tournaments & cash prizes", text: "Regular open and beginner brackets that bring the city's pickleball community together." },
-  { icon: Sparkles, title: "Equipment included", text: "Pro paddles and balls are complimentary with every court booking — just show up and play." },
-  { icon: Coffee, title: "In-house kitchen", text: "Refuel courtside with snacks and beverages between games." },
+  { icon: Sun, title: "3 premium courts", text: "Tournament-grade asphalt surface and net systems, floodlit for crisp evening play." },
+  { icon: Trophy, title: "Tournaments & prizes", text: "Regular open and beginner brackets that bring the city's pickleball community together." },
+  { icon: Sparkles, title: "Equipment included", text: "Pro paddles and balls are complimentary with every booking — just show up and play." },
+  { icon: Coffee, title: "Courtside kitchen", text: "Refuel between games at Breathe Kitchen with snacks and cold drinks." },
   { icon: ShowerHead, title: "Changing facilities", text: "Clean changing rooms and washrooms so you arrive and leave fresh." },
-  { icon: CalendarCheck, title: "Instant online booking", text: "Live slot availability and confirmed reservations in seconds — no calls needed." },
+  { icon: CalendarCheck, title: "Instant booking", text: "Live slot availability and confirmed reservations in seconds — no calls needed." },
 ];
 
 const steps = [
@@ -46,100 +49,81 @@ const testimonials = [
   { name: "Priya & Karan", role: "Doubles pair", memberType: "Tournament regulars", quote: "The monthly open is so well run — great vibe, real competition, and the courtside kitchen is a bonus." },
 ];
 
-function CourtLinesSVG() {
-  return (
-    <svg
-      className="pointer-events-none absolute inset-0 h-full w-full"
-      viewBox="0 0 1200 800"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-      style={{ opacity: 0.06 }}
-    >
-      <line x1="120" y1="80" x2="120" y2="720" stroke="white" strokeWidth="2" />
-      <line x1="1080" y1="80" x2="1080" y2="720" stroke="white" strokeWidth="2" />
-      <line x1="120" y1="80" x2="1080" y2="80" stroke="white" strokeWidth="2" />
-      <line x1="120" y1="720" x2="1080" y2="720" stroke="white" strokeWidth="2" />
-      <line x1="120" y1="400" x2="1080" y2="400" stroke="white" strokeWidth="3" />
-      <line x1="120" y1="310" x2="1080" y2="310" stroke="white" strokeWidth="1.5" strokeDasharray="6 6" />
-      <line x1="120" y1="490" x2="1080" y2="490" stroke="white" strokeWidth="1.5" strokeDasharray="6 6" />
-      <line x1="600" y1="80" x2="600" y2="310" stroke="white" strokeWidth="1.5" />
-      <line x1="600" y1="490" x2="600" y2="720" stroke="white" strokeWidth="1.5" />
-    </svg>
-  );
-}
+// Heading inline-icon + fade-up stagger, adapted from the brief's hero spec.
+const fadeUp = {
+  hidden: { opacity: 0, y: 28 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.12, duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
+  }),
+};
 
 export function HomeMotion({ notices }: { notices: Notice[] }) {
-  const containerVariants = {
-    hidden: {},
-    visible: {
-      transition: {
-        staggerChildren: 0.12,
-      },
-    },
-  };
-
-  const spanVariants = {
-    hidden: { opacity: 0, y: 24 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const } },
-  };
-
   return (
     <>
-      {/* ── HERO — single calm court backdrop, refined hierarchy ── */}
-      <section className="relative min-h-[86svh] overflow-hidden bg-ink text-white">
-        {/* One tasteful animated backdrop (no competing accents). */}
+      {/* ══ HERO — fullscreen cinematic pickleball-in-action scene ══ */}
+      <section className="relative flex min-h-[92svh] items-center overflow-hidden bg-ink text-white">
         <CourtScene />
-        {/* Legibility gradient so the headline always reads cleanly. */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/30" />
-        {/* Slim court-tape accent at the very top edge. */}
+        {/* a single flying serve across the whole hero for extra life */}
+        <span aria-hidden className="hero-ball hidden sm:block" />
+        {/* legibility wash — strongest on the left where the copy sits */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/25" />
         <div aria-hidden className="tape-stripe absolute left-0 top-0 z-10 h-1 w-full opacity-80" />
 
-        <Container className="relative z-10 grid items-center gap-10 py-20 sm:py-28 lg:grid-cols-[1.1fr_0.9fr] lg:py-32">
-          <motion.div variants={containerVariants} initial="hidden" animate="visible">
-            {/* Location tag */}
-            <motion.span
-              variants={spanVariants}
-              className="tag-sport border-white/15 bg-white/5 text-white/80"
-            >
-              <MapPin className="h-3 w-3" /> Kaikhali · North Kolkata
+        <Container className="relative z-10 grid items-center gap-12 py-24 sm:py-28 lg:grid-cols-[1.05fr_0.95fr] lg:py-32">
+          <motion.div initial="hidden" animate="visible">
+            <motion.span variants={fadeUp} custom={0} className="chip">
+              <span className="chip__dot" /> <MapPin className="h-3.5 w-3.5 text-lime" /> Kaikhali · North Kolkata
             </motion.span>
 
-            {/* Wordmark — one confident headline, lime as a single accent word. */}
-            <motion.h1 variants={containerVariants} className="mt-6">
-              <motion.span
-                variants={spanVariants}
-                className="block text-xs font-semibold uppercase tracking-[0.2em] text-white/45"
-              >
+            <motion.h1 variants={fadeUp} custom={1} className="mt-6">
+              <span className="block text-sm font-bold uppercase tracking-[0.24em] text-white/45">
                 Welcome to
-              </motion.span>
-              <motion.span variants={spanVariants} className="heading-xl mt-3 block text-white">
+              </span>
+              <span className="heading-xl mt-3 block text-white">
                 Breathe <span className="text-lime">Pickleball</span>
-              </motion.span>
+              </span>
             </motion.h1>
 
-            <motion.p variants={spanVariants} className="mt-6 max-w-md text-base leading-7 text-white/65 sm:text-lg">
-              Three professional courts, complimentary equipment, and a thriving community — all bookable in seconds from your phone.
+            <motion.p variants={fadeUp} custom={2} className="mt-6 max-w-md text-base leading-7 text-white/65 sm:text-lg">
+              Three professional courts, complimentary equipment, and a thriving community —
+              all bookable in seconds from your phone.
             </motion.p>
 
-            {/* CTAs */}
-            <motion.div variants={spanVariants} className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <motion.div whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
-                <Link href="/book" className="btn-accent w-full sm:w-auto">
-                  Book Slot Now <ArrowRight className="h-4 w-4" />
+            {/* inline-icon benefit pills (the brief's inline-icon energy) */}
+            <motion.div variants={fadeUp} custom={3} className="mt-6 flex flex-wrap gap-2.5">
+              {[
+                [Zap, "Instant booking"],
+                [Sparkles, "Gear included"],
+                [Trophy, "Tournaments"],
+              ].map(([Icon, label]) => {
+                const I = Icon as typeof Zap;
+                return (
+                  <span key={label as string} className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-white/75">
+                    <I className="h-3.5 w-3.5 text-lime" /> {label as string}
+                  </span>
+                );
+              })}
+            </motion.div>
+
+            <motion.div variants={fadeUp} custom={4} className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
+                <Link href="/book" className="btn-accent w-full justify-between sm:w-auto sm:justify-center">
+                  Book a Slot Now <ArrowRightCircle className="h-5 w-5" />
                 </Link>
               </motion.div>
-              <motion.div whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
+              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
                 <Link
-                  href="/gallery"
-                  className="btn-outline w-full border-white/40 text-white hover:border-white hover:text-white dark:border-white/40 dark:text-white dark:hover:border-white dark:hover:text-white sm:w-auto"
+                  href="/about"
+                  className="btn-outline w-full border-white/35 text-white hover:border-white hover:bg-white/5 hover:text-white dark:border-white/35 dark:text-white dark:hover:border-white dark:hover:text-white sm:w-auto"
                 >
-                  View the Courts
+                  Explore the club
                 </Link>
               </motion.div>
             </motion.div>
 
-            {/* Stat counters */}
-            <motion.div variants={spanVariants} className="mt-10 grid grid-cols-3 gap-3">
+            <motion.div variants={fadeUp} custom={5} className="mt-10 grid grid-cols-3 gap-3">
               {[
                 { value: <StatCounter end={3} />, label: "Pro courts" },
                 {
@@ -164,13 +148,30 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
             </motion.div>
           </motion.div>
 
-          <div className="relative">
+          {/* Live availability — floating glass card */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="relative"
+          >
             <LiveAvailability />
-          </div>
+          </motion.div>
         </Container>
+
+        {/* scroll cue */}
+        <div aria-hidden className="absolute inset-x-0 bottom-5 z-10 hidden justify-center lg:flex">
+          <motion.span
+            animate={{ y: [0, 8, 0] }}
+            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+            className="text-[0.6rem] font-bold uppercase tracking-[0.3em] text-white/35"
+          >
+            Scroll
+          </motion.span>
+        </div>
       </section>
 
-      {/* ── TRUST STRIP — light section ── */}
+      {/* ══ TRUST STRIP ══ */}
       <section className="border-b-2 border-ink/8 bg-white dark:border-white/10 dark:bg-[#111c38]">
         <Container className="grid grid-cols-2 gap-6 py-8 text-center sm:grid-cols-4">
           {[
@@ -183,7 +184,7 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
             return (
               <ScrollReveal key={label as string} delay={idx * 0.1} direction="up" className="flex flex-col items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10">
-                  <I className="h-5 w-5 text-brand" />
+                  <I className="h-5 w-5 text-brand dark:text-lime" />
                 </div>
                 <span className="text-sm font-extrabold uppercase tracking-wide text-ink dark:text-white">{label as string}</span>
               </ScrollReveal>
@@ -192,10 +193,68 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
         </Container>
       </section>
 
-      {/* ── FEATURES — light section / ink (dark) ── */}
-      <section className="bg-white px-4 py-20 text-ink dark:bg-ink dark:text-white sm:px-6 lg:px-8">
+      {/* ══ SHOWCASE — big photo split (replaces gallery's role) ══ */}
+      <section className="bg-white px-4 py-20 dark:bg-ink sm:px-6 lg:px-8">
         <Container className="!px-0">
-          {/* Section header */}
+          <ScrollReveal direction="up">
+            <div className="mb-10 max-w-2xl">
+              <span className="eyebrow text-brand dark:text-lime">Life at Breathe</span>
+              <h2 className="heading-lg mt-4 text-ink dark:text-white">
+                Real courts, real{" "}
+                <span className="mark-lime">community</span>
+              </h2>
+              <p className="mt-4 text-base text-slatey dark:text-white/65">
+                Floodlit evenings, friendly rallies, and a crowd that feels like a club.
+                Here's a glimpse of the energy on our courts.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          {/* asymmetric photo grid */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2">
+            <ScrollReveal direction="up" className="lg:col-span-2 lg:row-span-2">
+              <div className="photo-frame aspect-[4/5] h-full w-full sm:aspect-square lg:aspect-auto">
+                <span className="photo-frame__tick" />
+                <SmartImage photo={photos.playersAction} sizes="(max-width:1024px) 100vw, 50vw" priority imgClassName="object-[center_30%]" />
+                <div className="absolute bottom-0 left-0 z-[2] p-5">
+                  <span className="text-sm font-bold text-white">Game on, every evening</span>
+                </div>
+              </div>
+            </ScrollReveal>
+            <ScrollReveal direction="up" delay={0.06}>
+              <div className="photo-frame aspect-[4/5] sm:aspect-square">
+                <span className="photo-frame__tick" />
+                <SmartImage photo={photos.communityWomen} sizes="(max-width:1024px) 50vw, 25vw" />
+              </div>
+            </ScrollReveal>
+            <ScrollReveal direction="up" delay={0.12}>
+              <div className="photo-frame aspect-[4/5] sm:aspect-square">
+                <span className="photo-frame__tick" />
+                <SmartImage photo={photos.tournamentWinners} sizes="(max-width:1024px) 50vw, 25vw" />
+              </div>
+            </ScrollReveal>
+            <ScrollReveal direction="up" delay={0.18}>
+              <div className="photo-frame aspect-[4/5] sm:aspect-square">
+                <span className="photo-frame__tick" />
+                <SmartImage photo={photos.communityCourt} sizes="(max-width:1024px) 50vw, 25vw" />
+              </div>
+            </ScrollReveal>
+            <ScrollReveal direction="up" delay={0.24}>
+              <div className="photo-frame aspect-[4/5] sm:aspect-square">
+                <span className="photo-frame__tick" />
+                <SmartImage photo={photos.kitchen} sizes="(max-width:1024px) 50vw, 25vw" />
+                <div className="absolute bottom-0 left-0 z-[2] p-4">
+                  <span className="text-xs font-bold text-white">Breathe Kitchen</span>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </Container>
+      </section>
+
+      {/* ══ FEATURES ══ */}
+      <section className="bg-white px-4 py-20 text-ink dark:bg-[#111c38] dark:text-white sm:px-6 lg:px-8">
+        <Container className="!px-0">
           <ScrollReveal direction="up">
             <div className="mb-12 text-center">
               <span className="eyebrow text-brand dark:text-lime">Why Breathe</span>
@@ -231,8 +290,8 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
         </Container>
       </section>
 
-      {/* ── HOW IT WORKS — light section ── */}
-      <section className="bg-white px-4 py-20 dark:bg-[#111c38] sm:px-6 lg:px-8">
+      {/* ══ HOW IT WORKS ══ */}
+      <section className="bg-white px-4 py-20 dark:bg-ink sm:px-6 lg:px-8">
         <Container className="!px-0">
           <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <ScrollReveal direction="up">
@@ -245,11 +304,14 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
                 <p className="mt-4 text-base leading-7 text-slatey dark:text-white/65">
                   Most of our players book on their phone minutes before they leave home. Here's how simple it is.
                 </p>
+                {/* a real court photo to anchor the copy */}
+                <div className="photo-frame mt-7 aspect-[16/10] hidden lg:block">
+                  <SmartImage photo={photos.courtNight} sizes="(max-width:1024px) 0px, 40vw" />
+                </div>
               </div>
             </ScrollReveal>
 
             <div className="relative">
-              {/* Connector line */}
               <motion.div
                 initial={{ scaleY: 0 }}
                 whileInView={{ scaleY: 1 }}
@@ -257,12 +319,10 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
                 transition={{ duration: 1.2, ease: "easeInOut" }}
                 className="absolute left-7 top-10 bottom-10 hidden w-0.5 origin-top bg-lime/40 sm:block"
               />
-
               <div className="grid gap-5 relative">
                 {steps.map(({ icon: Icon, title, text }, i) => (
                   <ScrollReveal key={title} delay={i * 0.15} direction="left">
                     <div className="card-sport flex items-start gap-4 p-5">
-                      {/* Step number */}
                       <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-lime">
                         <span className="font-display text-lg font-extrabold text-ink">{i + 1}</span>
                       </div>
@@ -282,10 +342,9 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
         </Container>
       </section>
 
-      {/* ── SPLIT PROMO — light / ink (dark) ── */}
-      <section className="bg-white px-4 py-20 dark:bg-ink sm:px-6 lg:px-8">
+      {/* ══ SPLIT PROMO — court booking + tournaments (with photo) ══ */}
+      <section className="bg-white px-4 py-20 dark:bg-[#111c38] sm:px-6 lg:px-8">
         <Container className="!px-0 grid gap-5 lg:grid-cols-2">
-          {/* Court booking card — light */}
           <ScrollReveal direction="left" className="h-full">
             <TiltCard maxTilt={3} className="h-full">
               <div className="card-sport group relative h-full overflow-hidden p-8 flex flex-col justify-between">
@@ -301,56 +360,75 @@ export function HomeMotion({ notices }: { notices: Notice[] }) {
                     Live availability across all three courts, transparent pricing, and instant confirmation. Paddles and balls are on us.
                   </p>
                 </div>
-                <Link
-                  href="/book"
-                  className="btn-primary mt-8 self-start"
-                >
+                <Link href="/book" className="btn-primary mt-8 self-start">
                   Book a slot now <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             </TiltCard>
           </ScrollReveal>
 
-          {/* Tournament card — dark with lime */}
+          {/* Tournament card — photo background with lime tape */}
           <ScrollReveal direction="right" className="h-full">
             <TiltCard maxTilt={3} className="h-full">
-              <div className="relative h-full overflow-hidden rounded-3xl bg-lime p-8 text-ink flex flex-col justify-between">
-                <CourtLinesSVG />
-                <div className="relative">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-ink/10">
+              <div className="relative h-full min-h-[20rem] overflow-hidden rounded-3xl text-white flex flex-col justify-end">
+                <SmartImage photo={photos.tournamentWinners} sizes="(max-width:1024px) 100vw, 50vw" className="!absolute inset-0" imgClassName="object-[center_25%]" />
+                <div aria-hidden className="absolute inset-0 z-[1] bg-gradient-to-t from-ink via-ink/70 to-ink/20" />
+                <div aria-hidden className="tape-stripe absolute left-0 top-0 z-[2] h-1.5 w-full opacity-90" />
+                <div className="relative z-[2] p-8">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime">
                     <Trophy className="h-6 w-6 text-ink" />
                   </div>
-                  <h3 className="heading-lg mt-5 text-ink" style={{ fontSize: "clamp(1.5rem,3vw,2rem)" }}>
+                  <h3 className="heading-lg mt-5 text-white" style={{ fontSize: "clamp(1.5rem,3vw,2rem)" }}>
                     Tournaments with{" "}
-                    <span className="relative inline-block">
-                      <span className="relative z-10">real stakes</span>
-                      <span
-                        aria-hidden
-                        className="absolute inset-x-[-0.1em] bottom-[0.08em] -z-0 h-[0.38em] bg-ink/15"
-                        style={{ transform: "skewX(-8deg)" }}
-                      />
-                    </span>
+                    <span className="mark-lime">real stakes</span>
                   </h3>
-                  <p className="mt-3 text-sm leading-7 text-ink/70">
+                  <p className="mt-3 max-w-md text-sm leading-7 text-white/75">
                     Monthly opens and beginner brackets with cash prizes, ranking points, and the best courtside atmosphere in the city.
                   </p>
+                  <Link href="/tournaments" className="btn-accent relative mt-7 self-start">
+                    See tournament calendar <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </div>
-                <Link
-                  href="/tournaments"
-                  className="btn-dark relative mt-8 self-start"
-                >
-                  See tournament calendar <ArrowRight className="h-4 w-4" />
-                </Link>
               </div>
             </TiltCard>
           </ScrollReveal>
         </Container>
       </section>
 
-      {/* ── NOTICE BOARD — light section ── */}
+      {/* ══ COMMUNITY MARQUEE — edge-to-edge auto-scroll ══ */}
+      <section className="relative overflow-hidden bg-ink py-16">
+        <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1 w-full opacity-60" />
+        <Container className="!px-4 sm:!px-6 lg:!px-8">
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <div>
+              <span className="eyebrow text-lime">On the courts</span>
+              <h2 className="heading-lg mt-3 text-white" style={{ fontSize: "clamp(1.6rem,3vw,2.4rem)" }}>
+                Moments from the club
+              </h2>
+            </div>
+            <Link href="/book" className="hidden shrink-0 text-sm font-bold text-lime hover:underline sm:inline-flex sm:items-center sm:gap-1">
+              Join a session <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </Container>
+        <div className="relative">
+          <div className="marquee gap-4 pl-4">
+            {[...communityPhotos, ...communityPhotos].map((photo, i) => (
+              <div key={i} className="photo-frame photo-frame--plain aspect-[3/4] w-[230px] shrink-0 sm:w-[280px]">
+                <SmartImage photo={photo} sizes="280px" />
+              </div>
+            ))}
+          </div>
+          {/* edge fades */}
+          <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-ink to-transparent" />
+          <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-ink to-transparent" />
+        </div>
+      </section>
+
+      {/* ══ NOTICE BOARD ══ */}
       <NoticeBoard notices={notices} />
 
-      {/* ── TESTIMONIALS — light / ink (dark) ── */}
+      {/* ══ TESTIMONIALS ══ */}
       <section className="bg-white px-4 py-20 dark:bg-ink sm:px-6 lg:px-8">
         <Container className="!px-0">
           <ScrollReveal direction="up">

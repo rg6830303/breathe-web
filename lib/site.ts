@@ -42,6 +42,5 @@ export const navLinks = [
   { href: "/pricing", label: "Pricing" },
   { href: "/calendar", label: "Calendar" },
   { href: "/tournaments", label: "Tournaments" },
-  { href: "/gallery", label: "Gallery" },
   { href: "/contact", label: "Contact" },
 ] as const;

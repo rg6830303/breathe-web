@@ -9,7 +9,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/book", priority: 0.9, freq: "daily" },
     { path: "/about", priority: 0.7, freq: "monthly" },
     { path: "/tournaments", priority: 0.7, freq: "weekly" },
-    { path: "/gallery", priority: 0.6, freq: "weekly" },
     { path: "/contact", priority: 0.6, freq: "monthly" },
   ];
   return routes.map((r) => ({

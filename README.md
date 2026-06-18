@@ -18,7 +18,6 @@ Production-grade Next.js App Router build for Breathe Pickleball: public site, l
 - `/about` - club story, culture, and growth
 - `/coaching` - coaching programs for all ages
 - `/tournaments` - tournament formats and cash-prize events
-- `/gallery` - photo gallery + Instagram CTA
 - `/contact` - address, hours, map, and contact channels
 - `/book` - live half-hour slot matrix across all courts using `GET /api/slots`
 

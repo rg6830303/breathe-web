@@ -133,110 +133,90 @@ export function CTABand() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
-    <section className="relative px-4 py-20 sm:px-6 lg:px-8 bg-[#070B14] overflow-hidden">
-      {/* Asymmetric sport geometry/angled cut */}
-      <div 
-        className="absolute inset-0 bg-[#0B0F19] opacity-95 [clip-path:polygon(0_3%,100%_0,100%_97%,0_100%)] pointer-events-none"
-      />
-      
-      {/* Net pattern overlay / Court lines */}
-      <div className="court-lines absolute inset-0 opacity-10 pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(#D4FC34_1px,transparent_1px)] [background-size:32px_32px] opacity-[0.03] pointer-events-none" />
+    <section className="relative overflow-hidden bg-[#070d20] px-4 py-20 sm:px-6 lg:px-8">
+      {/* Court-line texture + faint ball-dot grid */}
+      <div className="court-lines pointer-events-none absolute inset-0 opacity-10" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(theme(colors.lime.DEFAULT)_1px,transparent_1px)] [background-size:32px_32px] opacity-[0.03]" />
+      <div aria-hidden className="grain" />
 
-      {/* Ambient neon radial glows */}
-      <div className="pointer-events-none absolute -right-24 top-1/4 h-96 w-96 rounded-full bg-[#D4FC34]/5 blur-3xl" />
-      <div className="pointer-events-none absolute -left-24 bottom-1/4 h-96 w-96 rounded-full bg-brand-500/10 blur-3xl" />
+      {/* Ambient brand + lime glows */}
+      <div className="pointer-events-none absolute -right-24 top-1/4 h-96 w-96 rounded-full bg-lime/5 blur-3xl" />
+      <div className="pointer-events-none absolute -left-24 bottom-1/4 h-96 w-96 rounded-full bg-brand/10 blur-3xl" />
+      <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1 w-full opacity-70" />
 
       <Container className="relative z-10 !px-0">
         <div className="grid gap-12 lg:grid-cols-2 lg:items-start">
-          
-          {/* Left Block: Energetic CTA Content */}
+
+          {/* Left: conversion content */}
           <div className="flex flex-col gap-6">
-            
-            {/* Live Court Status Widget */}
-            <div className="inline-flex self-start items-center gap-2.5 rounded-full border border-[#D4FC34]/20 bg-[#D4FC34]/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#D4FC34] shadow-[0_0_15px_rgba(212,252,52,0.1)]">
+            <div className="chip self-start text-lime">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D4FC34] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#D4FC34]"></span>
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-lime opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-lime" />
               </span>
-              🟢 2/3 Courts Available Now
+              Courts open today · 5 AM – 11 PM
             </div>
 
-            <h2 className="font-display text-3xl font-extrabold leading-tight text-white sm:text-5xl tracking-tight">
-              READY WHEN <br className="hidden sm:inline" />
-              <span className="text-[#D4FC34]">YOU ARE</span>
+            <h2 className="heading-lg text-white" style={{ fontSize: "clamp(2rem,5vw,3.25rem)" }}>
+              Ready when{" "}
+              <span className="mark-lime">you are</span>
             </h2>
-            
-            <p className="text-gray-400 text-sm sm:text-base leading-relaxed max-w-lg">
+
+            <p className="max-w-lg text-sm leading-relaxed text-white/60 sm:text-base">
               Live availability across all three championship courts. Lock in your session under our professional floodlights instantly — no calls, no delays.
             </p>
 
-            <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row">
-              <motion.div
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                className="w-full sm:w-auto"
-              >
-                <Link
-                  href="/book"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#D4FC34] px-8 py-4 text-sm font-bold text-gray-950 shadow-[0_4px_20px_rgba(212,252,52,0.3)] transition hover:bg-[#c3ea2d] active:scale-[0.98]"
-                >
-                  Book a Court Slot <ArrowRight className="h-4 w-4" />
+            <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
+                <Link href="/book" className="btn-accent w-full justify-between sm:w-auto sm:justify-center">
+                  Book a court slot <ArrowRight className="h-4 w-4" />
                 </Link>
               </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                className="w-full sm:w-auto"
-              >
+              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
                 <a
                   href={site.phoneHref}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-8 py-4 text-sm font-bold text-white transition hover:bg-white/10"
+                  className="btn-outline w-full border-white/25 text-white hover:border-white hover:bg-white/5 hover:text-white dark:border-white/25 dark:text-white dark:hover:border-white dark:hover:text-white sm:w-auto"
                 >
                   <Phone className="h-4 w-4" /> {site.phoneDisplay}
                 </a>
               </motion.div>
             </div>
 
-            {/* Floating/Integrated Facility Badge */}
-            <div className="mt-8 flex items-center gap-4 border-t border-white/5 pt-8">
+            {/* Certified facility badge */}
+            <div className="mt-8 flex items-center gap-4 border-t border-white/10 pt-8">
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
-                className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-[#D4FC34]/30 bg-[#D4FC34]/5 text-[#D4FC34]"
+                className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-lime/30 bg-lime/5 text-lime"
               >
                 <Sparkles className="h-6 w-6" />
               </motion.div>
               <div>
-                <h4 className="text-sm font-extrabold text-white uppercase tracking-wider">⚡ Breathe Certified Facility</h4>
-                <p className="text-xs text-gray-400 mt-1">Tournament-grade court surfaces, floodlit play & courtside kitchen.</p>
+                <h4 className="text-sm font-extrabold uppercase tracking-wider text-white">Breathe certified facility</h4>
+                <p className="mt-1 text-xs text-white/55">Tournament-grade surfaces, floodlit play &amp; a courtside kitchen.</p>
               </div>
             </div>
           </div>
 
-          {/* Right Block: Interactive FAQ Accordion */}
-          <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-6 backdrop-blur-md shadow-card lg:p-8">
-            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#D4FC34]">GOT QUESTIONS?</span>
-            <h3 className="mt-1 font-display text-xl font-extrabold text-white">Frequently Asked Questions</h3>
-            
+          {/* Right: FAQ accordion */}
+          <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 shadow-card backdrop-blur-md lg:p-8">
+            <span className="eyebrow text-lime">Got questions?</span>
+            <h3 className="mt-2 font-display text-xl font-extrabold text-white">Frequently asked</h3>
+
             <div className="mt-6 space-y-3">
               {faqItems.map((item, idx) => {
                 const isOpen = openFaq === idx;
                 return (
-                  <div 
-                    key={idx} 
-                    className="overflow-hidden rounded-2xl border border-white/5 bg-white/[0.01] transition-all hover:bg-white/[0.03]"
+                  <div
+                    key={idx}
+                    className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] transition-colors hover:bg-white/[0.04]"
                   >
                     <button
                       onClick={() => setOpenFaq(isOpen ? null : idx)}
-                      className="flex w-full items-center justify-between p-4 text-left font-semibold text-white text-sm focus:outline-none"
+                      className="flex w-full items-center justify-between gap-4 p-4 text-left text-sm font-semibold text-white focus:outline-none"
                     >
                       <span>{item.q}</span>
-                      <span className={`ml-4 text-[#D4FC34] transition-transform duration-300 ${isOpen ? "rotate-45" : ""}`}>
-                        ＋
-                      </span>
+                      <span className={`text-lime transition-transform duration-300 ${isOpen ? "rotate-45" : ""}`}>＋</span>
                     </button>
                     <motion.div
                       initial={false}
@@ -244,7 +224,7 @@ export function CTABand() {
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                       className="overflow-hidden"
                     >
-                      <p className="px-4 pb-4 text-xs leading-relaxed text-gray-400 border-t border-white/5 pt-3">
+                      <p className="border-t border-white/10 px-4 pb-4 pt-3 text-xs leading-relaxed text-white/60">
                         {item.a}
                       </p>
                     </motion.div>

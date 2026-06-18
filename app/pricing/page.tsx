@@ -6,6 +6,8 @@ import { CTABand, Container, SectionDivider } from "@/components/ui";
 import { PageHero } from "@/components/ui/page-hero";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { TiltCard } from "@/components/motion/tilt-card";
+import { SmartImage } from "@/components/ui/smart-image";
+import { photos } from "@/lib/photos";
 import { Wallet, ShieldCheck, Clock, HelpCircle } from "lucide-react";
 
 const sportsPricing = [
@@ -137,6 +139,24 @@ export default function PricingPage() {
                 </ScrollReveal>
               ))}
             </div>
+          </Container>
+        </section>
+
+        {/* ── COURT PHOTO BANNER ── */}
+        <section className="bg-white px-4 pb-4 dark:bg-ink sm:px-6 lg:px-8">
+          <Container className="!px-0">
+            <ScrollReveal direction="up">
+              <div className="photo-frame relative aspect-[16/9] w-full sm:aspect-[21/9]">
+                <span className="photo-frame__tick" />
+                <SmartImage photo={photos.courtNight} sizes="(max-width:768px) 100vw, 1200px" imgClassName="object-[center_60%]" />
+                <div className="absolute inset-0 z-[2] flex flex-col justify-end p-6 sm:p-10">
+                  <span className="eyebrow text-lime">Every booking includes</span>
+                  <p className="mt-2 max-w-lg font-display text-xl font-extrabold leading-tight text-white sm:text-2xl">
+                    Tournament-grade courts, floodlit till 11&nbsp;PM — paddles and balls on us.
+                  </p>
+                </div>
+              </div>
+            </ScrollReveal>
           </Container>
         </section>
 

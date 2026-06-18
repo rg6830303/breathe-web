@@ -14,6 +14,9 @@ export function Footer() {
       {/* Court tape top accent */}
       <div aria-hidden className="tape-stripe h-1.5 w-full opacity-90" />
 
+      {/* Premium film grain */}
+      <div aria-hidden className="grain" />
+
       {/* Subtle court-line grid overlay */}
       <div
         aria-hidden
