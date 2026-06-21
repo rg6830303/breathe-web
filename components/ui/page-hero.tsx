@@ -38,6 +38,8 @@ export function PageHero({ label, title, subtitle, bgClassName, children }: Prop
       <ArenaBackdrop />
       {/* Legibility wash so the heading reads cleanly over the backdrop. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/40" />
+      {/* Premium film grain for a richer dark surface. */}
+      <div aria-hidden className="grain" />
       {/* Slim court-tape accent at the top edge. */}
       <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1 w-full opacity-70 z-10" />
 

@@ -10,6 +10,8 @@ import { StatCounter } from "@/components/motion/stat-counter";
 import { TiltCard } from "@/components/motion/tilt-card";
 import { CourtPatternBg } from "@/components/ui/court-pattern-bg";
 import { PaddleScene } from "@/components/ui/paddle-scene";
+import { SmartImage } from "@/components/ui/smart-image";
+import { photos } from "@/lib/photos";
 import { motion } from "framer-motion";
 import { site } from "@/lib/site";
 
@@ -99,6 +101,29 @@ export default function AboutPage() {
                   </TiltCard>
                 </ScrollReveal>
               ))}
+            </div>
+          </Container>
+        </section>
+
+        {/* ── PHOTO BAND — the club, for real ── */}
+        <section className="bg-white px-4 pb-20 dark:bg-[#111c38] sm:px-6 lg:px-8">
+          <Container className="!px-0">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <ScrollReveal direction="up" className="sm:col-span-2">
+                <div className="photo-frame aspect-[16/10] h-full w-full">
+                  <span className="photo-frame__tick" />
+                  <SmartImage photo={photos.courtAerial2} sizes="(max-width:640px) 100vw, 66vw" />
+                  <div className="absolute bottom-0 left-0 z-[2] p-5">
+                    <span className="text-sm font-bold text-white">Three floodlit courts in the heart of Kaikhali</span>
+                  </div>
+                </div>
+              </ScrollReveal>
+              <ScrollReveal direction="up" delay={0.1}>
+                <div className="photo-frame aspect-[16/10] h-full w-full sm:aspect-auto">
+                  <span className="photo-frame__tick" />
+                  <SmartImage photo={photos.communityCourt} sizes="(max-width:640px) 100vw, 33vw" />
+                </div>
+              </ScrollReveal>
             </div>
           </Container>
         </section>

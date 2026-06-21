@@ -37,7 +37,7 @@ export async function middleware(req: NextRequest) {
       pathname !== "/favicon.ico" &&
       pathname !== "/robots.txt" &&
       !pathname.startsWith("/icons/") &&
-      !pathname.startsWith("/gallery/") &&
+      !pathname.startsWith("/photos/") &&
       !/\.(png|jpg|jpeg|gif|svg|json|ico)$/i.test(pathname)
     ) {
       const dest = req.nextUrl.clone();
@@ -84,5 +84,5 @@ export async function middleware(req: NextRequest) {
 // Run on everything except Next internals & static files so the admin-host
 // root redirect works, while staying cheap.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icons/|gallery/|sw.js|manifest.json|robots.txt|sitemap.xml).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icons/|photos/|sw.js|manifest.json|robots.txt|sitemap.xml).*)"],
 };
