@@ -3,8 +3,14 @@ import path from "node:path";
 
 // Content-Security-Policy: defence-in-depth against XSS/clickjacking. Allows the
 // origins the app actually needs (Razorpay checkout, Google Maps embed, Google
-// Fonts, https images for Instagram/Vercel-blob). Inline scripts/styles are
-// permitted because the app ships a small no-FOUC theme script + JSON-LD.
+// Fonts, Meta Pixel, https images for Instagram/Vercel-blob). Inline
+// scripts/styles are permitted because the app ships a small no-FOUC theme
+// script + JSON-LD.
+//
+// NOTE: img-src and connect-src already allow `https:`, which covers the Meta
+// Pixel's noscript beacon (www.facebook.com) and fbevents' XHR/beacon calls.
+// Only script-src needed the new connect.facebook.net entry — without it the
+// browser blocks fbevents.js and the pixel silently never fires.
 const CSP = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -13,7 +19,7 @@ const CSP = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data: https://fonts.gstatic.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://*.razorpay.com",
+  "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://*.razorpay.com https://connect.facebook.net",
   "connect-src 'self' https:",
   "frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.razorpay.com https://www.google.com",
   "form-action 'self'",
