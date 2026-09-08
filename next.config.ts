@@ -3,20 +3,27 @@ import path from "node:path";
 
 // Content-Security-Policy: defence-in-depth against XSS/clickjacking. Allows the
 // origins the app actually needs (Razorpay checkout, Google Maps embed, Google
-// Fonts, https images for Instagram/Vercel-blob). Inline scripts/styles are
-// permitted because the app ships a small no-FOUC theme script + JSON-LD.
+// Fonts, Meta Pixel, https images for Instagram/Vercel-blob). Inline
+// scripts/styles are permitted because the app ships a small no-FOUC theme
+// script + JSON-LD.
 //
 // NOTE: `next dev` compiles client modules with eval()-based HMR, which a strict
 // script-src blocks ("unsafe-eval" violation) — that silently kills hydration and
 // leaves the page a blank dark shell locally. So we allow 'unsafe-eval' in
 // development ONLY; production stays strict (no eval), keeping the deployed site
 // hardened per the project security rules.
+//
+// NOTE: img-src and connect-src already allow `https:`, which covers the Meta
+// Pixel's noscript beacon (www.facebook.com) and fbevents' XHR/beacon calls.
+// Only script-src needs connect.facebook.net — without it the browser blocks
+// fbevents.js and the pixel silently never fires.
 const isDev = process.env.NODE_ENV !== "production";
 
 const scriptSrc = [
   "script-src 'self' 'unsafe-inline'",
   isDev ? "'unsafe-eval'" : "",
   "https://checkout.razorpay.com https://*.razorpay.com",
+  "https://connect.facebook.net",
 ]
   .filter(Boolean)
   .join(" ");

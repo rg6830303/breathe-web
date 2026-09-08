@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/app/providers";
 import { ScrollPaddle } from "@/components/motion/scroll-paddle";
 import { PresenceBeacon } from "@/components/presence-beacon";
+import { MetaPixel } from "@/components/meta-pixel";
 import { site, SITE_URL } from "@/lib/site";
 
 // Space Grotesk — a modern, geometric grotesk with an athletic, techy edge.
@@ -179,6 +180,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>{children}</Providers>
         <ScrollPaddle />
         <PresenceBeacon />
+        <MetaPixel />
       </body>
     </html>
   );
