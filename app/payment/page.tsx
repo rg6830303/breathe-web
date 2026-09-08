@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, Lock, ShieldCheck } from "lucide-react";
@@ -9,6 +9,7 @@ import { Footer } from "@/components/footer";
 import { Container } from "@/components/ui";
 import { loadCart, clearCart, cartTotal, cartMinutes, cartSports, SPORT_LABEL, type Cart } from "@/lib/cart";
 import { priceForRange } from "@/lib/slots";
+import { trackFb, CURRENCY, ADVANCE_INR } from "@/lib/analytics";
 
 type Account = { id: string; email: string; name: string; role: "user" | "admin" } | null;
 
@@ -62,7 +63,40 @@ export default function PaymentPage() {
     sport: i.sport ?? cart!.sport, // carry per-slot sport so mixed carts price/book correctly
   }));
 
+  // Reaching checkout with a real cart. Fired once per visit.
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutTracked.current || !cart || cart.items.length === 0) return;
+    checkoutTracked.current = true;
+    trackFb("InitiateCheckout", {
+      value: cartTotal(cart),
+      currency: CURRENCY,
+      num_items: cart.items.length,
+      content_category: cart.sport,
+    });
+  }, [cart]);
+
+  /** Single success chokepoint for BOTH the Razorpay and prepaid-credit paths. */
   function done() {
+    // Fire BEFORE clearCart() so the booking value is still available. This is a
+    // client-side route change (not a document unload), so the beacon is never
+    // cut off mid-flight.
+    //
+    // `value` is the FULL booking value, not the ₹200 charged online: that is the
+    // real revenue the ad produced, and it's what ROAS/bid optimisation should
+    // work from. Reporting only the advance would understate ROAS ~4x and make
+    // Meta under-bid. The online portion is sent as `advance_paid` so it can
+    // still be reconciled against Razorpay settlements.
+    if (cart && cart.items.length > 0) {
+      const value = cartTotal(cart);
+      trackFb("Purchase", {
+        value,
+        currency: CURRENCY,
+        num_items: cart.items.length,
+        content_category: cart.sport,
+        advance_paid: Math.min(ADVANCE_INR, value),
+      });
+    }
     clearCart();
     router.push("/booking/confirmed");
   }
