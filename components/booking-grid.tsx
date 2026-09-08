@@ -8,6 +8,7 @@ import { CalendarDays, Check, Gift, Loader2, Lock, LogIn, Plus, ReceiptText } fr
 import { calculateTotals, getSlotPrice } from "@/lib/pricing";
 import { priceForRange } from "@/lib/slots";
 import { saveCart, loadCart } from "@/lib/cart";
+import { trackFb, CURRENCY } from "@/lib/analytics";
 
 type Ext = { before: boolean; after: boolean };
 
@@ -176,6 +177,14 @@ export function BookingGrid() {
       items = [...kept, ...newItems];
     }
     saveCart({ date, sport, items });
+    // Top of the booking funnel — lets Meta build/optimise on people who got as
+    // far as selecting slots, and powers cart-abandonment retargeting.
+    trackFb("AddToCart", {
+      value: newItems.reduce((sum, i) => sum + (Number(i.price) || 0), 0),
+      currency: CURRENCY,
+      num_items: newItems.length,
+      content_category: sport,
+    });
     router.push("/cart");
   }
 

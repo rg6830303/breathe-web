@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight, Loader2, LogIn, ShieldCheck } from "lucide-react";
+import { trackFb } from "@/lib/analytics";
 
 /**
  * True when the page is running as an installed PWA (standalone display mode,
@@ -115,6 +116,10 @@ export function SignupForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Signup failed");
+      // New account created — a real funnel step for ad optimisation (many
+      // visitors sign up first and book later). Fired before the redirect below;
+      // the pixel sends via beacon so it survives the navigation.
+      trackFb("CompleteRegistration", { content_name: "player_signup" });
       // Hard redirect so the new session cookie is read server-side on the next request
       window.location.href = next;
     } catch (err) {

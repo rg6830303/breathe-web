@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 import { Clock, Sparkles } from "lucide-react";
 import { WhatsAppIcon } from "@/components/ui/social-icons";
 import { site } from "@/lib/site";
+import { trackFb, CURRENCY } from "@/lib/analytics";
+
+// Kept as local literals on purpose: importing BULK_PACKAGE from "@/lib/credits"
+// would pull the DB layer (postgres → node:net) into this CLIENT component and
+// break the browser bundle. Keep in sync with lib/credits.ts.
+const BULK_PRICE_INR = 8000;
+const BULK_LABEL = "13-Hour Bulk Pass";
 
 type Account = { id: string; email: string; name: string; role: "user" | "admin" } | null;
 
@@ -84,6 +91,16 @@ export function BulkPassCard() {
           href={waHref}
           target="_blank"
           rel="noopener noreferrer"
+          // Bulk passes are closed manually over WhatsApp, so this hand-off IS
+          // the conversion for that funnel — the highest-value one (₹8,000).
+          onClick={() =>
+            trackFb("Lead", {
+              value: BULK_PRICE_INR,
+              currency: CURRENCY,
+              content_name: BULK_LABEL,
+              content_category: "bulk_pass",
+            })
+          }
           className="btn-accent shrink-0 self-start sm:self-center"
         >
           <WhatsAppIcon className="h-4 w-4" />
