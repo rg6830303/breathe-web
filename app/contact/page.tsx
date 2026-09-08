@@ -10,6 +10,8 @@ import { PageHero } from "@/components/ui/page-hero";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { TiltCard } from "@/components/motion/tilt-card";
 import { CourtPatternBg } from "@/components/ui/court-pattern-bg";
+import { SmartImage } from "@/components/ui/smart-image";
+import { photos } from "@/lib/photos";
 import { motion } from "framer-motion";
 import { site } from "@/lib/site";
 
@@ -92,6 +94,22 @@ export default function ContactPage() {
                   href={card.href}
                   delay={i * 0.08}
                 />
+              ))}
+            </div>
+          </Container>
+        </section>
+
+        {/* ── PHOTO STRIP ── */}
+        <section className="bg-white px-4 pb-4 dark:bg-[#111c38] sm:px-6 lg:px-8">
+          <Container className="!px-0">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {[photos.communityWomen, photos.kitchen, photos.playersAction].map((photo, i) => (
+                <ScrollReveal key={photo.src} direction="up" delay={i * 0.08} className={i === 2 ? "col-span-2 sm:col-span-1" : ""}>
+                  <div className="photo-frame aspect-[4/3] w-full">
+                    <span className="photo-frame__tick" />
+                    <SmartImage photo={photo} sizes="(max-width:640px) 50vw, 33vw" />
+                  </div>
+                </ScrollReveal>
               ))}
             </div>
           </Container>

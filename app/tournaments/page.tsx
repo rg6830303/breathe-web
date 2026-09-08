@@ -10,6 +10,8 @@ import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { StatCounter } from "@/components/motion/stat-counter";
 import { TiltCard } from "@/components/motion/tilt-card";
 import { TournamentBracket } from "@/components/ui/tournament-bracket";
+import { SmartImage } from "@/components/ui/smart-image";
+import { photos } from "@/lib/photos";
 import { motion } from "framer-motion";
 import { site } from "@/lib/site";
 
@@ -137,6 +139,39 @@ export default function TournamentsPage() {
                   </div>
                 </ScrollReveal>
               ))}
+            </div>
+          </Container>
+        </section>
+
+        {/* ── CHAMPIONS PHOTO BAND ── */}
+        <section className="bg-white px-4 py-20 dark:bg-ink sm:px-6 lg:px-8">
+          <Container className="!px-0">
+            <ScrollReveal direction="up">
+              <div className="mb-8 max-w-2xl">
+                <span className="eyebrow text-brand dark:text-lime">From the arena</span>
+                <h2 className="heading-lg mt-4 text-ink dark:text-white" style={{ fontSize: "clamp(1.6rem,3vw,2.4rem)" }}>
+                  Where champions are{" "}
+                  <span className="mark-lime">crowned</span>
+                </h2>
+              </div>
+            </ScrollReveal>
+            <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
+              <ScrollReveal direction="left" className="h-full">
+                <div className="photo-frame aspect-[4/3] h-full w-full">
+                  <span className="photo-frame__tick" />
+                  <SmartImage photo={photos.tournamentWinners} sizes="(max-width:1024px) 100vw, 55vw" imgClassName="object-[center_22%]" />
+                  <div className="absolute bottom-0 left-0 z-[2] p-6">
+                    <span className="eyebrow text-lime">Breathe Battle 1.0</span>
+                    <p className="mt-2 font-display text-lg font-extrabold text-white">Trophies, medals, and a finals atmosphere under the lights.</p>
+                  </div>
+                </div>
+              </ScrollReveal>
+              <ScrollReveal direction="right" className="h-full">
+                <div className="photo-frame aspect-[4/3] h-full w-full">
+                  <span className="photo-frame__tick" />
+                  <SmartImage photo={photos.communityWomen} sizes="(max-width:1024px) 100vw, 35vw" />
+                </div>
+              </ScrollReveal>
             </div>
           </Container>
         </section>

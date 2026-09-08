@@ -1,7 +1,7 @@
 // Breathe Pickleball Service Worker
 // Caches the app shell for offline support and fast repeat loads
 
-const CACHE_NAME = "breathe-pb-v4";
+const CACHE_NAME = "breathe-pb-v5";
 const OFFLINE_URL = "/offline";
 
 // Core app shell URLs to precache
@@ -9,7 +9,6 @@ const PRECACHE_URLS = [
   "/",
   "/book",
   "/about",
-  "/gallery",
   "/contact",
   "/offline",
   "/manifest.json",

@@ -65,7 +65,6 @@ async function main() {
     "/about",
     "/coaching",
     "/tournaments",
-    "/gallery",
     "/contact",
     "/book",
     "/calendar",
@@ -180,7 +179,6 @@ async function main() {
     "/api/admin/notices",
     "/api/admin/config",
     "/api/admin/customers/00000000-0000-0000-0000-000000000000",
-    "/api/admin/gallery",
     "/api/admin/test-email",
   ];
   for (const path of adminEndpoints) {

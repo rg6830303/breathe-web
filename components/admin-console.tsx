@@ -226,12 +226,6 @@ export function AdminConsole() {
             <ShieldOff className="h-3.5 w-3.5" /> Close slots
           </button>
           <Link
-            href="/admin/gallery"
-            className="btn-outline px-3 py-1.5 text-xs"
-          >
-            Gallery
-          </Link>
-          <Link
             href="/admin/import"
             className="btn-outline px-3 py-1.5 text-xs"
           >
