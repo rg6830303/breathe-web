@@ -5,6 +5,7 @@ import { Providers } from "@/app/providers";
 import { ScrollPaddle } from "@/components/motion/scroll-paddle";
 import { PresenceBeacon } from "@/components/presence-beacon";
 import { MetaPixel } from "@/components/meta-pixel";
+import { META_PIXEL_ID } from "@/lib/analytics";
 import { site, SITE_URL } from "@/lib/site";
 
 // Space Grotesk — a modern, geometric grotesk with an athletic, techy edge.
@@ -173,6 +174,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               process.env.NODE_ENV === "production"
                 ? `if('serviceWorker' in navigator){window.addEventListener('load',function(){var hadController=!!navigator.serviceWorker.controller;navigator.serviceWorker.register('/sw.js').then(function(r){r.update();}).catch(function(){});var rl=false;navigator.serviceWorker.addEventListener('controllerchange',function(){if(rl||!hadController)return;rl=true;window.location.reload();});});}`
                 : `if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){var had=rs.length>0;rs.forEach(function(r){r.unregister();});var done=function(){if(had)window.location.reload();};if(window.caches){caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}).then(done).catch(done);}else{done();}});}`,
+          }}
+        />
+        {/* Meta Pixel — base snippet. Deliberately a plain inline <script> in the
+            document <head> (Meta's documented install) rather than next/script:
+            it must exist in the SERVER HTML so Pixel Helper / Events Manager
+            actually detect it, and so the first PageView fires immediately
+            instead of waiting for hydration. Route-change PageViews are handled
+            by <MetaPixel /> in the body. App-controlled string — no user input
+            is interpolated. */}
+        <script
+          id="meta-pixel-base"
+          dangerouslySetInnerHTML={{
+            __html: `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${META_PIXEL_ID}');fbq('track','PageView');`,
           }}
         />
       </head>
