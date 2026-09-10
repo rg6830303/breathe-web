@@ -12,6 +12,13 @@
 
 type FbParams = Record<string, unknown>;
 
+/**
+ * Meta Pixel ID. PUBLIC by design — it ships in the page source and in every
+ * request to Meta, so it is not a secret. Overridable per environment (e.g. a
+ * test pixel) and falls back to the live ID so tracking needs zero env config.
+ */
+export const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1083171524398058";
+
 /** Currency for all monetary conversion values. */
 export const CURRENCY = "INR";
 
