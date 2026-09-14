@@ -139,6 +139,27 @@ export const SCHEMA_TABLES: string[] = [
     slot_date TEXT NOT NULL,
     slot_time TEXT NOT NULL
   )`,
+  // Tournament entries. Registration is players-only (user_id always set) and
+  // the entry fee is paid online, so fee/amount_paid/payment_id mirror the
+  // bookings table. Note: every INTEGER here becomes BIGINT via portable() —
+  // created_at holds Date.now() (~1.7e12) which overflows Postgres INT4.
+  `CREATE TABLE IF NOT EXISTS tournament_registrations (
+    id TEXT PRIMARY KEY,
+    tournament_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    player_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT,
+    category TEXT NOT NULL DEFAULT 'singles',
+    skill_level TEXT,
+    partner_name TEXT,
+    notes TEXT,
+    fee INTEGER NOT NULL DEFAULT 0,
+    amount_paid INTEGER NOT NULL DEFAULT 0,
+    payment_id TEXT,
+    status TEXT NOT NULL DEFAULT 'confirmed' CHECK (status IN ('confirmed','cancelled')),
+    created_at INTEGER NOT NULL
+  )`,
 ];
 
 /** Indexes — created LAST, after SCHEMA_ALTERS guarantee their columns exist. */
@@ -163,6 +184,12 @@ export const SCHEMA_INDEXES: string[] = [
   // INSERT throws (handled by the booking routes with a refund).
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_unique_confirmed_slot ON bookings (court_number, slot_date, slot_time) WHERE status = 'confirmed'`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_booking_courts_unique ON booking_courts (court_number, slot_date, slot_time)`,
+  `CREATE INDEX IF NOT EXISTS idx_tournament_regs_tournament ON tournament_registrations (tournament_id, created_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_tournament_regs_user ON tournament_registrations (user_id)`,
+  // One CONFIRMED entry per player per category, per tournament — stops a
+  // double-submit/refresh from charging and registering the same player twice.
+  // Partial so a cancelled entry doesn't block re-registering.
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_tournament_regs_unique ON tournament_registrations (tournament_id, user_id, category) WHERE status = 'confirmed'`,
 ];
 
 /** Back-compat: combined list (tables + indexes) for any external reference. */

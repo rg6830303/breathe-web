@@ -258,8 +258,8 @@ export default function TournamentsPage() {
                       </a>
                     </motion.div>
                     <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} className="w-full sm:w-auto">
-                      <Link href="/contact" className="btn-outline w-full sm:w-auto">
-                        Register interest
+                      <Link href="/tournaments/register" className="btn-outline w-full sm:w-auto">
+                        Register now
                       </Link>
                     </motion.div>
                   </div>

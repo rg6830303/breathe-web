@@ -1397,6 +1397,7 @@ function TournamentsTab() {
   const inputCls = "w-full rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
 
   return (
+    <>
     <div className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
       <div className="card-sport h-fit p-5">
         <span className="eyebrow">Host event</span>
@@ -1448,6 +1449,135 @@ function TournamentsTab() {
           </ul>
         )}
       </div>
+      </div>
+      <TournamentRegistrationsPanel />
+    </>
+  );
+}
+
+type TournamentReg = {
+  id: string;
+  tournament_name: string;
+  player_name: string;
+  email: string;
+  phone: string | null;
+  category: string;
+  skill_level: string | null;
+  partner_name: string | null;
+  fee: number;
+  amount_paid: number;
+  status: string;
+  created_at: number;
+};
+
+/** Paid tournament entries, newest first, with a CSV export for the draw sheet. */
+function TournamentRegistrationsPanel() {
+  const [rows, setRows] = useState<TournamentReg[]>(() => getAdminCache<TournamentReg[]>("tournregs") ?? []);
+  const [loading, setLoading] = useState(() => getAdminCache<TournamentReg[]>("tournregs") === undefined);
+
+  function load() {
+    fetch("/api/admin/tournaments/registrations")
+      .then((r) => (r.ok ? r.json() : { registrations: [] }))
+      .then((d) => {
+        setRows(d.registrations ?? []);
+        setAdminCache("tournregs", d.registrations ?? []);
+      })
+      .finally(() => setLoading(false));
+  }
+  useEffect(load, []);
+
+  const collected = useMemo(
+    () => rows.filter((r) => r.status === "confirmed").reduce((a, r) => a + (Number(r.amount_paid) || 0), 0),
+    [rows],
+  );
+
+  function exportCsv() {
+    const header = ["Tournament", "Player", "Email", "Phone", "Category", "Level", "Partner", "Fee paid", "Status", "Registered"];
+    const body = rows.map((r) => [
+      r.tournament_name,
+      r.player_name,
+      r.email,
+      r.phone ?? "",
+      r.category,
+      r.skill_level ?? "",
+      r.partner_name ?? "",
+      String(r.amount_paid),
+      r.status,
+      new Date(Number(r.created_at)).toLocaleString("en-IN"),
+    ]);
+    const csv = [header, ...body]
+      .map((line) => line.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `breathe-tournament-entries-${todayIST()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="card-sport mt-5 p-5">
+      <PanelHeader
+        eyebrow="Tournament entries"
+        title="Registrations"
+        subtitle={`${rows.length} entr${rows.length === 1 ? "y" : "ies"} · ${money(collected)} collected`}
+      >
+        {rows.length > 0 && (
+          <button type="button" onClick={exportCsv} className="btn-outline px-2.5 py-2 text-xs">
+            <Download className="h-3.5 w-3.5" /> Export CSV
+          </button>
+        )}
+        <button type="button" onClick={load} className="btn-outline px-2.5 py-2 text-xs">
+          <RefreshCw className="h-3.5 w-3.5" /> Refresh
+        </button>
+      </PanelHeader>
+
+      {loading ? (
+        <LoadingCard />
+      ) : rows.length === 0 ? (
+        <EmptyState>No entries yet. They appear here as soon as a player pays.</EmptyState>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[820px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b-2 border-ink/10 dark:border-white/10">
+                <th className={TH}>Player</th>
+                <th className={TH}>Tournament</th>
+                <th className={TH}>Category</th>
+                <th className={TH}>Partner</th>
+                <th className={TH_RIGHT}>Fee paid</th>
+                <th className={TH}>Registered</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} className={TR_HOVER}>
+                  <td className="p-3">
+                    <div className="font-bold text-ink dark:text-white">{r.player_name}</div>
+                    <div className="text-[11px] text-ink/50 dark:text-white/50">
+                      {r.email}
+                      {r.phone ? ` · ${r.phone}` : ""}
+                    </div>
+                  </td>
+                  <td className="p-3 text-ink dark:text-white">{r.tournament_name}</td>
+                  <td className="p-3 capitalize text-ink dark:text-white">
+                    {r.category.replace("_", " ")}
+                    {r.skill_level && (
+                      <span className="block text-[11px] capitalize text-ink/50 dark:text-white/50">{r.skill_level}</span>
+                    )}
+                  </td>
+                  <td className="p-3 text-ink/70 dark:text-white/60">{r.partner_name ?? "—"}</td>
+                  <td className="p-3 text-right font-extrabold text-lime-dark dark:text-lime">{money(r.amount_paid)}</td>
+                  <td className="p-3 text-[11px] text-ink/50 dark:text-white/50">
+                    {new Date(Number(r.created_at)).toLocaleDateString("en-IN")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

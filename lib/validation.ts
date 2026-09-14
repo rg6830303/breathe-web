@@ -56,6 +56,24 @@ export const bookingRequestSchema = z.object({
     .default([]),
 });
 
+/** Tournament entry. `partner_name` is required for doubles — enforced below. */
+export const tournamentRegistrationSchema = z
+  .object({
+    tournament_id: z.string().min(1, "Please choose a tournament.").max(64),
+    category: z.enum(["singles", "doubles", "mixed_doubles"]),
+    skill_level: z.enum(["beginner", "intermediate", "advanced"]),
+    phone: z
+      .string()
+      .trim()
+      .regex(/^[0-9+\-\s()]{7,20}$/, "Please enter a valid phone number."),
+    partner_name: z.string().trim().max(80).optional().or(z.literal("")),
+    notes: z.string().trim().max(500).optional().or(z.literal("")),
+  })
+  .refine((d) => d.category === "singles" || (d.partner_name ?? "").trim().length > 1, {
+    message: "Please enter your partner's name for a doubles category.",
+    path: ["partner_name"],
+  });
+
 export function formatZodError(err: z.ZodError): string {
   const first = err.issues[0];
   return first ? first.message : "Invalid input.";
