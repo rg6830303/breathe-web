@@ -611,6 +611,104 @@ export async function notifyDuesCleared(b: {
   }
 }
 
+/**
+ * Tournament entry confirmed (fee paid). Emails the player their entry details
+ * and drops a confirmation into their portal inbox + devices.
+ */
+export async function notifyTournamentRegistration(r: {
+  id: string;
+  userId?: string;
+  userEmail: string;
+  userName: string;
+  tournamentName: string;
+  eventDate?: string | null;
+  category: string;
+  skillLevel?: string;
+  partnerName?: string | null;
+  fee: number;
+}): Promise<{ emailed: boolean }> {
+  try {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in";
+    const firstName = (r.userName || "there").trim().split(" ")[0];
+    const shortRef = r.id.slice(0, 8).toUpperCase();
+    const categoryLabel = r.category.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const dateStr = r.eventDate
+      ? new Date(r.eventDate).toLocaleDateString("en-IN", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          timeZone: "Asia/Kolkata",
+        })
+      : "To be announced";
+
+    const rows =
+      `<tr><td style="padding:6px 0;color:#64748b">Tournament</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${r.tournamentName}</td></tr>` +
+      `<tr><td style="padding:6px 0;color:#64748b">Date</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${dateStr}</td></tr>` +
+      `<tr><td style="padding:6px 0;color:#64748b">Category</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${categoryLabel}</td></tr>` +
+      (r.skillLevel
+        ? `<tr><td style="padding:6px 0;color:#64748b">Level</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426;text-transform:capitalize">${r.skillLevel}</td></tr>`
+        : "") +
+      (r.partnerName
+        ? `<tr><td style="padding:6px 0;color:#64748b">Partner</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${r.partnerName}</td></tr>`
+        : "") +
+      `<tr><td style="padding:6px 0;color:#64748b">Entry fee paid</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#22c55e">₹${r.fee.toLocaleString("en-IN")}</td></tr>`;
+
+    const html =
+      `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0d1426">` +
+      `<div style="text-align:center;margin-bottom:16px"><img src="${siteUrl}/icons/icon-192.png" alt="Breathe Pickleball" width="56" height="56" style="border-radius:14px"/></div>` +
+      `<h2 style="text-align:center;margin:0 0 4px">You're in! 🏆</h2>` +
+      `<p style="text-align:center;color:#64748b;margin:0 0 20px">Entry ${shortRef}</p>` +
+      `<p style="color:#475569;line-height:1.6">Hi ${firstName}, your tournament entry is confirmed and your fee has been received. Here are your details:</p>` +
+      `<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">${rows}</table>` +
+      `<p style="background:#dcfce7;color:#166534;padding:12px;border-radius:12px;font-size:13px;line-height:1.5;margin:16px 0">We'll email you the match schedule and bracket closer to the date. Bring your A-game — paddles and balls are on us.</p>` +
+      `<p style="color:#475569;font-size:13px;line-height:1.6"><strong>Venue:</strong> ${VENUE_ADDRESS}</p>` +
+      `<hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0"/>` +
+      `<p style="color:#94a3b8;font-size:12px">Breathe Club · Panchwati Complex, Kaikhali, Kolkata</p>` +
+      `</div>`;
+
+    const text =
+      `Hi ${firstName},\n\nYour tournament entry is confirmed.\n\n` +
+      `Tournament: ${r.tournamentName}\nDate: ${dateStr}\nCategory: ${categoryLabel}\n` +
+      (r.partnerName ? `Partner: ${r.partnerName}\n` : "") +
+      `Entry fee paid: Rs. ${r.fee.toLocaleString("en-IN")}\nEntry ref: ${shortRef}\n\n` +
+      `We'll email the schedule closer to the date.\n\nVenue: ${VENUE_ADDRESS}`;
+
+    const result = await sendMail({
+      to: r.userEmail,
+      subject: `You're registered: ${r.tournamentName} | Entry ${shortRef}`,
+      html,
+      text,
+    });
+
+    try {
+      const body = `${r.tournamentName} · ${categoryLabel} · ${dateStr}`;
+      if (r.userId) {
+        await sendPushToUser(r.userId, {
+          title: "Tournament entry confirmed 🏆",
+          body,
+          url: "/tournaments",
+          tag: `tournament-${r.id}`,
+        }).catch(() => {});
+        await recordNotification({
+          userId: r.userId,
+          role: "user",
+          title: "Tournament entry confirmed 🏆",
+          body,
+          url: "/tournaments",
+        });
+      }
+    } catch (pushErr) {
+      console.error("[notifyTournamentRegistration push error]", pushErr);
+    }
+
+    return { emailed: result.ok };
+  } catch (err) {
+    console.error("[notifyTournamentRegistration error]", err);
+    return { emailed: false };
+  }
+}
+
 function computeEndTime(hhmm: string, dur: number): string {
   const [h, m] = hhmm.split(":").map(Number);
   const t = h * 60 + m + dur;
