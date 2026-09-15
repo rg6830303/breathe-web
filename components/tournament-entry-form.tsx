@@ -81,6 +81,8 @@ type Props = {
   entryLabel: string;
   /** Hidden when the page is for one fixed event. */
   showPicker?: boolean;
+  /** Off on the standalone captain page, which links nowhere into the site. */
+  showBackLink?: boolean;
   emptyTitle: string;
   emptyBody: string;
 };
@@ -96,6 +98,7 @@ export function TournamentEntryForm({
   category,
   entryLabel,
   showPicker = true,
+  showBackLink = true,
   emptyTitle,
   emptyBody,
 }: Props) {
@@ -295,16 +298,18 @@ export function TournamentEntryForm({
               Entry <span className="font-bold text-ink dark:text-white">{doneRef}</span> is confirmed. We&apos;ve
               emailed your details and will send the match schedule closer to the date.
             </p>
-            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link href="/tournaments" className="btn-primary">
-                Back to tournaments
-              </Link>
-              {account && (
-                <Link href="/dashboard" className="btn-outline">
-                  Go to my dashboard
+            {showBackLink && (
+              <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                <Link href="/tournaments" className="btn-primary">
+                  Back to tournaments
                 </Link>
-              )}
-            </div>
+                {account && (
+                  <Link href="/dashboard" className="btn-outline">
+                    Go to my dashboard
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         ) : loading ? (
           <div className="card-sport flex items-center justify-center p-12">
@@ -316,9 +321,11 @@ export function TournamentEntryForm({
             <Trophy className="mx-auto h-10 w-10 text-brand dark:text-lime" />
             <h2 className="mt-4 font-display text-xl font-extrabold text-ink dark:text-white">{emptyTitle}</h2>
             <p className="mt-2 text-sm text-slatey dark:text-white/60">{emptyBody}</p>
-            <Link href="/tournaments" className="btn-outline mt-6 inline-flex">
-              Back to tournaments
-            </Link>
+            {showBackLink && (
+              <Link href="/tournaments" className="btn-outline mt-6 inline-flex">
+                Back to tournaments
+              </Link>
+            )}
           </div>
         ) : (
           <form onSubmit={submit} className="card-sport space-y-5 p-6 sm:p-8">

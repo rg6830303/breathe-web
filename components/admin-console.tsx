@@ -1481,6 +1481,7 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
   const [rows, setRows] = useState<TournamentReg[]>(() => getAdminCache<TournamentReg[]>("tournregs") ?? []);
   const [loading, setLoading] = useState(() => getAdminCache<TournamentReg[]>("tournregs") === undefined);
   const [filter, setFilter] = useState("");
+  const [kind, setKind] = useState<"" | "captain" | "player">("");
   const [busy, setBusy] = useState<string | null>(null);
 
   function load(tournamentId = filter) {
@@ -1501,11 +1502,21 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
 
   // Live totals reflect CONFIRMED entries only — a cancelled entry shouldn't
   // count toward the head-count or the money collected.
-  const confirmed = useMemo(() => rows.filter((r) => r.status === "confirmed"), [rows]);
+  const shown = useMemo(
+    () =>
+      kind === ""
+        ? rows
+        : rows.filter((r) => (kind === "captain" ? r.category === "captain" : r.category !== "captain")),
+    [rows, kind],
+  );
+  const confirmed = useMemo(() => shown.filter((r) => r.status === "confirmed"), [shown]);
   const collected = useMemo(
     () => confirmed.reduce((a, r) => a + (Number(r.amount_paid) || 0), 0),
     [confirmed],
   );
+  // Captains and players enter the same events at different fees, so the
+  // head-count is only readable if the two are broken out.
+  const captains = useMemo(() => confirmed.filter((r) => r.category === "captain").length, [confirmed]);
 
   async function setStatus(r: TournamentReg, status: "cancelled" | "confirmed") {
     const verb = status === "cancelled" ? "Cancel" : "Reinstate";
@@ -1537,8 +1548,10 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
       <PanelHeader
         eyebrow="Tournament entries"
         title="Registrations"
-        subtitle={`${confirmed.length} confirmed · ${money(collected)} collected${
-          rows.length !== confirmed.length ? ` · ${rows.length - confirmed.length} cancelled` : ""
+        subtitle={`${confirmed.length} confirmed (${confirmed.length - captains} player${
+          confirmed.length - captains === 1 ? "" : "s"
+        } · ${captains} captain${captains === 1 ? "" : "s"}) · ${money(collected)} collected${
+          shown.length !== confirmed.length ? ` · ${shown.length - confirmed.length} cancelled` : ""
         }`}
       >
         <select
@@ -1553,6 +1566,15 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
             </option>
           ))}
         </select>
+        <select
+          value={kind}
+          onChange={(e) => setKind(e.target.value as typeof kind)}
+          className="rounded-lg border border-ink/10 bg-white px-3 py-2 text-xs text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white"
+        >
+          <option value="">Players + captains</option>
+          <option value="player">Players only</option>
+          <option value="captain">Captains only</option>
+        </select>
         <button type="button" onClick={exportExcel} disabled={rows.length === 0} className="btn-outline px-2.5 py-2 text-xs disabled:opacity-50">
           <Download className="h-3.5 w-3.5" /> Download Excel
         </button>
@@ -1563,7 +1585,7 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
 
       {loading ? (
         <LoadingCard />
-      ) : rows.length === 0 ? (
+      ) : shown.length === 0 ? (
         <EmptyState>No entries yet. They appear here as soon as a player pays.</EmptyState>
       ) : (
         <div className="overflow-x-auto">
@@ -1583,7 +1605,7 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {shown.map((r) => {
                 const cancelled = r.status !== "confirmed";
                 return (
                 <tr key={r.id} className={`${TR_HOVER} ${cancelled ? "opacity-55" : ""}`}>
@@ -1628,8 +1650,14 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
                     )}
                   </td>
                   <td className="p-3 capitalize text-ink dark:text-white">
-                    {r.category.replace("_", " ")}
-                    {r.skill_level && (
+                    {r.category === "captain" ? (
+                      <span className="inline-flex items-center rounded-full bg-lime/15 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-lime-dark dark:text-lime">
+                        Team captain
+                      </span>
+                    ) : (
+                      r.category.replace("_", " ")
+                    )}
+                    {r.skill_level && r.category !== "captain" && (
                       <span className="block text-[11px] capitalize text-ink/50 dark:text-white/50">{r.skill_level}</span>
                     )}
                   </td>

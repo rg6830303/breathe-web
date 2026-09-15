@@ -76,15 +76,27 @@ export async function middleware(req: NextRequest) {
     });
   }
 
-  // --- Captain host: the landing page IS the captain entry form ---
+  // --- Captain host: this domain is the captain entry form and nothing else ---
   if (CAPTAIN_HOST && host === CAPTAIN_HOST) {
-    // Rewrite (not redirect) so the form is served at the bare domain. Every
-    // other path — /api/*, assets, the rest of the site — is left alone so the
-    // form's fetches and the Razorpay round-trip keep working.
-    const res =
-      pathname === "/"
-        ? NextResponse.rewrite(new URL("/tournaments/captain", req.url))
-        : NextResponse.next();
+    // Every page path rewrites to the form, so the rest of the website is
+    // simply not reachable here — /about, /pricing, /book and the player
+    // registration all land on the captain form instead of exposing the site
+    // behind this link. Rewrite, not redirect, so the URL stays put.
+    //
+    // Left alone: /api/* (the form's own fetches and the Razorpay round-trip),
+    // Next internals and static assets, which the form needs to render.
+    const passThrough =
+      pathname.startsWith("/api/") ||
+      pathname.startsWith("/_next/") ||
+      pathname.startsWith("/icons/") ||
+      pathname.startsWith("/photos/") ||
+      pathname === "/favicon.ico" ||
+      pathname === "/robots.txt" ||
+      /\.(png|jpg|jpeg|gif|svg|webp|ico|json|js|css|txt|xml|webmanifest)$/i.test(pathname);
+
+    const res = passThrough
+      ? NextResponse.next()
+      : NextResponse.rewrite(new URL("/tournaments/captain", req.url));
     // A one-event link, not a page to index.
     res.headers.set("X-Robots-Tag", "noindex, nofollow");
     return res;
