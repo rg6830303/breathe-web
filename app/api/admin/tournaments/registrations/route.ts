@@ -41,3 +41,52 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   }
 }
+
+/**
+ * Admin: cancel or reinstate an entry — `{ id, status: 'cancelled'|'confirmed' }`.
+ *
+ * We never hard-delete: the row is the record that a fee was paid. Cancelling
+ * also frees the player to re-enter that category, because the uniqueness index
+ * is partial (WHERE status='confirmed'). Reinstating can therefore collide with
+ * a newer entry, which is reported as a conflict rather than a 500.
+ */
+export async function PATCH(req: NextRequest) {
+  try {
+    const admin = await getAdminSession();
+    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    await ensureSchema().catch(() => {});
+
+    const body = await req.json().catch(() => ({}));
+    const id = String(body.id ?? "");
+    const status = String(body.status ?? "");
+    if (!id) return NextResponse.json({ error: "Registration id is required." }, { status: 400 });
+    if (status !== "cancelled" && status !== "confirmed") {
+      return NextResponse.json({ error: "Status must be 'cancelled' or 'confirmed'." }, { status: 400 });
+    }
+
+    try {
+      const r = await turso.execute({
+        sql: "UPDATE tournament_registrations SET status = ? WHERE id = ?",
+        args: [status, id],
+      });
+      if (!r.rowsAffected) {
+        return NextResponse.json({ error: "Registration not found." }, { status: 404 });
+      }
+    } catch (dbErr) {
+      const msg = String((dbErr as Error)?.message ?? "").toLowerCase();
+      if (msg.includes("unique") || msg.includes("duplicate")) {
+        return NextResponse.json(
+          { error: "That player already has a confirmed entry in this category." },
+          { status: 409 },
+        );
+      }
+      console.error("[admin tournament registration update error]", dbErr);
+      return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, id, status });
+  } catch (err) {
+    console.error("[admin tournament registration patch error]", err);
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+  }
+}
