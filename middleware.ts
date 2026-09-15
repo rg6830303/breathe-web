@@ -16,6 +16,13 @@ import { verifyToken } from "@/lib/auth";
  */
 const ADMIN_HOST = process.env.NEXT_PUBLIC_ADMIN_HOST?.trim().toLowerCase();
 
+/**
+ * Standalone host for the 33 Showdown team-captain entry. Its root serves the
+ * captain form directly, so the URL can be handed out on its own without the
+ * rest of the site around it. Override with NEXT_PUBLIC_CAPTAIN_HOST.
+ */
+const CAPTAIN_HOST = (process.env.NEXT_PUBLIC_CAPTAIN_HOST ?? "33showdown.vercel.app").trim().toLowerCase();
+
 function hostOf(req: NextRequest): string {
   return (req.headers.get("host") ?? "").split(":")[0].toLowerCase();
 }
@@ -67,6 +74,20 @@ export async function middleware(req: NextRequest) {
       status: 404,
       headers: { "X-Robots-Tag": "noindex, nofollow" },
     });
+  }
+
+  // --- Captain host: the landing page IS the captain entry form ---
+  if (CAPTAIN_HOST && host === CAPTAIN_HOST) {
+    // Rewrite (not redirect) so the form is served at the bare domain. Every
+    // other path — /api/*, assets, the rest of the site — is left alone so the
+    // form's fetches and the Razorpay round-trip keep working.
+    const res =
+      pathname === "/"
+        ? NextResponse.rewrite(new URL("/tournaments/captain", req.url))
+        : NextResponse.next();
+    // A one-event link, not a page to index.
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return res;
   }
 
   // --- Player dashboard gate ---

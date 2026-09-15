@@ -106,23 +106,31 @@ async function seedShowdown() {
 }
 
 /**
- * Remove the stale hand-entered "33 Showdown" duplicate that predates the seed.
+ * Remove the stale hand-entered "33 Showdown" duplicate that predates the seed
+ * and showed up twice in the registration dropdown.
  *
- * Scoped hard: only a row with that exact name, only one that is NOT a seeded
- * id, and only one with no registrations at all — a row someone has paid
- * against is never touched, it is left for an admin to decide on.
+ * Addressed by its exact id — matching on the name did not take — and guarded
+ * by NOT EXISTS so a row with any registration against it is never touched.
+ * NOT EXISTS rather than NOT IN: a single NULL tournament_id anywhere in
+ * tournament_registrations makes a NOT IN subquery match nothing, silently.
  */
+const STALE_TOURNAMENT_IDS = ["e5122842-4833-42ec-916f-820cbb2e1c4a"];
+
 async function dropStaleShowdownDuplicates() {
-  try {
-    await turso.execute({
-      sql: `DELETE FROM tournaments
-            WHERE name = '33 Showdown'
-              AND id NOT IN (?, ?)
-              AND id NOT IN (SELECT DISTINCT tournament_id FROM tournament_registrations)`,
-      args: [SHOWDOWN_33_ID, SHOWDOWN_33_CAPTAIN_ID],
-    });
-  } catch (err) {
-    console.error("[tournament duplicate cleanup]", err);
+  for (const id of STALE_TOURNAMENT_IDS) {
+    if (id === SHOWDOWN_33_ID || id === SHOWDOWN_33_CAPTAIN_ID) continue;
+    try {
+      await turso.execute({
+        sql: `DELETE FROM tournaments
+              WHERE id = ?
+                AND NOT EXISTS (
+                  SELECT 1 FROM tournament_registrations r WHERE r.tournament_id = tournaments.id
+                )`,
+        args: [id],
+      });
+    } catch (err) {
+      console.error("[tournament duplicate cleanup]", id, err);
+    }
   }
 }
 
