@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 /**
  * PUBLIC list of tournaments that are accepting entries.
  *
- * Only `status = 'open'` rows are returned — 'upcoming' events are announced but
+ * Only `status = 'open'`, listed rows are returned — an `unlisted` event is
+ * reachable only through its own direct link — 'upcoming' events are announced but
  * not yet taking registrations, and completed/cancelled ones must never appear
  * on the registration form. No user data is exposed.
  */
@@ -22,7 +23,7 @@ export async function GET() {
     const r = await turso.execute({
       sql: `SELECT id, name, event_date, format, prize, fee, description, poster_url
             FROM tournaments
-            WHERE active = 1 AND status = 'open'
+            WHERE active = 1 AND status = 'open' AND COALESCE(unlisted, 0) = 0
             ORDER BY event_date ASC
             LIMIT 50`,
       args: [],

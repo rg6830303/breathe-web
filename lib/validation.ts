@@ -83,7 +83,7 @@ export const tournamentRegistrationSchema = z
       .regex(/^([0-9](\.[0-9]{1,2})?)?$/, "DUPR level looks like 3.5.")
       .optional()
       .or(z.literal("")),
-    category: z.enum(["singles", "doubles", "mixed_doubles"]).optional().default("singles"),
+    category: z.enum(["singles", "doubles", "mixed_doubles", "captain"]).optional().default("singles"),
     skill_level: z.enum(["beginner", "intermediate", "advanced"]).optional().default("intermediate"),
     partner_name: z.string().trim().max(80).optional().or(z.literal("")),
     notes: z.string().trim().max(500).optional().or(z.literal("")),

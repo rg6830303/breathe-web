@@ -12,8 +12,10 @@ import { turso } from "@/lib/turso";
  * Memoised per serverless instance so it costs one round-trip on a cold start.
  */
 
-/** Stable id so the seed is idempotent across deploys and both engines. */
+/** Stable ids so the seeds are idempotent across deploys and both engines. */
 export const SHOWDOWN_33_ID = "tour-33-showdown";
+/** Team-captain entry — same event, higher fee, kept off the public listing. */
+export const SHOWDOWN_33_CAPTAIN_ID = "tour-33-showdown-captain";
 
 const STATEMENTS: string[] = [
   // Player detail captured by the public entry form.
@@ -24,6 +26,9 @@ const STATEMENTS: string[] = [
   `ALTER TABLE tournament_registrations ADD COLUMN dupr_level TEXT`,
   // Poster artwork shown on the public tournaments tab.
   `ALTER TABLE tournaments ADD COLUMN poster_url TEXT`,
+  // 1 = reachable by direct link only: hidden from /api/tournaments and so from
+  // the public tab and the player registration dropdown.
+  `ALTER TABLE tournaments ADD COLUMN unlisted INTEGER DEFAULT 0`,
 ];
 
 /**
@@ -59,29 +64,65 @@ async function quietly(sql: string) {
   }
 }
 
-/** Seed the 33 Showdown event so the public tab has something to register for. */
+/** Seed the 33 Showdown events so the public tab has something to register for. */
 async function seedShowdown() {
   const now = Date.now();
+  const base = {
+    date: "2026-10-04",
+    format: "Auction format · 5 players per team · B,C doubles → B singles → B,C doubles",
+    prize: "₹40,000 prize pool",
+    poster: "/photos/33-showdown-poster.jpg",
+  };
+  const rows: Array<[string, string, number, number, string]> = [
+    [
+      SHOWDOWN_33_ID,
+      "33 Showdown",
+      1200,
+      0,
+      "One scoreline, three matches — whoever's team touches thirty three first wins it. Sunday 4th October at Panchwati Complex, Kaikhali. Limited slots.",
+    ],
+    [
+      SHOWDOWN_33_CAPTAIN_ID,
+      "33 Showdown — Team Captain",
+      3000,
+      1,
+      "Captain entry for 33 Showdown: lead a five-player team through the auction and the three-match scoreline. Sunday 4th October at Panchwati Complex, Kaikhali.",
+    ],
+  ];
+
+  for (const [id, name, fee, unlisted, description] of rows) {
+    try {
+      await turso.execute({
+        sql: `INSERT OR IGNORE INTO tournaments
+                (id, name, event_date, format, prize, fee, description, poster_url, unlisted,
+                 status, active, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', 1, ?, ?)`,
+        args: [id, name, base.date, base.format, base.prize, fee, description, base.poster, unlisted, now, now],
+      });
+    } catch (err) {
+      console.error("[tournament seed]", id, err);
+    }
+  }
+}
+
+/**
+ * Remove the stale hand-entered "33 Showdown" duplicate that predates the seed.
+ *
+ * Scoped hard: only a row with that exact name, only one that is NOT a seeded
+ * id, and only one with no registrations at all — a row someone has paid
+ * against is never touched, it is left for an admin to decide on.
+ */
+async function dropStaleShowdownDuplicates() {
   try {
     await turso.execute({
-      sql: `INSERT OR IGNORE INTO tournaments
-              (id, name, event_date, format, prize, fee, description, poster_url, status, active, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', 1, ?, ?)`,
-      args: [
-        SHOWDOWN_33_ID,
-        "33 Showdown",
-        "2026-10-04",
-        "Auction format · 5 players per team · B,C doubles → B singles → B,C doubles",
-        "₹40,000 prize pool",
-        1200,
-        "One scoreline, three matches — whoever's team touches thirty three first wins it. Sunday 4th October at Panchwati Complex, Kaikhali. Limited slots.",
-        "/photos/33-showdown-poster.jpg",
-        now,
-        now,
-      ],
+      sql: `DELETE FROM tournaments
+            WHERE name = '33 Showdown'
+              AND id NOT IN (?, ?)
+              AND id NOT IN (SELECT DISTINCT tournament_id FROM tournament_registrations)`,
+      args: [SHOWDOWN_33_ID, SHOWDOWN_33_CAPTAIN_ID],
     });
   } catch (err) {
-    console.error("[tournament seed]", err);
+    console.error("[tournament duplicate cleanup]", err);
   }
 }
 
@@ -94,6 +135,7 @@ export function ensureTournamentSchema(): Promise<void> {
       await quietly(NULLABLE_USER_ID);
       await quietly(EMAIL_UNIQUE);
       await seedShowdown();
+      await dropStaleShowdownDuplicates();
       done = true;
     } finally {
       running = null;
