@@ -114,7 +114,7 @@ async function seedShowdown() {
  * NOT EXISTS rather than NOT IN: a single NULL tournament_id anywhere in
  * tournament_registrations makes a NOT IN subquery match nothing, silently.
  */
-const STALE_TOURNAMENT_IDS = ["e5122842-4833-42ec-916f-820cbb2e1c4a"];
+export const STALE_TOURNAMENT_IDS = ["e5122842-4833-42ec-916f-820cbb2e1c4a"];
 
 async function dropStaleShowdownDuplicates() {
   for (const id of STALE_TOURNAMENT_IDS) {
