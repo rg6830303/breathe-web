@@ -1450,7 +1450,7 @@ function TournamentsTab() {
         )}
       </div>
       </div>
-      <TournamentRegistrationsPanel />
+      <TournamentRegistrationsPanel tournaments={items} />
     </>
   );
 }
@@ -1470,50 +1470,61 @@ type TournamentReg = {
   created_at: number;
 };
 
-/** Paid tournament entries, newest first, with a CSV export for the draw sheet. */
-function TournamentRegistrationsPanel() {
+/** Paid tournament entries — filter, cancel/reinstate, and export a live .xlsx. */
+function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament[] }) {
+  const toast = useToast();
   const [rows, setRows] = useState<TournamentReg[]>(() => getAdminCache<TournamentReg[]>("tournregs") ?? []);
   const [loading, setLoading] = useState(() => getAdminCache<TournamentReg[]>("tournregs") === undefined);
+  const [filter, setFilter] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
 
-  function load() {
-    fetch("/api/admin/tournaments/registrations")
+  function load(tournamentId = filter) {
+    const url = tournamentId
+      ? `/api/admin/tournaments/registrations?tournament_id=${encodeURIComponent(tournamentId)}`
+      : "/api/admin/tournaments/registrations";
+    fetch(url)
       .then((r) => (r.ok ? r.json() : { registrations: [] }))
       .then((d) => {
         setRows(d.registrations ?? []);
-        setAdminCache("tournregs", d.registrations ?? []);
+        if (!tournamentId) setAdminCache("tournregs", d.registrations ?? []);
       })
       .finally(() => setLoading(false));
   }
-  useEffect(load, []);
+  useEffect(() => {
+    load(filter);
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Live totals reflect CONFIRMED entries only — a cancelled entry shouldn't
+  // count toward the head-count or the money collected.
+  const confirmed = useMemo(() => rows.filter((r) => r.status === "confirmed"), [rows]);
   const collected = useMemo(
-    () => rows.filter((r) => r.status === "confirmed").reduce((a, r) => a + (Number(r.amount_paid) || 0), 0),
-    [rows],
+    () => confirmed.reduce((a, r) => a + (Number(r.amount_paid) || 0), 0),
+    [confirmed],
   );
 
-  function exportCsv() {
-    const header = ["Tournament", "Player", "Email", "Phone", "Category", "Level", "Partner", "Fee paid", "Status", "Registered"];
-    const body = rows.map((r) => [
-      r.tournament_name,
-      r.player_name,
-      r.email,
-      r.phone ?? "",
-      r.category,
-      r.skill_level ?? "",
-      r.partner_name ?? "",
-      String(r.amount_paid),
-      r.status,
-      new Date(Number(r.created_at)).toLocaleString("en-IN"),
-    ]);
-    const csv = [header, ...body]
-      .map((line) => line.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `breathe-tournament-entries-${todayIST()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  async function setStatus(r: TournamentReg, status: "cancelled" | "confirmed") {
+    const verb = status === "cancelled" ? "Cancel" : "Reinstate";
+    if (!confirm(`${verb} ${r.player_name}'s entry for ${r.tournament_name}?`)) return;
+    setBusy(r.id);
+    const res = await fetch("/api/admin/tournaments/registrations", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: r.id, status }),
+    });
+    setBusy(null);
+    if (res.ok) {
+      toast.show(`Entry ${status === "cancelled" ? "cancelled" : "reinstated"}.`, "success");
+      load(filter);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.show(d.error ?? `Could not ${verb.toLowerCase()} that entry.`, "error");
+    }
+  }
+
+  /** Streams a real .xlsx built server-side from live data (not the cached rows). */
+  function exportExcel() {
+    const qs = filter ? `?tournament_id=${encodeURIComponent(filter)}` : "";
+    window.location.href = `/api/admin/tournaments/registrations/export${qs}`;
   }
 
   return (
@@ -1521,14 +1532,26 @@ function TournamentRegistrationsPanel() {
       <PanelHeader
         eyebrow="Tournament entries"
         title="Registrations"
-        subtitle={`${rows.length} entr${rows.length === 1 ? "y" : "ies"} · ${money(collected)} collected`}
+        subtitle={`${confirmed.length} confirmed · ${money(collected)} collected${
+          rows.length !== confirmed.length ? ` · ${rows.length - confirmed.length} cancelled` : ""
+        }`}
       >
-        {rows.length > 0 && (
-          <button type="button" onClick={exportCsv} className="btn-outline px-2.5 py-2 text-xs">
-            <Download className="h-3.5 w-3.5" /> Export CSV
-          </button>
-        )}
-        <button type="button" onClick={load} className="btn-outline px-2.5 py-2 text-xs">
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="rounded-lg border border-ink/10 bg-white px-3 py-2 text-xs text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white"
+        >
+          <option value="">All tournaments</option>
+          {tournaments.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+        <button type="button" onClick={exportExcel} disabled={rows.length === 0} className="btn-outline px-2.5 py-2 text-xs disabled:opacity-50">
+          <Download className="h-3.5 w-3.5" /> Download Excel
+        </button>
+        <button type="button" onClick={() => load(filter)} className="btn-outline px-2.5 py-2 text-xs">
           <RefreshCw className="h-3.5 w-3.5" /> Refresh
         </button>
       </PanelHeader>
@@ -1547,12 +1570,16 @@ function TournamentRegistrationsPanel() {
                 <th className={TH}>Category</th>
                 <th className={TH}>Partner</th>
                 <th className={TH_RIGHT}>Fee paid</th>
+                <th className={TH}>Status</th>
                 <th className={TH}>Registered</th>
+                <th className="p-3"></th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className={TR_HOVER}>
+              {rows.map((r) => {
+                const cancelled = r.status !== "confirmed";
+                return (
+                <tr key={r.id} className={`${TR_HOVER} ${cancelled ? "opacity-55" : ""}`}>
                   <td className="p-3">
                     <div className="font-bold text-ink dark:text-white">{r.player_name}</div>
                     <div className="text-[11px] text-ink/50 dark:text-white/50">
@@ -1569,11 +1596,34 @@ function TournamentRegistrationsPanel() {
                   </td>
                   <td className="p-3 text-ink/70 dark:text-white/60">{r.partner_name ?? "—"}</td>
                   <td className="p-3 text-right font-extrabold text-lime-dark dark:text-lime">{money(r.amount_paid)}</td>
+                  <td className="p-3"><StatusPill status={r.status} /></td>
                   <td className="p-3 text-[11px] text-ink/50 dark:text-white/50">
                     {new Date(Number(r.created_at)).toLocaleDateString("en-IN")}
                   </td>
+                  <td className="p-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setStatus(r, cancelled ? "confirmed" : "cancelled")}
+                      disabled={busy === r.id}
+                      className={
+                        cancelled
+                          ? "inline-flex items-center gap-1 rounded-lg border border-lime/40 bg-lime/10 px-2.5 py-1.5 text-xs font-bold text-lime-dark transition hover:bg-lime/20 disabled:opacity-60 dark:text-lime"
+                          : DANGER_BTN
+                      }
+                    >
+                      {busy === r.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : cancelled ? (
+                        <Check className="h-3 w-3" />
+                      ) : (
+                        <X className="h-3 w-3" />
+                      )}
+                      {cancelled ? "Reinstate" : "Cancel"}
+                    </button>
+                  </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
