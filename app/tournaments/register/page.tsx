@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { CheckCircle2, Loader2, Lock, Trophy } from "lucide-react";
+import { CheckCircle2, Camera, Loader2, Trophy, X } from "lucide-react";
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { Container } from "@/components/ui";
@@ -19,18 +18,13 @@ type Tournament = {
   prize: string | null;
   fee: number;
   description: string | null;
+  poster_url: string | null;
 };
 
-const CATEGORIES = [
-  { value: "singles", label: "Singles" },
-  { value: "doubles", label: "Doubles" },
-  { value: "mixed_doubles", label: "Mixed doubles" },
-] as const;
-
-const LEVELS = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
+const SEXES = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "other", label: "Other" },
 ] as const;
 
 const FIELD =
@@ -57,37 +51,69 @@ function formatDate(d: string | null) {
   return parsed.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
 }
 
+/**
+ * Shrink the chosen photo to a 512px JPEG in the browser before it ever leaves
+ * the device. A 6 MB phone snap becomes ~60 KB, which keeps the upload instant
+ * and the stored image small whichever way the server persists it.
+ */
+async function downscale(file: File): Promise<File> {
+  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (!bitmap) return file;
+  const max = 512;
+  const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return file;
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.82));
+  if (!blob) return file;
+  return new File([blob], "photo.jpg", { type: "image/jpeg" });
+}
+
 export default function TournamentRegisterPage() {
-  const router = useRouter();
   const [account, setAccount] = useState<Account>(null);
-  const [authLoaded, setAuthLoaded] = useState(false);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [doneRef, setDoneRef] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     tournament_id: "",
-    category: "singles" as (typeof CATEGORIES)[number]["value"],
-    skill_level: "intermediate" as (typeof LEVELS)[number]["value"],
+    player_name: "",
+    email: "",
     phone: "",
-    partner_name: "",
-    notes: "",
+    age: "",
+    sex: "" as "" | (typeof SEXES)[number]["value"],
+    photo_url: "",
+    dupr_id: "",
+    dupr_level: "",
   });
 
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => r.json())
-      .then((d) => setAccount(d.user ?? null))
-      .catch(() => {})
-      .finally(() => setAuthLoaded(true));
+      .then((d) => {
+        const u: Account = d.user ?? null;
+        setAccount(u);
+        // Prefill from the account when there is one — guests just type it in.
+        if (u && u.role === "user") {
+          setForm((f) => ({ ...f, player_name: f.player_name || u.name, email: f.email || u.email }));
+        }
+      })
+      .catch(() => {});
     fetch("/api/tournaments")
       .then((r) => (r.ok ? r.json() : { tournaments: [] }))
       .then((d) => {
         const list: Tournament[] = d.tournaments ?? [];
         setTournaments(list);
-        if (list.length > 0) setForm((f) => ({ ...f, tournament_id: list[0].id }));
+        if (list.length > 0) setForm((f) => ({ ...f, tournament_id: f.tournament_id || list[0].id }));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -97,28 +123,59 @@ export default function TournamentRegisterPage() {
     () => tournaments.find((t) => t.id === form.tournament_id) ?? null,
     [tournaments, form.tournament_id],
   );
-  const needsPartner = form.category !== "singles";
+
+  async function pickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      setError("Photo must be a JPG, PNG or WebP image.");
+      return;
+    }
+    setError(null);
+    setUploading(true);
+    try {
+      const small = await downscale(file);
+      const fd = new FormData();
+      fd.append("file", small);
+      const res = await fetch("/api/tournaments/register/photo", { method: "POST", body: fd });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Could not upload that photo.");
+      setForm((f) => ({ ...f, photo_url: String(d.url) }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not upload that photo.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    if (!account || account.role !== "user") {
-      router.push("/login?next=/tournaments/register");
-      return;
-    }
     if (!selected) {
       setError("Please choose a tournament.");
+      return;
+    }
+    if (!form.photo_url) {
+      setError("Please upload a profile photo.");
+      return;
+    }
+    if (!form.sex) {
+      setError("Please select your sex.");
       return;
     }
     setPaying(true);
     try {
       const payload = {
         tournament_id: form.tournament_id,
-        category: form.category,
-        skill_level: form.skill_level,
-        phone: form.phone,
-        partner_name: needsPartner ? form.partner_name : "",
-        notes: form.notes,
+        player_name: form.player_name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        age: Number(form.age),
+        sex: form.sex,
+        photo_url: form.photo_url,
+        dupr_id: form.dupr_id.trim(),
+        dupr_level: form.dupr_level.trim(),
       };
 
       const orderRes = await fetch("/api/tournaments/register/create-order", {
@@ -146,9 +203,9 @@ export default function TournamentRegisterPage() {
         amount: order.amount,
         currency: order.currency,
         name: "Breathe Pickleball",
-        description: `${selected.name} · ${form.category.replace("_", " ")}`,
+        description: `${selected.name} · player entry`,
         order_id: order.orderId,
-        prefill: { name: account.name, email: account.email, contact: form.phone },
+        prefill: { name: payload.player_name, email: payload.email, contact: payload.phone },
         theme: { color: "#2F5BFF" },
         handler: async (resp: {
           razorpay_order_id?: string;
@@ -206,7 +263,7 @@ export default function TournamentRegisterPage() {
         <PageHero
           label="Tournaments"
           title="Register your entry"
-          subtitle="Secure your spot in the next Breathe Open. Pay the entry fee online and we'll email your confirmation and the match schedule."
+          subtitle="Secure your spot — no account needed. Pay the entry fee online and we'll email your confirmation and the match schedule."
         />
 
         <Container className="py-10">
@@ -223,12 +280,14 @@ export default function TournamentRegisterPage() {
                   emailed your details and will send the match schedule closer to the date.
                 </p>
                 <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-                  <Link href="/dashboard" className="btn-primary">
-                    Go to my dashboard
-                  </Link>
-                  <Link href="/tournaments" className="btn-outline">
+                  <Link href="/tournaments" className="btn-primary">
                     Back to tournaments
                   </Link>
+                  {account && (
+                    <Link href="/dashboard" className="btn-outline">
+                      Go to my dashboard
+                    </Link>
+                  )}
                 </div>
               </div>
             ) : loading ? (
@@ -252,6 +311,16 @@ export default function TournamentRegisterPage() {
               </div>
             ) : (
               <form onSubmit={submit} className="card-sport space-y-5 p-6 sm:p-8">
+                {/* Poster for the selected event */}
+                {selected?.poster_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={selected.poster_url}
+                    alt={`${selected.name} poster`}
+                    className="w-full rounded-2xl border border-ink/10 dark:border-white/10"
+                  />
+                )}
+
                 {/* Tournament */}
                 <div>
                   <label className={LABEL} htmlFor="tournament">
@@ -278,94 +347,165 @@ export default function TournamentRegisterPage() {
                   )}
                 </div>
 
-                {/* Category + level */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className={LABEL} htmlFor="category">
-                      Category
-                    </label>
-                    <select
-                      id="category"
-                      className={FIELD}
-                      value={form.category}
-                      onChange={(e) =>
-                        setForm({ ...form, category: e.target.value as typeof form.category })
-                      }
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c.value} value={c.value}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={LABEL} htmlFor="level">
-                      Skill level
-                    </label>
-                    <select
-                      id="level"
-                      className={FIELD}
-                      value={form.skill_level}
-                      onChange={(e) =>
-                        setForm({ ...form, skill_level: e.target.value as typeof form.skill_level })
-                      }
-                    >
-                      {LEVELS.map((l) => (
-                        <option key={l.value} value={l.value}>
-                          {l.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Partner — doubles only */}
-                {needsPartner && (
-                  <div>
-                    <label className={LABEL} htmlFor="partner">
-                      Partner&apos;s name
-                    </label>
-                    <input
-                      id="partner"
-                      className={FIELD}
-                      value={form.partner_name}
-                      onChange={(e) => setForm({ ...form, partner_name: e.target.value })}
-                      placeholder="Who are you playing with?"
-                      required
-                    />
-                  </div>
-                )}
-
-                {/* Phone */}
+                {/* Name */}
                 <div>
-                  <label className={LABEL} htmlFor="phone">
-                    Mobile number
+                  <label className={LABEL} htmlFor="name">
+                    Full name
                   </label>
                   <input
-                    id="phone"
-                    type="tel"
+                    id="name"
                     className={FIELD}
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    placeholder="For match-day updates"
+                    value={form.player_name}
+                    onChange={(e) => setForm({ ...form, player_name: e.target.value })}
+                    placeholder="As it should appear on the draw"
                     required
                   />
                 </div>
 
-                {/* Notes */}
+                {/* Email + phone */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className={LABEL} htmlFor="email">
+                      Email
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      className={FIELD}
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      placeholder="For your confirmation"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className={LABEL} htmlFor="phone">
+                      Mobile number
+                    </label>
+                    <input
+                      id="phone"
+                      type="tel"
+                      className={FIELD}
+                      value={form.phone}
+                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                      placeholder="For match-day updates"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Age + sex */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className={LABEL} htmlFor="age">
+                      Age
+                    </label>
+                    <input
+                      id="age"
+                      type="number"
+                      min={8}
+                      max={99}
+                      className={FIELD}
+                      value={form.age}
+                      onChange={(e) => setForm({ ...form, age: e.target.value })}
+                      placeholder="e.g. 28"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className={LABEL} htmlFor="sex">
+                      Sex
+                    </label>
+                    <select
+                      id="sex"
+                      className={FIELD}
+                      value={form.sex}
+                      onChange={(e) => setForm({ ...form, sex: e.target.value as typeof form.sex })}
+                      required
+                    >
+                      <option value="">Select…</option>
+                      {SEXES.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Profile photo */}
                 <div>
-                  <label className={LABEL} htmlFor="notes">
-                    Anything we should know? <span className="normal-case text-slatey/70">(optional)</span>
-                  </label>
-                  <textarea
-                    id="notes"
-                    rows={3}
-                    className={FIELD}
-                    value={form.notes}
-                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                    placeholder="Preferred match times, accessibility needs…"
-                  />
+                  <label className={LABEL}>Profile photo</label>
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-ink/10 bg-ink/5 dark:border-white/15 dark:bg-white/10">
+                      {form.photo_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={form.photo_url} alt="Your profile" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center">
+                          <Camera className="h-5 w-5 text-ink/30 dark:text-white/30" />
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileRef.current?.click()}
+                        disabled={uploading}
+                        className="btn-outline px-3 py-2 text-xs"
+                      >
+                        {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                        {form.photo_url ? "Change photo" : "Upload photo"}
+                      </button>
+                      {form.photo_url && !uploading && (
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, photo_url: "" })}
+                          className="inline-flex items-center gap-1 text-xs font-bold text-red-600 dark:text-red-400"
+                        >
+                          <X className="h-3 w-3" /> Remove
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={pickPhoto}
+                    />
+                  </div>
+                  <p className="mt-2 text-[11px] text-slatey dark:text-white/40">
+                    JPG, PNG or WebP. We resize it on your device before uploading.
+                  </p>
+                </div>
+
+                {/* DUPR */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className={LABEL} htmlFor="duprid">
+                      DUPR ID <span className="normal-case text-slatey/70">(optional)</span>
+                    </label>
+                    <input
+                      id="duprid"
+                      className={FIELD}
+                      value={form.dupr_id}
+                      onChange={(e) => setForm({ ...form, dupr_id: e.target.value })}
+                      placeholder="e.g. ABC123"
+                    />
+                  </div>
+                  <div>
+                    <label className={LABEL} htmlFor="duprlevel">
+                      DUPR level <span className="normal-case text-slatey/70">(optional)</span>
+                    </label>
+                    <input
+                      id="duprlevel"
+                      className={FIELD}
+                      value={form.dupr_level}
+                      onChange={(e) => setForm({ ...form, dupr_level: e.target.value })}
+                      placeholder="e.g. 3.5"
+                    />
+                  </div>
                 </div>
 
                 {/* Fee */}
@@ -384,26 +524,18 @@ export default function TournamentRegisterPage() {
                   </div>
                 )}
 
-                {/* Login gate */}
-                {authLoaded && (!account || account.role !== "user") ? (
-                  <div className="space-y-3">
-                    <p className="text-center text-sm text-slatey dark:text-white/60">
-                      Please log in to register — we link your entry to your player account.
-                    </p>
-                    <Link href="/login?next=/tournaments/register" className="btn-primary w-full justify-center">
-                      <Lock className="h-4 w-4" /> Log in to register
-                    </Link>
-                  </div>
-                ) : (
-                  <button type="submit" disabled={paying || !selected} className="btn-primary w-full justify-center">
-                    {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
-                    {selected ? `Pay ₹${selected.fee.toLocaleString("en-IN")} & confirm entry` : "Confirm entry"}
-                  </button>
-                )}
+                <button
+                  type="submit"
+                  disabled={paying || uploading || !selected}
+                  className="btn-primary w-full justify-center"
+                >
+                  {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
+                  {selected ? `Pay ₹${selected.fee.toLocaleString("en-IN")} & confirm entry` : "Confirm entry"}
+                </button>
 
                 <p className="text-center text-[11px] leading-relaxed text-slatey dark:text-white/40">
-                  Your spot is confirmed once payment succeeds. Entry fees are non-refundable within 48 hours of the
-                  event.
+                  Your spot is confirmed only once payment succeeds — there is no pay-later option. Entry fees are
+                  non-refundable within 48 hours of the event.
                 </p>
               </form>
             )}

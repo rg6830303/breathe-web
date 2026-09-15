@@ -56,22 +56,37 @@ export const bookingRequestSchema = z.object({
     .default([]),
 });
 
-/** Tournament entry. `partner_name` is required for doubles — enforced below. */
+/**
+ * Tournament entry, filled in by anyone — player account or guest.
+ *
+ * Name/email/phone are collected on the form because a guest has no account to
+ * read them from; for a logged-in player the server still prefers the account's
+ * own name and email. `photo_url` is written by the upload route, never typed.
+ */
 export const tournamentRegistrationSchema = z
   .object({
     tournament_id: z.string().min(1, "Please choose a tournament.").max(64),
-    category: z.enum(["singles", "doubles", "mixed_doubles"]),
-    skill_level: z.enum(["beginner", "intermediate", "advanced"]),
+    player_name: z.string().trim().min(2, "Please enter your full name.").max(80),
+    email: z.string().trim().toLowerCase().email("Please enter a valid email.").max(160),
     phone: z
       .string()
       .trim()
       .regex(/^[0-9+\-\s()]{7,20}$/, "Please enter a valid phone number."),
+    age: z.coerce.number().int().min(8, "Age must be 8 or over.").max(99, "Please enter a valid age."),
+    sex: z.enum(["male", "female", "other"], { message: "Please select your sex." }),
+    photo_url: z.string().trim().max(200_000, "That photo is too large.").min(1, "Please upload a profile photo."),
+    dupr_id: z.string().trim().max(40).optional().or(z.literal("")),
+    dupr_level: z
+      .string()
+      .trim()
+      .max(10)
+      .regex(/^([0-9](\.[0-9]{1,2})?)?$/, "DUPR level looks like 3.5.")
+      .optional()
+      .or(z.literal("")),
+    category: z.enum(["singles", "doubles", "mixed_doubles"]).optional().default("singles"),
+    skill_level: z.enum(["beginner", "intermediate", "advanced"]).optional().default("intermediate"),
     partner_name: z.string().trim().max(80).optional().or(z.literal("")),
     notes: z.string().trim().max(500).optional().or(z.literal("")),
-  })
-  .refine((d) => d.category === "singles" || (d.partner_name ?? "").trim().length > 1, {
-    message: "Please enter your partner's name for a doubles category.",
-    path: ["partner_name"],
   });
 
 export function formatZodError(err: z.ZodError): string {

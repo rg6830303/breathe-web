@@ -4,6 +4,7 @@ import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
+import { ensureTournamentSchema } from "@/lib/db/tournament-schema";
 import { tournamentRegistrationSchema, formatZodError } from "@/lib/validation";
 
 export const runtime = "nodejs";
@@ -19,15 +20,19 @@ export const maxDuration = 30;
 export async function POST(req: Request) {
   try {
     await ensureSchema().catch(() => {});
+    await ensureTournamentSchema().catch(() => {});
+    // No session required — tournament entry is open to guests.
     const session = await getSession();
-    if (!session) return NextResponse.json({ error: "Please log in to register." }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
     const parsed = tournamentRegistrationSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 });
     }
-    const { tournament_id, category, skill_level, phone, partner_name, notes } = parsed.data;
+    const {
+      tournament_id, category, skill_level, phone, partner_name, notes,
+      player_name, email, age, sex, photo_url, dupr_id, dupr_level,
+    } = parsed.data;
 
     const orderId = String(body.orderId ?? "");
     const paymentId = String(body.paymentId ?? "");
@@ -63,58 +68,68 @@ export async function POST(req: Request) {
     }
     const fee = Math.max(0, Number(t.fee) || 0);
 
-    // Player details come from the account, not the client payload.
-    let userName = session.name;
-    let userEmail = session.email;
-    try {
-      const u = await turso.execute({
-        sql: "SELECT full_name, email FROM users WHERE id = ? LIMIT 1",
-        args: [session.id],
-      });
-      const row = u.rows[0];
-      if (row) {
-        userName = String(row.full_name ?? userName);
-        userEmail = String(row.email ?? userEmail);
+    // A logged-in player's name/email come from their account (a client can't
+    // register someone else under their session); a guest's come from the form.
+    let userName = player_name;
+    let userEmail = email;
+    if (session) {
+      try {
+        const u = await turso.execute({
+          sql: "SELECT full_name, email FROM users WHERE id = ? LIMIT 1",
+          args: [session.id],
+        });
+        const row = u.rows[0];
+        if (row) {
+          userName = String(row.full_name ?? userName);
+          userEmail = String(row.email ?? userEmail).toLowerCase();
+        }
+      } catch (dbErr) {
+        console.error("[tournament verify user fetch error]", dbErr);
       }
-    } catch (dbErr) {
-      console.error("[tournament verify user fetch error]", dbErr);
     }
 
     const id = uuid();
     const now = Date.now();
-    try {
-      await turso.execute({
-        sql: `INSERT INTO tournament_registrations (
+    const INSERT_SQL = `INSERT INTO tournament_registrations (
                 id, tournament_id, user_id, player_name, email, phone,
+                age, sex, photo_url, dupr_id, dupr_level,
                 category, skill_level, partner_name, notes,
                 fee, amount_paid, payment_id, status, created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?)`,
-        args: [
-          id,
-          tournament_id,
-          session.id,
-          userName,
-          userEmail,
-          phone,
-          category,
-          skill_level,
-          partner_name || null,
-          notes || null,
-          fee,
-          fee,
-          paymentId || null,
-          now,
-        ],
-      });
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?)`;
+    const argsFor = (userId: string | null) => [
+      id, tournament_id, userId, userName, userEmail, phone,
+      age, sex, photo_url, dupr_id || null, dupr_level || null,
+      category, skill_level, partner_name || null, notes || null,
+      fee, fee, paymentId || null, now,
+    ];
+
+    try {
+      await turso.execute({ sql: INSERT_SQL, args: argsFor(session?.id ?? null) });
     } catch (insertErr) {
+      const msg = String((insertErr as Error)?.message ?? "").toLowerCase();
       // The partial unique index makes a duplicate confirmed entry impossible;
       // treat a collision as "already registered" rather than a server error.
-      const msg = String((insertErr as Error)?.message ?? "").toLowerCase();
       if (msg.includes("unique") || msg.includes("duplicate")) {
-        return NextResponse.json({ error: "You're already registered for this category." }, { status: 409 });
+        return NextResponse.json(
+          { error: "That email is already registered for this tournament." },
+          { status: 409 },
+        );
       }
-      console.error("[tournament verify insert error]", insertErr);
-      return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+      // Safety net: if the DROP NOT NULL migration hasn't landed on this
+      // database yet, a guest's NULL user_id is rejected. The player has
+      // already paid, so store a synthetic guest id rather than lose the entry.
+      const nullUserId = !session && (msg.includes("null") || msg.includes("not-null"));
+      if (nullUserId) {
+        try {
+          await turso.execute({ sql: INSERT_SQL, args: argsFor(`guest-${id}`) });
+        } catch (retryErr) {
+          console.error("[tournament verify guest insert error]", retryErr);
+          return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+        }
+      } else {
+        console.error("[tournament verify insert error]", insertErr);
+        return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+      }
     }
 
     // Confirmation email + inbox/push, in the background so a slow SMTP never
@@ -126,7 +141,7 @@ export async function POST(req: Request) {
         if (notifyTournamentRegistration) {
           await notifyTournamentRegistration({
             id,
-            userId: session.id,
+            userId: session?.id ?? undefined,
             userEmail,
             userName,
             tournamentName: String(t.name),

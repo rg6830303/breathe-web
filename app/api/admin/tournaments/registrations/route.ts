@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
+import { ensureTournamentSchema } from "@/lib/db/tournament-schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export async function GET(req: NextRequest) {
     const admin = await getAdminSession();
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     await ensureSchema().catch(() => {});
+    await ensureTournamentSchema().catch(() => {});
 
     const tournamentId = req.nextUrl.searchParams.get("tournament_id");
     const where = tournamentId ? "WHERE r.tournament_id = ?" : "";
@@ -23,6 +25,7 @@ export async function GET(req: NextRequest) {
 
     const r = await turso.execute({
       sql: `SELECT r.id, r.tournament_id, r.user_id, r.player_name, r.email, r.phone,
+                   r.age, r.sex, r.photo_url, r.dupr_id, r.dupr_level,
                    r.category, r.skill_level, r.partner_name, r.notes,
                    r.fee, r.amount_paid, r.status, r.created_at,
                    COALESCE(t.name, '—') AS tournament_name,

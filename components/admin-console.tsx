@@ -1461,6 +1461,11 @@ type TournamentReg = {
   player_name: string;
   email: string;
   phone: string | null;
+  age: number | null;
+  sex: string | null;
+  photo_url: string | null;
+  dupr_id: string | null;
+  dupr_level: string | null;
   category: string;
   skill_level: string | null;
   partner_name: string | null;
@@ -1562,11 +1567,13 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
         <EmptyState>No entries yet. They appear here as soon as a player pays.</EmptyState>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] border-collapse text-sm">
+          <table className="w-full min-w-[1040px] border-collapse text-sm">
             <thead>
               <tr className="border-b-2 border-ink/10 dark:border-white/10">
                 <th className={TH}>Player</th>
                 <th className={TH}>Tournament</th>
+                <th className={TH}>Age / Sex</th>
+                <th className={TH}>DUPR</th>
                 <th className={TH}>Category</th>
                 <th className={TH}>Partner</th>
                 <th className={TH_RIGHT}>Fee paid</th>
@@ -1581,13 +1588,45 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
                 return (
                 <tr key={r.id} className={`${TR_HOVER} ${cancelled ? "opacity-55" : ""}`}>
                   <td className="p-3">
-                    <div className="font-bold text-ink dark:text-white">{r.player_name}</div>
-                    <div className="text-[11px] text-ink/50 dark:text-white/50">
-                      {r.email}
-                      {r.phone ? ` · ${r.phone}` : ""}
+                    <div className="flex items-center gap-2.5">
+                      {/* Entry photo. Hosted URL or inline data URL — plain <img>
+                          either way, since next/image can't optimise a data URL. */}
+                      {r.photo_url ? (
+                        <a href={r.photo_url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={r.photo_url}
+                            alt={r.player_name}
+                            className="h-9 w-9 rounded-full border border-ink/10 object-cover dark:border-white/15"
+                          />
+                        </a>
+                      ) : (
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink/5 text-[10px] font-bold text-ink/40 dark:bg-white/10 dark:text-white/40">
+                          —
+                        </span>
+                      )}
+                      <div>
+                        <div className="font-bold text-ink dark:text-white">{r.player_name}</div>
+                        <div className="text-[11px] text-ink/50 dark:text-white/50">
+                          {r.email}
+                          {r.phone ? ` · ${r.phone}` : ""}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="p-3 text-ink dark:text-white">{r.tournament_name}</td>
+                  <td className="p-3 text-ink dark:text-white">
+                    {r.age ?? "—"}
+                    {r.sex && (
+                      <span className="block text-[11px] capitalize text-ink/50 dark:text-white/50">{r.sex}</span>
+                    )}
+                  </td>
+                  <td className="p-3 text-ink/70 dark:text-white/60">
+                    {r.dupr_level ? <span className="font-bold text-ink dark:text-white">{r.dupr_level}</span> : "—"}
+                    {r.dupr_id && (
+                      <span className="block text-[11px] text-ink/50 dark:text-white/50">{r.dupr_id}</span>
+                    )}
+                  </td>
                   <td className="p-3 capitalize text-ink dark:text-white">
                     {r.category.replace("_", " ")}
                     {r.skill_level && (

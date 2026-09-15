@@ -4,6 +4,7 @@ import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
+import { ensureTournamentSchema } from "@/lib/db/tournament-schema";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { tournamentRegistrationSchema, formatZodError } from "@/lib/validation";
 
@@ -14,6 +15,9 @@ export const runtime = "nodejs";
  * open and the player isn't already in that category, then create the Razorpay
  * order for the entry fee.
  *
+ * Open to guests: entries do not require a player account, so an absent session
+ * is fine and the entrant's details come from the validated form body.
+ *
  * Mirrors /api/bookings/create-order, including the single-key fallback: with a
  * RAZORPAY_KEY_SECRET we create a verifiable Order; with only the public key id
  * we return amount+keyId for direct checkout. Nothing is written to
@@ -23,7 +27,6 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   try {
     const session = await getSession();
-    if (!session) return NextResponse.json({ error: "Please log in to register." }, { status: 401 });
 
     const rl = await checkRateLimit(`tournament-register:${getClientIp(req)}`, 20, 60 * 1000);
     if (!rl.ok) {
@@ -34,13 +37,14 @@ export async function POST(req: Request) {
     }
 
     await ensureSchema().catch(() => {});
+    await ensureTournamentSchema().catch(() => {});
 
     const body = await req.json().catch(() => ({}));
     const parsed = tournamentRegistrationSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 });
     }
-    const { tournament_id, category } = parsed.data;
+    const { tournament_id, category, email } = parsed.data;
 
     // Tournament must exist and still be open for entries.
     let row: Record<string, unknown> | undefined;
@@ -62,13 +66,13 @@ export async function POST(req: Request) {
     try {
       const dup = await turso.execute({
         sql: `SELECT id FROM tournament_registrations
-              WHERE tournament_id = ? AND user_id = ? AND category = ? AND status = 'confirmed'
+              WHERE tournament_id = ? AND email = ? AND category = ? AND status = 'confirmed'
               LIMIT 1`,
-        args: [tournament_id, session.id, category],
+        args: [tournament_id, email, category],
       });
       if (dup.rows[0]) {
         return NextResponse.json(
-          { error: "You're already registered for this category." },
+          { error: "That email is already registered for this tournament." },
           { status: 409 },
         );
       }
@@ -102,7 +106,7 @@ export async function POST(req: Request) {
         amount: amountPaise,
         currency: "INR",
         receipt: uuid(),
-        notes: { user_id: session.id, tournament_id, category, kind: "tournament" },
+        notes: { user_id: session?.id ?? "guest", email, tournament_id, category, kind: "tournament" },
       });
     } catch (rzpErr) {
       console.error("[tournament create-order razorpay error]", rzpErr);

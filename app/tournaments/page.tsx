@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Award, Crown, Medal, Trophy, Users, Check } from "lucide-react";
 import { Footer } from "@/components/footer";
@@ -32,6 +33,102 @@ const particles = [
   { top: "60%", left: "10%", size: 3, duration: 8.5, delay: 2.2 },
   { top: "50%", left: "50%", size: 5, duration: 5.5, delay: 0.7 },
 ];
+
+type OpenTournament = {
+  id: string;
+  name: string;
+  event_date: string | null;
+  format: string | null;
+  prize: string | null;
+  fee: number;
+  description: string | null;
+  poster_url: string | null;
+};
+
+function formatDate(d: string | null) {
+  if (!d) return "Date to be announced";
+  const parsed = new Date(d);
+  if (Number.isNaN(parsed.getTime())) return d;
+  return parsed.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+
+/**
+ * The events currently taking entries, poster and all. Rendered from the live
+ * `/api/tournaments` list, so adding or closing an event in the admin console
+ * is all it takes to change this band — nothing here is hard-coded.
+ */
+function OpenTournaments() {
+  const [items, setItems] = useState<OpenTournament[]>([]);
+
+  useEffect(() => {
+    fetch("/api/tournaments")
+      .then((r) => (r.ok ? r.json() : { tournaments: [] }))
+      .then((d) => setItems(d.tournaments ?? []))
+      .catch(() => {});
+  }, []);
+
+  if (items.length === 0) return null;
+
+  return (
+    <section className="bg-white px-4 py-20 text-ink dark:bg-ink dark:text-white sm:px-6 lg:px-8">
+      <Container className="!px-0">
+        <ScrollReveal direction="up">
+          <div className="mb-10 text-center">
+            <span className="eyebrow justify-center text-brand dark:text-lime">Registrations open</span>
+            <h2 className="heading-lg mt-4 text-ink dark:text-white">
+              Enter the <span className="mark-lime">next event</span>
+            </h2>
+          </div>
+        </ScrollReveal>
+
+        <div className="grid gap-8">
+          {items.map((t, i) => (
+            <ScrollReveal key={t.id} delay={i * 0.1} direction="up">
+              <div className="card-sport grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-center">
+                {t.poster_url && (
+                  /* Poster artwork is uploaded per event, so it is rendered as a
+                     plain <img> rather than through the curated photo set. */
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={t.poster_url}
+                    alt={`${t.name} poster`}
+                    className="w-full rounded-2xl border border-ink/10 object-cover dark:border-white/10"
+                  />
+                )}
+                <div>
+                  <h3 className="font-display text-2xl font-extrabold text-ink dark:text-white sm:text-3xl">{t.name}</h3>
+                  <p className="mt-2 text-sm font-bold text-brand dark:text-lime">{formatDate(t.event_date)}</p>
+                  {t.description && (
+                    <p className="mt-4 text-sm leading-relaxed text-slatey dark:text-white/65">{t.description}</p>
+                  )}
+                  <ul className="mt-6 grid gap-2 text-sm">
+                    {t.format && (
+                      <li className="flex items-start gap-2 text-ink dark:text-white/80">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-lime" /> {t.format}
+                      </li>
+                    )}
+                    {t.prize && (
+                      <li className="flex items-start gap-2 text-ink dark:text-white/80">
+                        <Trophy className="mt-0.5 h-4 w-4 shrink-0 text-lime" /> {t.prize}
+                      </li>
+                    )}
+                    <li className="flex items-start gap-2 text-ink dark:text-white/80">
+                      <Medal className="mt-0.5 h-4 w-4 shrink-0 text-lime" /> ₹{t.fee.toLocaleString("en-IN")} per player
+                      · limited slots
+                    </li>
+                  </ul>
+                  <Link href="/tournaments/register" className="btn-accent mt-7 inline-flex">
+                    Register now · ₹{t.fee.toLocaleString("en-IN")}
+                  </Link>
+                </div>
+              </div>
+            </ScrollReveal>
+          ))}
+        </div>
+      </Container>
+    </section>
+  );
+}
 
 export default function TournamentsPage() {
   return (
@@ -76,6 +173,8 @@ export default function TournamentsPage() {
             ))}
           </div>
         </div>
+
+        <OpenTournaments />
 
         {/* ── TOURNAMENT FORMATS — light / ink (dark) ── */}
         <section className="bg-white px-4 py-20 text-ink dark:bg-ink dark:text-white sm:px-6 lg:px-8">

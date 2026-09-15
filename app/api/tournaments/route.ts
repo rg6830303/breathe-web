@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
+import { ensureTournamentSchema } from "@/lib/db/tournament-schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,8 +16,11 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     await ensureSchema().catch(() => {});
+    // Adds poster_url (and seeds the current event) on a database provisioned
+    // before those existed — the SELECT below reads that column.
+    await ensureTournamentSchema().catch(() => {});
     const r = await turso.execute({
-      sql: `SELECT id, name, event_date, format, prize, fee, description
+      sql: `SELECT id, name, event_date, format, prize, fee, description, poster_url
             FROM tournaments
             WHERE active = 1 AND status = 'open'
             ORDER BY event_date ASC
@@ -32,6 +36,7 @@ export async function GET() {
       prize: row.prize ? String(row.prize) : null,
       fee: Number(row.fee) || 0,
       description: row.description ? String(row.description) : null,
+      poster_url: row.poster_url ? String(row.poster_url) : null,
     }));
 
     return NextResponse.json(

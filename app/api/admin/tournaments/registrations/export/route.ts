@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { getAdminSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
+import { ensureTournamentSchema } from "@/lib/db/tournament-schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,13 +20,15 @@ export async function GET(req: NextRequest) {
     const admin = await getAdminSession();
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     await ensureSchema().catch(() => {});
+    await ensureTournamentSchema().catch(() => {});
 
     const tournamentId = req.nextUrl.searchParams.get("tournament_id");
     const where = tournamentId ? "WHERE r.tournament_id = ?" : "";
     const args = tournamentId ? [tournamentId] : [];
 
     const res = await turso.execute({
-      sql: `SELECT r.player_name, r.email, r.phone, r.category, r.skill_level,
+      sql: `SELECT r.player_name, r.email, r.phone, r.age, r.sex, r.photo_url, r.dupr_id, r.dupr_level,
+                   r.category, r.skill_level,
                    r.partner_name, r.fee, r.amount_paid, r.status, r.created_at,
                    r.payment_id, r.notes,
                    COALESCE(t.name, '—') AS tournament_name, t.event_date
@@ -45,6 +48,12 @@ export async function GET(req: NextRequest) {
       Player: String(r.player_name ?? ""),
       Email: String(r.email ?? ""),
       Phone: r.phone ? String(r.phone) : "",
+      Age: r.age ? Number(r.age) : "",
+      Sex: r.sex ? title(String(r.sex)) : "",
+      "DUPR ID": r.dupr_id ? String(r.dupr_id) : "",
+      "DUPR level": r.dupr_level ? String(r.dupr_level) : "",
+      // Inline data URLs would blow the sheet up; only a hosted photo is linked.
+      Photo: r.photo_url && String(r.photo_url).startsWith("http") ? String(r.photo_url) : "",
       Category: title(String(r.category ?? "")),
       Level: r.skill_level ? title(String(r.skill_level)) : "",
       Partner: r.partner_name ? String(r.partner_name) : "",
@@ -62,6 +71,7 @@ export async function GET(req: NextRequest) {
     // Sensible column widths so the sheet is readable without manual resizing.
     sheet["!cols"] = [
       { wch: 24 }, { wch: 12 }, { wch: 22 }, { wch: 28 }, { wch: 14 },
+      { wch: 6 }, { wch: 9 }, { wch: 14 }, { wch: 11 }, { wch: 34 },
       { wch: 14 }, { wch: 13 }, { wch: 20 }, { wch: 10 }, { wch: 12 },
       { wch: 11 }, { wch: 18 }, { wch: 20 }, { wch: 30 },
     ];
