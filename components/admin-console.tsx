@@ -205,11 +205,14 @@ export function AdminConsole() {
 
 
   return (
-    <div className="grid gap-5">
-      {/* Tab bar */}
-      <div className="card-sport overflow-hidden rounded-2xl p-0">
+    // min-w-0 on the grid and on each child: without it a grid item is sized by
+    // its content (min-width:auto), so one wide table stretches the whole page
+    // and the browser renders the console zoomed out on a phone.
+    <div className="grid min-w-0 gap-5">
+      {/* Tab bar — stays put while a long table scrolls under it. */}
+      <div className="card-sport sticky top-0 z-30 min-w-0 overflow-hidden rounded-2xl p-0 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-[#0d1730]/85">
         {/* Top action bar */}
-        <div className="flex flex-wrap items-center justify-end gap-2 border-b-2 border-ink/10 bg-ink/[0.03] px-4 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 border-b-2 border-ink/10 bg-ink/[0.03] px-3 py-2.5 sm:px-4 dark:border-white/10 dark:bg-white/[0.03]">
           <div className="mr-auto">
             <NotificationBell />
           </div>
@@ -244,7 +247,7 @@ export function AdminConsole() {
         </div>
 
         {/* Tabs — horizontally scrollable, labels always visible for clear nav */}
-        <div className="no-scrollbar flex flex-nowrap gap-0 overflow-x-auto border-b-2 border-ink/10 dark:border-white/10">
+        <div className="no-scrollbar flex min-w-0 max-w-full flex-nowrap gap-0 overflow-x-auto border-b-2 border-ink/10 dark:border-white/10">
           {TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -273,6 +276,7 @@ export function AdminConsole() {
       <AnimatePresence mode="wait">
         <motion.div
           key={tab}
+          className="min-w-0"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
@@ -464,7 +468,7 @@ function DuesTab() {
       ) : rows.length === 0 ? (
         <EmptyState>No pending dues — every booking is fully settled. 🎉</EmptyState>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="min-w-0 max-w-full overflow-x-auto">
           <table className="w-full min-w-[860px] border-collapse text-sm">
             <thead>
               <tr className="border-b-2 border-ink/10 dark:border-white/10">
@@ -1074,7 +1078,7 @@ function UsersTab() {
           {q ? `No users match "${search}".` : "No users yet."}
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="min-w-0 max-w-full overflow-x-auto">
           <table className="w-full min-w-[760px] border-collapse text-sm">
             <thead>
               <tr className="border-b-2 border-ink/10 dark:border-white/10">
@@ -1298,7 +1302,7 @@ function ExpensesTab() {
         {loading ? <LoadingCard /> : expenses.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-ink/10 p-8 text-center text-sm text-ink/40 dark:border-white/10 dark:text-white/40">No expenses in this period.</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="min-w-0 max-w-full overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse text-sm">
               <thead>
                 <tr className="border-b-2 border-ink/10 dark:border-white/10">
@@ -1921,7 +1925,7 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
       ) : shown.length === 0 ? (
         <EmptyState>No entries yet. They appear here as soon as a player pays.</EmptyState>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="min-w-0 max-w-full overflow-x-auto">
           <table className="w-full min-w-[1040px] border-collapse text-sm">
             <thead>
               <tr className="border-b-2 border-ink/10 dark:border-white/10">

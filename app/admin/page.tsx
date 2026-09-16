@@ -19,7 +19,7 @@ export default async function AdminPage() {
   return (
     <>
       <Nav />
-      <main className="app-surface bg-brand-50/30 dark:bg-ink">
+      <main className="app-surface overflow-x-hidden bg-brand-50/30 dark:bg-ink">
         <PortalHero
           eyebrow="Owner console"
           title={<h1 className="heading-lg text-white">Breathe Pickleball <span className="mark-lime">Admin</span></h1>}
@@ -53,7 +53,7 @@ export default async function AdminPage() {
           }
         />
 
-        <Container className="space-y-6 py-8">
+        <Container className="min-w-0 space-y-6 py-8">
           <LiveTraffic />
           <TodayPanel />
           <AdminConsole />
