@@ -1505,6 +1505,8 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
   const [orphans, setOrphans] = useState<Orphan[] | null>(null);
   const [scanning, setScanning] = useState(false);
   const [importing, setImporting] = useState<string | null>(null);
+  const [inspected, setInspected] = useState<Record<string, unknown> | null>(null);
+  const [inspecting, setInspecting] = useState<string | null>(null);
   const inputCls =
     "w-full rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
 
@@ -1588,6 +1590,21 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
       const d = await res.json().catch(() => ({}));
       toast.show(d.error ?? `Could not ${verb.toLowerCase()} that entry.`, "error");
     }
+  }
+
+  /** Ask Razorpay what a payment actually was, for a row whose figure looks wrong. */
+  async function inspectPayment(paymentId: string) {
+    setInspecting(paymentId);
+    const res = await fetch(
+      `/api/admin/tournaments/registrations/inspect?payment_id=${encodeURIComponent(paymentId)}`,
+    );
+    const d = await res.json().catch(() => ({}));
+    setInspecting(null);
+    if (!res.ok) {
+      toast.show(d.error ?? "Could not read that payment.", "error");
+      return;
+    }
+    setInspected(d);
   }
 
   /**
@@ -1789,6 +1806,63 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
         </form>
       )}
 
+      {inspected && (
+        <div className="mb-5 rounded-2xl border-2 border-brand/30 bg-brand/5 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h4 className="font-display text-sm font-extrabold text-ink dark:text-white">
+                Razorpay says: {money(Number(inspected.amount) || 0)} · {String(inspected.status ?? "")}
+              </h4>
+              <p className="mt-1 text-xs text-ink/60 dark:text-white/50">
+                {String(inspected.payment_id ?? "")} ·{" "}
+                {inspected.created_at ? new Date(Number(inspected.created_at)).toLocaleString("en-IN") : "—"}
+                {inspected.method ? ` · ${String(inspected.method)}` : ""}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setInspected(null)}
+              className="rounded-lg border border-ink/10 px-2 py-1 text-xs font-bold text-ink/60 dark:border-white/10 dark:text-white/60"
+            >
+              Close
+            </button>
+          </div>
+          <dl className="mt-3 grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
+            {[
+              ["Paid by", [inspected.email, inspected.contact].filter(Boolean).join(" · ") || "—"],
+              ["Description", String(inspected.description ?? "—")],
+              ["Order", String(inspected.order_id ?? "—")],
+              ["Order amount", inspected.order_amount ? money(Number(inspected.order_amount)) : "—"],
+            ].map(([k, v]) => (
+              <div key={String(k)} className="flex gap-2">
+                <dt className="font-bold text-ink/50 dark:text-white/45">{String(k)}:</dt>
+                <dd className="text-ink dark:text-white">{String(v)}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-3 text-xs text-ink/60 dark:text-white/50">
+            {Object.keys((inspected.notes ?? {}) as Record<string, string>).length === 0 ? (
+              <span className="font-bold text-amber-600 dark:text-amber-400">
+                This payment carries no notes at all — our tournament checkout did not create it, so it is not a
+                tournament entry. Delete the row; the payment itself is untouched.
+              </span>
+            ) : (
+              <>
+                Notes from the gateway:{" "}
+                <code className="text-ink dark:text-white">
+                  {JSON.stringify(inspected.notes)}
+                </code>
+                {String((inspected.notes as Record<string, string>).kind ?? "") !== "tournament" && (
+                  <span className="mt-1 block font-bold text-amber-600 dark:text-amber-400">
+                    These notes are not from the tournament checkout — this payment belongs somewhere else.
+                  </span>
+                )}
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
       {loading ? (
         <LoadingCard />
       ) : shown.length === 0 ? (
@@ -1879,6 +1953,16 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
                       <span className="block text-[10px] font-normal text-ink/40 dark:text-white/35">
                         {r.payment_id}
                       </span>
+                    )}
+                    {r.payment_id && Number(r.fee) !== Number(r.amount_paid) && (
+                      <button
+                        type="button"
+                        onClick={() => inspectPayment(r.payment_id!)}
+                        disabled={inspecting === r.payment_id}
+                        className="mt-1 text-[10px] font-bold uppercase tracking-wide text-brand underline dark:text-lime"
+                      >
+                        {inspecting === r.payment_id ? "Checking…" : "What was this?"}
+                      </button>
                     )}
                   </td>
                   <td className="p-3"><StatusPill status={r.status} /></td>
