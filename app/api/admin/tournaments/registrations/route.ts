@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { v4 as uuid } from "uuid";
 import { getAdminSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
@@ -90,6 +91,107 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true, id, status });
   } catch (err) {
     console.error("[admin tournament registration patch error]", err);
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+  }
+}
+
+/**
+ * Admin: record an entry by hand — `{ tournament_id, player_name, email, ... }`.
+ *
+ * For entries that were paid for but never written (a payment that succeeded
+ * while the database write failed) and for offline/walk-in payments. The row is
+ * identical to one the public form would have created, so it exports and counts
+ * the same; `payment_id` carries whatever reference the club has.
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const admin = await getAdminSession();
+    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    await ensureSchema().catch(() => {});
+    await ensureTournamentSchema().catch(() => {});
+
+    const b = await req.json().catch(() => ({}));
+    const tournamentId = String(b.tournament_id ?? "").trim();
+    const playerName = String(b.player_name ?? "").trim();
+    const email = String(b.email ?? "").trim().toLowerCase();
+    const phone = String(b.phone ?? "").trim();
+    const category = b.category === "captain" ? "captain" : "singles";
+    const ageRaw = Number(b.age);
+    const age = Number.isFinite(ageRaw) && ageRaw >= 8 && ageRaw <= 99 ? Math.round(ageRaw) : null;
+    const sex = ["male", "female", "other"].includes(String(b.sex)) ? String(b.sex) : null;
+    const duprId = String(b.dupr_id ?? "").trim() || null;
+    const duprLevel = String(b.dupr_level ?? "").trim() || null;
+    const paymentId = String(b.payment_id ?? "").trim() || null;
+    const notes = String(b.notes ?? "").trim() || null;
+
+    if (!tournamentId) return NextResponse.json({ error: "Please choose a tournament." }, { status: 400 });
+    if (playerName.length < 2) return NextResponse.json({ error: "Please enter the player's name." }, { status: 400 });
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      return NextResponse.json({ error: "Please enter a valid email." }, { status: 400 });
+    }
+
+    // Fee comes from the tournament, never from the request body.
+    let fee = 0;
+    let name = "";
+    try {
+      const t = await turso.execute({
+        sql: "SELECT name, fee FROM tournaments WHERE id = ? LIMIT 1",
+        args: [tournamentId],
+      });
+      const row = t.rows[0];
+      if (!row) return NextResponse.json({ error: "That tournament no longer exists." }, { status: 400 });
+      name = String(row.name);
+      fee = Math.max(0, Number(row.fee) || 0);
+    } catch (dbErr) {
+      console.error("[admin tournament registration lookup error]", dbErr);
+      return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+    }
+
+    const amountPaid = Number.isFinite(Number(b.amount_paid)) ? Math.max(0, Math.round(Number(b.amount_paid))) : fee;
+    const id = uuid();
+
+    try {
+      await turso.execute({
+        sql: `INSERT INTO tournament_registrations (
+                id, tournament_id, user_id, player_name, email, phone,
+                age, sex, photo_url, dupr_id, dupr_level,
+                category, skill_level, partner_name, notes,
+                fee, amount_paid, payment_id, status, created_at
+              ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, 'confirmed', ?)`,
+        args: [
+          id, tournamentId, playerName, email, phone || null,
+          age, sex, duprId, duprLevel, category,
+          notes, fee, amountPaid, paymentId, Date.now(),
+        ],
+      });
+    } catch (dbErr) {
+      const msg = String((dbErr as Error)?.message ?? "").toLowerCase();
+      if (msg.includes("unique") || msg.includes("duplicate")) {
+        return NextResponse.json(
+          { error: "That email already has a confirmed entry for this tournament." },
+          { status: 409 },
+        );
+      }
+      console.error("[admin tournament registration insert error]", dbErr);
+      return NextResponse.json({ error: "Could not save that entry." }, { status: 500 });
+    }
+
+    try {
+      const { notifyAdminAction } = require("@/lib/notifications");
+      if (notifyAdminAction) {
+        await notifyAdminAction(
+          "Tournament entry added manually",
+          `${playerName} · ${name} · ${category} · ₹${amountPaid}`,
+          { actor: admin.email },
+        ).catch(() => {});
+      }
+    } catch {
+      // best-effort
+    }
+
+    return NextResponse.json({ ok: true, id });
+  } catch (err) {
+    console.error("[admin tournament registration post error]", err);
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   }
 }

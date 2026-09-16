@@ -1483,6 +1483,24 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
   const [filter, setFilter] = useState("");
   const [kind, setKind] = useState<"" | "captain" | "player">("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const blankEntry = {
+    tournament_id: "",
+    player_name: "",
+    email: "",
+    phone: "",
+    age: "",
+    sex: "",
+    dupr_id: "",
+    dupr_level: "",
+    category: "singles",
+    payment_id: "",
+    notes: "",
+  };
+  const [entry, setEntry] = useState(blankEntry);
+  const inputCls =
+    "w-full rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
 
   function load(tournamentId = filter) {
     const url = tournamentId
@@ -1537,6 +1555,30 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
     }
   }
 
+  /**
+   * Record an entry by hand — for a payment that succeeded while the write
+   * failed, or an offline payment. Same row shape as the public form's.
+   */
+  async function addEntry(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    const res = await fetch("/api/admin/tournaments/registrations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entry),
+    });
+    setSaving(false);
+    if (res.ok) {
+      toast.show("Entry added", "success");
+      setEntry(blankEntry);
+      setAdding(false);
+      load(filter);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.show(d.error ?? "Could not save that entry.", "error");
+    }
+  }
+
   /** Streams a real .xlsx built server-side from live data (not the cached rows). */
   function exportExcel() {
     const qs = filter ? `?tournament_id=${encodeURIComponent(filter)}` : "";
@@ -1581,7 +1623,59 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
         <button type="button" onClick={() => load(filter)} className="btn-outline px-2.5 py-2 text-xs">
           <RefreshCw className="h-3.5 w-3.5" /> Refresh
         </button>
+        <button type="button" onClick={() => setAdding((v) => !v)} className="btn-outline px-2.5 py-2 text-xs">
+          <Plus className="h-3.5 w-3.5" /> Add entry
+        </button>
       </PanelHeader>
+
+      {adding && (
+        <form onSubmit={addEntry} className="mb-5 rounded-2xl border-2 border-ink/10 p-4 dark:border-white/10">
+          <p className="mb-3 text-xs text-ink/60 dark:text-white/50">
+            For an entry paid for outside the form — or one whose payment succeeded while the entry failed to save.
+            Put the Razorpay payment id in the reference field.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <select
+              value={entry.tournament_id}
+              onChange={(e) => setEntry({ ...entry, tournament_id: e.target.value })}
+              className={inputCls}
+              required
+            >
+              <option value="">Tournament…</option>
+              {tournaments.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={entry.category}
+              onChange={(e) => setEntry({ ...entry, category: e.target.value })}
+              className={inputCls}
+            >
+              <option value="singles">Player</option>
+              <option value="captain">Team captain</option>
+            </select>
+            <input placeholder="Full name" value={entry.player_name} onChange={(e) => setEntry({ ...entry, player_name: e.target.value })} className={inputCls} required />
+            <input type="email" placeholder="Email" value={entry.email} onChange={(e) => setEntry({ ...entry, email: e.target.value })} className={inputCls} required />
+            <input placeholder="Phone" value={entry.phone} onChange={(e) => setEntry({ ...entry, phone: e.target.value })} className={inputCls} />
+            <input type="number" min={8} max={99} placeholder="Age" value={entry.age} onChange={(e) => setEntry({ ...entry, age: e.target.value })} className={inputCls} />
+            <select value={entry.sex} onChange={(e) => setEntry({ ...entry, sex: e.target.value })} className={inputCls}>
+              <option value="">Sex…</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+            <input placeholder="DUPR ID (optional)" value={entry.dupr_id} onChange={(e) => setEntry({ ...entry, dupr_id: e.target.value })} className={inputCls} />
+            <input placeholder="DUPR level (optional)" value={entry.dupr_level} onChange={(e) => setEntry({ ...entry, dupr_level: e.target.value })} className={inputCls} />
+            <input placeholder="Payment reference" value={entry.payment_id} onChange={(e) => setEntry({ ...entry, payment_id: e.target.value })} className={inputCls} />
+            <input placeholder="Notes (optional)" value={entry.notes} onChange={(e) => setEntry({ ...entry, notes: e.target.value })} className={inputCls} />
+          </div>
+          <button type="submit" disabled={saving} className="btn-primary mt-3 px-3 py-2 text-xs">
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />} Save entry
+          </button>
+        </form>
+      )}
 
       {loading ? (
         <LoadingCard />

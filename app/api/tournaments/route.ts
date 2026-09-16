@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
-import { ensureTournamentSchema, STALE_TOURNAMENT_IDS } from "@/lib/db/tournament-schema";
+import { ensureTournamentSchema } from "@/lib/db/tournament-schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,21 +20,13 @@ export async function GET() {
     // Adds poster_url (and seeds the current event) on a database provisioned
     // before those existed — the SELECT below reads that column.
     await ensureTournamentSchema().catch(() => {});
-    // Belt and braces on the stale hand-entered duplicate: the cleanup DELETE
-    // in ensureTournamentSchema has not taken on the production database, and
-    // until it does this filter keeps the row out of the registration
-    // dropdown, where it appeared as a second identical "33 Showdown".
-    const staleFilter = STALE_TOURNAMENT_IDS.length
-      ? ` AND id NOT IN (${STALE_TOURNAMENT_IDS.map(() => "?").join(", ")})`
-      : "";
-
     const r = await turso.execute({
       sql: `SELECT id, name, event_date, format, prize, fee, description, poster_url
             FROM tournaments
-            WHERE active = 1 AND status = 'open' AND COALESCE(unlisted, 0) = 0${staleFilter}
+            WHERE active = 1 AND status = 'open' AND COALESCE(unlisted, 0) = 0
             ORDER BY event_date ASC
             LIMIT 50`,
-      args: [...STALE_TOURNAMENT_IDS],
+      args: [],
     });
 
     const tournaments = r.rows.map((row) => ({
