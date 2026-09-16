@@ -1499,6 +1499,9 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
     notes: "",
   };
   const [entry, setEntry] = useState(blankEntry);
+  const [orphans, setOrphans] = useState<Orphan[] | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [importing, setImporting] = useState<string | null>(null);
   const inputCls =
     "w-full rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
 
@@ -1552,6 +1555,47 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
     } else {
       const d = await res.json().catch(() => ({}));
       toast.show(d.error ?? `Could not ${verb.toLowerCase()} that entry.`, "error");
+    }
+  }
+
+  /**
+   * Ask Razorpay for captured payments that have no entry row — the entries
+   * lost while the registrations table was missing from the database.
+   */
+  async function scanPayments() {
+    setScanning(true);
+    const res = await fetch("/api/admin/tournaments/registrations/recover?days=60");
+    const d = await res.json().catch(() => ({}));
+    setScanning(false);
+    if (!res.ok) {
+      toast.show(d.error ?? "Could not read payments from Razorpay.", "error");
+      return;
+    }
+    setOrphans(d.orphans ?? []);
+    if ((d.orphans ?? []).length === 0) toast.show("No unrecorded payments found.", "success");
+  }
+
+  /** Rebuild one entry from its payment. */
+  async function importPayment(o: Orphan, playerName: string, tournamentId: string) {
+    setImporting(o.payment_id);
+    const res = await fetch("/api/admin/tournaments/registrations/recover", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        payment_id: o.payment_id,
+        player_name: playerName,
+        tournament_id: tournamentId,
+        category: o.category,
+      }),
+    });
+    const d = await res.json().catch(() => ({}));
+    setImporting(null);
+    if (res.ok) {
+      toast.show("Entry recovered", "success");
+      setOrphans((list) => (list ?? []).filter((x) => x.payment_id !== o.payment_id));
+      load(filter);
+    } else {
+      toast.show(d.error ?? "Could not import that payment.", "error");
     }
   }
 
@@ -1626,7 +1670,34 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
         <button type="button" onClick={() => setAdding((v) => !v)} className="btn-outline px-2.5 py-2 text-xs">
           <Plus className="h-3.5 w-3.5" /> Add entry
         </button>
+        <button type="button" onClick={scanPayments} disabled={scanning} className="btn-outline px-2.5 py-2 text-xs">
+          {scanning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          Find unrecorded payments
+        </button>
       </PanelHeader>
+
+      {orphans !== null && orphans.length > 0 && (
+        <div className="mb-5 rounded-2xl border-2 border-amber-400/40 bg-amber-50/60 p-4 dark:bg-amber-500/5">
+          <h4 className="font-display text-sm font-extrabold text-ink dark:text-white">
+            {orphans.length} payment{orphans.length === 1 ? "" : "s"} with no entry
+          </h4>
+          <p className="mt-1 text-xs text-ink/60 dark:text-white/50">
+            Money was taken but no registration was saved. Importing rebuilds the entry from the payment — the
+            photo, age and DUPR details were never sent to Razorpay, so add those by editing afterwards if needed.
+          </p>
+          <div className="mt-3 grid gap-2">
+            {orphans.map((o) => (
+              <OrphanRow
+                key={o.payment_id}
+                orphan={o}
+                tournaments={tournaments}
+                busy={importing === o.payment_id}
+                onImport={importPayment}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {adding && (
         <form onSubmit={addEntry} className="mb-5 rounded-2xl border-2 border-ink/10 p-4 dark:border-white/10">
@@ -1789,6 +1860,67 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+type Orphan = {
+  payment_id: string;
+  amount: number;
+  email: string | null;
+  contact: string | null;
+  method: string | null;
+  created_at: number;
+  tournament_id: string | null;
+  tournament_name: string | null;
+  category: string;
+};
+
+/** One unrecorded payment, with the two things the gateway could not tell us. */
+function OrphanRow({
+  orphan,
+  tournaments,
+  busy,
+  onImport,
+}: {
+  orphan: Orphan;
+  tournaments: Tournament[];
+  busy: boolean;
+  onImport: (o: Orphan, playerName: string, tournamentId: string) => void;
+}) {
+  const [name, setName] = useState(orphan.email ? orphan.email.split("@")[0] : "");
+  const [tid, setTid] = useState(orphan.tournament_id ?? tournaments[0]?.id ?? "");
+  const cls =
+    "w-full rounded-lg border border-ink/10 bg-white px-2.5 py-1.5 text-xs text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
+
+  return (
+    <div className="grid gap-2 rounded-xl bg-white p-3 dark:bg-white/5 sm:grid-cols-[1.2fr_1fr_1fr_auto] sm:items-center">
+      <div className="text-xs">
+        <div className="font-bold text-ink dark:text-white">{money(orphan.amount)}</div>
+        <div className="text-ink/50 dark:text-white/50">
+          {orphan.email ?? "no email"}
+          {orphan.contact ? ` · ${orphan.contact}` : ""}
+        </div>
+        <div className="text-ink/40 dark:text-white/35">
+          {orphan.payment_id} · {new Date(orphan.created_at).toLocaleString("en-IN")}
+        </div>
+      </div>
+      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Player name" className={cls} />
+      <select value={tid} onChange={(e) => setTid(e.target.value)} className={cls}>
+        {tournaments.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.name}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={() => onImport(orphan, name, tid)}
+        disabled={busy || !tid}
+        className="btn-primary px-3 py-2 text-xs disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Import
+      </button>
     </div>
   );
 }
