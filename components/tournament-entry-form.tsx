@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Camera, Loader2, Trophy, X } from "lucide-react";
+import { Camera, Loader2, Trophy, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Container } from "@/components/ui";
 import { trackFb, CURRENCY } from "@/lib/analytics";
 
@@ -169,13 +170,17 @@ export function TournamentEntryForm({
   emptyTitle,
   emptyBody,
 }: Props) {
+  const router = useRouter();
+  /** Both endings land on the shared confirmation page, which reads the entry's
+   *  real state back from the server rather than trusting the checkout. */
+  const goToConfirmation = (query: string) =>
+    router.push(`/tournaments/confirmation?${query}${showBackLink ? "" : "&ctx=captain"}`);
   const [account, setAccount] = useState<Account>(null);
   const [tournaments, setTournaments] = useState<EntryTournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [doneRef, setDoneRef] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
@@ -204,7 +209,7 @@ export function TournamentEntryForm({
           signature: pendingPayment.signature,
         });
         clearStash();
-        setDoneRef(String(v.id ?? "").slice(0, 8).toUpperCase());
+        goToConfirmation(`ref=${encodeURIComponent(String(v.id ?? ""))}`);
       } catch {
         // Leave it stashed: the next visit tries again, and the club's nightly
         // reconcile picks it up from Razorpay regardless.
@@ -352,7 +357,7 @@ export function TournamentEntryForm({
               content_category: "tournament",
               content_name: selected.name,
             });
-            setDoneRef(String(v.id ?? "").slice(0, 8).toUpperCase());
+            goToConfirmation(`ref=${encodeURIComponent(String(v.id ?? ""))}`);
           } catch (err) {
             setError(
               (err instanceof Error ? err.message : "We couldn't confirm your entry.") +
@@ -367,10 +372,8 @@ export function TournamentEntryForm({
       });
       rzp.on("payment.failed", (r) => {
         setPaying(false);
-        setError(
-          r?.error?.description
-            ? `Payment failed: ${r.error.description}. You have not been charged — please try again.`
-            : "Payment failed or was cancelled. You have not been charged — please try again.",
+        goToConfirmation(
+          `state=failed&reason=${encodeURIComponent(r?.error?.description ?? "The payment did not go through")}`,
         );
       });
       rzp.open();
@@ -383,31 +386,7 @@ export function TournamentEntryForm({
   return (
     <Container className="py-10">
       <div className="mx-auto max-w-xl">
-        {/* ── Confirmed ── */}
-        {doneRef ? (
-          <div className="card-sport p-8 text-center">
-            <CheckCircle2 className="mx-auto h-12 w-12 text-lime" />
-            <h2 className="mt-4 font-display text-2xl font-extrabold text-ink dark:text-white">
-              You&apos;re registered!
-            </h2>
-            <p className="mt-2 text-sm text-slatey dark:text-white/60">
-              Entry <span className="font-bold text-ink dark:text-white">{doneRef}</span> is confirmed. We&apos;ve
-              emailed your details and will send the match schedule closer to the date.
-            </p>
-            {showBackLink && (
-              <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-                <Link href="/tournaments" className="btn-primary">
-                  Back to tournaments
-                </Link>
-                {account && (
-                  <Link href="/dashboard" className="btn-outline">
-                    Go to my dashboard
-                  </Link>
-                )}
-              </div>
-            )}
-          </div>
-        ) : loading ? (
+        {loading ? (
           <div className="card-sport flex items-center justify-center p-12">
             <Loader2 className="h-6 w-6 animate-spin text-brand" />
           </div>

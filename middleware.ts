@@ -86,6 +86,8 @@ export async function middleware(req: NextRequest) {
     // Left alone: /api/* (the form's own fetches and the Razorpay round-trip),
     // Next internals and static assets, which the form needs to render.
     const passThrough =
+      // The entry form sends both endings here, so it has to be reachable.
+      pathname.startsWith("/tournaments/confirmation") ||
       pathname.startsWith("/api/") ||
       pathname.startsWith("/_next/") ||
       pathname.startsWith("/icons/") ||
