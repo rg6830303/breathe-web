@@ -27,10 +27,8 @@ export async function GET(req: NextRequest) {
     const args = tournamentId ? [tournamentId] : [];
 
     const res = await turso.execute({
-      sql: `SELECT r.player_name, r.email, r.phone, r.age, r.sex, r.photo_url, r.dupr_id, r.dupr_level,
-                   r.category, r.skill_level,
-                   r.partner_name, r.fee, r.amount_paid, r.status, r.created_at,
-                   r.payment_id, r.notes,
+      // r.* so a column that has not been migrated yet cannot fail the export.
+      sql: `SELECT r.*,
                    COALESCE(t.name, '—') AS tournament_name, t.event_date
             FROM tournament_registrations r
             LEFT JOIN tournaments t ON t.id = r.tournament_id

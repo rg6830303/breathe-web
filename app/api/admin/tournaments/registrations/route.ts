@@ -24,10 +24,10 @@ export async function GET(req: NextRequest) {
     const args = tournamentId ? [tournamentId] : [];
 
     const r = await turso.execute({
-      sql: `SELECT r.id, r.tournament_id, r.user_id, r.player_name, r.email, r.phone,
-                   r.age, r.sex, r.photo_url, r.dupr_id, r.dupr_level,
-                   r.category, r.skill_level, r.partner_name, r.notes,
-                   r.fee, r.amount_paid, r.status, r.created_at,
+      // r.* rather than a column list: if a column migration has not landed on
+      // this database, naming the column would fail the whole query and the
+      // console would show an empty table instead of the entries that exist.
+      sql: `SELECT r.*,
                    COALESCE(t.name, '—') AS tournament_name,
                    t.event_date
             FROM tournament_registrations r

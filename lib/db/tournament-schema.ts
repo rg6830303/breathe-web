@@ -17,6 +17,58 @@ export const SHOWDOWN_33_ID = "tour-33-showdown";
 /** Team-captain entry — same event, higher fee, kept off the public listing. */
 export const SHOWDOWN_33_CAPTAIN_ID = "tour-33-showdown-captain";
 
+/**
+ * Create the tournament tables if production never got them.
+ *
+ * This is the important one. `ensureSchema()` returns early the moment `users`
+ * exists, so on a database provisioned before these tables were added to
+ * SCHEMA_TABLES, applySchema() never runs and the tables are simply absent —
+ * every ALTER below fails with "relation does not exist", every INSERT from the
+ * registration flow fails, and the admin console reads nothing. Written in
+ * Postgres-valid DDL (BIGINT for epoch-ms columns, which overflow INT4).
+ */
+const CREATE_TABLES: string[] = [
+  `CREATE TABLE IF NOT EXISTS tournaments (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    event_date TEXT,
+    format TEXT,
+    prize TEXT,
+    fee INTEGER DEFAULT 0,
+    description TEXT,
+    poster_url TEXT,
+    unlisted INTEGER DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'upcoming',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS tournament_registrations (
+    id TEXT PRIMARY KEY,
+    tournament_id TEXT NOT NULL,
+    user_id TEXT,
+    player_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT,
+    age INTEGER,
+    sex TEXT,
+    photo_url TEXT,
+    dupr_id TEXT,
+    dupr_level TEXT,
+    category TEXT NOT NULL DEFAULT 'singles',
+    skill_level TEXT,
+    partner_name TEXT,
+    notes TEXT,
+    fee INTEGER NOT NULL DEFAULT 0,
+    amount_paid INTEGER NOT NULL DEFAULT 0,
+    payment_id TEXT,
+    status TEXT NOT NULL DEFAULT 'confirmed',
+    created_at BIGINT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_tournament_regs_tournament ON tournament_registrations (tournament_id, created_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_tournament_regs_user ON tournament_registrations (user_id)`,
+];
+
 const STATEMENTS: string[] = [
   // Player detail captured by the public entry form.
   `ALTER TABLE tournament_registrations ADD COLUMN age INTEGER`,
@@ -139,6 +191,9 @@ export function ensureTournamentSchema(): Promise<void> {
   if (running) return running;
   running = (async () => {
     try {
+      // Tables first — the ALTERs and every query below are meaningless if the
+      // tables were never created on this database.
+      for (const sql of CREATE_TABLES) await quietly(sql);
       for (const sql of STATEMENTS) await quietly(sql);
       await quietly(NULLABLE_USER_ID);
       await quietly(EMAIL_UNIQUE);

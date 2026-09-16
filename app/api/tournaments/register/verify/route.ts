@@ -103,34 +103,91 @@ export async function POST(req: Request) {
       fee, fee, paymentId || null, now,
     ];
 
-    try {
-      await turso.execute({ sql: INSERT_SQL, args: argsFor(session?.id ?? null) });
-    } catch (insertErr) {
-      const msg = String((insertErr as Error)?.message ?? "").toLowerCase();
-      // The partial unique index makes a duplicate confirmed entry impossible;
-      // treat a collision as "already registered" rather than a server error.
-      if (msg.includes("unique") || msg.includes("duplicate")) {
-        return NextResponse.json(
-          { error: "That email is already registered for this tournament." },
-          { status: 409 },
-        );
-      }
-      // Safety net: if the DROP NOT NULL migration hasn't landed on this
-      // database yet, a guest's NULL user_id is rejected. The player has
-      // already paid, so store a synthetic guest id rather than lose the entry.
-      const nullUserId = !session && (msg.includes("null") || msg.includes("not-null"));
-      if (nullUserId) {
-        try {
-          await turso.execute({ sql: INSERT_SQL, args: argsFor(`guest-${id}`) });
-        } catch (retryErr) {
-          console.error("[tournament verify guest insert error]", retryErr);
-          return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+    /**
+     * Write the entry. The player has ALREADY paid by this point, so an entry
+     * must never be lost to a schema problem: we retry down a ladder of
+     * progressively simpler inserts, and if every one of them fails we alert
+     * the club with the payment reference rather than dropping it silently.
+     */
+    const LEGACY_SQL = `INSERT INTO tournament_registrations (
+                id, tournament_id, user_id, player_name, email, phone,
+                category, skill_level, partner_name, notes,
+                fee, amount_paid, payment_id, status, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?)`;
+    const legacyArgs = (userId: string | null) => [
+      id, tournament_id, userId, userName, userEmail, phone,
+      category, skill_level, partner_name || null,
+      // The detail the legacy columns can't hold still reaches the club.
+      [notes || "", `age ${age}`, sex, dupr_id ? `DUPR ${dupr_id}` : "", dupr_level ? `level ${dupr_level}` : ""]
+        .filter(Boolean)
+        .join(" · "),
+      fee, fee, paymentId || null, now,
+    ];
+
+    type Attempt = { label: string; sql: string; args: unknown[] };
+    const attempts: Attempt[] = [
+      { label: "full", sql: INSERT_SQL, args: argsFor(session?.id ?? null) },
+      // Older database where user_id is still NOT NULL and the entrant is a guest.
+      { label: "full+guest-id", sql: INSERT_SQL, args: argsFor(session ? session.id : `guest-${id}`) },
+      // Database that never got the age/sex/photo/DUPR columns.
+      { label: "legacy", sql: LEGACY_SQL, args: legacyArgs(session?.id ?? null) },
+      { label: "legacy+guest-id", sql: LEGACY_SQL, args: legacyArgs(session ? session.id : `guest-${id}`) },
+    ];
+
+    let wrote: string | null = null;
+    let lastErr: unknown = null;
+    for (const attempt of attempts) {
+      try {
+        await turso.execute({ sql: attempt.sql, args: attempt.args });
+        wrote = attempt.label;
+        break;
+      } catch (insertErr) {
+        lastErr = insertErr;
+        const msg = String((insertErr as Error)?.message ?? "").toLowerCase();
+        // A duplicate is a real answer, not a schema problem — stop retrying.
+        if (msg.includes("unique") || msg.includes("duplicate")) {
+          return NextResponse.json(
+            { error: "That email is already registered for this tournament." },
+            { status: 409 },
+          );
         }
-      } else {
-        console.error("[tournament verify insert error]", insertErr);
-        return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+        console.error(`[tournament verify insert failed: ${attempt.label}]`, insertErr);
       }
     }
+
+    if (!wrote) {
+      // Paid, but unwritable. Shout about it: the club gets the payment id and
+      // the entrant's details so the entry can be reconstructed by hand, and
+      // the entrant is told their money is safe and who to contact.
+      console.error("[tournament verify ALL INSERTS FAILED]", {
+        paymentId,
+        tournament_id,
+        email: userEmail,
+        lastErr,
+      });
+      try {
+        const { notifyAdminAction } = require("@/lib/notifications");
+        if (notifyAdminAction) {
+          await notifyAdminAction(
+            "URGENT: paid tournament entry could not be saved",
+            `${userName} · ${userEmail} · ${phone} · ${String(t.name)} · ₹${fee} · payment ${paymentId || "?"}. ` +
+              `Add this entry manually — the payment succeeded but the database write failed.`,
+            { url: "/admin" },
+          ).catch(() => {});
+        }
+      } catch {
+        // Notification is best-effort; the console.error above is the record.
+      }
+      return NextResponse.json(
+        {
+          error:
+            `Your payment went through (ref ${paymentId || "—"}) but we couldn't save your entry. ` +
+            `Please contact the club with that reference — you will not be charged again.`,
+        },
+        { status: 500 },
+      );
+    }
+    if (wrote !== "full") console.warn(`[tournament verify insert used fallback: ${wrote}]`);
 
     // Confirmation email + inbox/push, in the background so a slow SMTP never
     // blocks (or fails) the response.
