@@ -23,8 +23,17 @@ export async function GET(req: NextRequest) {
     await ensureTournamentSchema().catch(() => {});
 
     const tournamentId = req.nextUrl.searchParams.get("tournament_id");
-    const where = tournamentId ? "WHERE r.tournament_id = ?" : "";
-    const args = tournamentId ? [tournamentId] : [];
+    // Same rule as the console: real entries only unless ?include=all, so the
+    // spreadsheet says what the screen says.
+    const includeAll = req.nextUrl.searchParams.get("include") === "all";
+    const clauses: string[] = [];
+    const args: unknown[] = [];
+    if (tournamentId) {
+      clauses.push("r.tournament_id = ?");
+      args.push(tournamentId);
+    }
+    if (!includeAll) clauses.push("(r.status <> 'confirmed' OR r.amount_paid = r.fee)");
+    const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
     const res = await turso.execute({
       // r.* so a column that has not been migrated yet cannot fail the export.

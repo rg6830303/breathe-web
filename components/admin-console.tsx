@@ -1507,24 +1507,30 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
   const [importing, setImporting] = useState<string | null>(null);
   const [inspected, setInspected] = useState<Record<string, unknown> | null>(null);
   const [inspecting, setInspecting] = useState<string | null>(null);
+  // Rows whose captured amount is not the event's fee are withheld from the
+  // tab: they did not come from a tournament checkout. Counted, not hidden.
+  const [mismatched, setMismatched] = useState(0);
+  const [showAll, setShowAll] = useState(false);
   const inputCls =
     "w-full rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
 
-  function load(tournamentId = filter) {
-    const url = tournamentId
-      ? `/api/admin/tournaments/registrations?tournament_id=${encodeURIComponent(tournamentId)}`
-      : "/api/admin/tournaments/registrations";
-    fetch(url)
+  function load(tournamentId = filter, all = showAll) {
+    const params = new URLSearchParams();
+    if (tournamentId) params.set("tournament_id", tournamentId);
+    if (all) params.set("include", "all");
+    const qs = params.toString();
+    fetch(`/api/admin/tournaments/registrations${qs ? `?${qs}` : ""}`)
       .then((r) => (r.ok ? r.json() : { registrations: [] }))
       .then((d) => {
         setRows(d.registrations ?? []);
-        if (!tournamentId) setAdminCache("tournregs", d.registrations ?? []);
+        setMismatched(Number(d.mismatched ?? 0));
+        if (!tournamentId && !all) setAdminCache("tournregs", d.registrations ?? []);
       })
       .finally(() => setLoading(false));
   }
   useEffect(() => {
-    load(filter);
-  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
+    load(filter, showAll);
+  }, [filter, showAll]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Live totals reflect CONFIRMED entries only — a cancelled entry shouldn't
   // count toward the head-count or the money collected.
@@ -1683,8 +1689,11 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
 
   /** Streams a real .xlsx built server-side from live data (not the cached rows). */
   function exportExcel() {
-    const qs = filter ? `?tournament_id=${encodeURIComponent(filter)}` : "";
-    window.location.href = `/api/admin/tournaments/registrations/export${qs}`;
+    const params = new URLSearchParams();
+    if (filter) params.set("tournament_id", filter);
+    if (showAll) params.set("include", "all");
+    const qs = params.toString();
+    window.location.href = `/api/admin/tournaments/registrations/export${qs ? `?${qs}` : ""}`;
   }
 
   return (
@@ -1804,6 +1813,22 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />} Save entry
           </button>
         </form>
+      )}
+
+      {mismatched > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-400/40 bg-amber-50/60 px-4 py-2.5 text-xs dark:bg-amber-500/5">
+          <span className="text-ink/70 dark:text-white/60">
+            {showAll ? "Showing" : "Hiding"} {mismatched} payment{mismatched === 1 ? "" : "s"} that {mismatched === 1 ? "does" : "do"}{" "}
+            not match an entry fee — not from a tournament checkout.
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className="font-bold text-brand underline dark:text-lime"
+          >
+            {showAll ? "Show real entries only" : "Review them"}
+          </button>
+        </div>
       )}
 
       {inspected && (

@@ -129,8 +129,8 @@ export async function POST(req: Request) {
                 id, tournament_id, user_id, player_name, email, phone,
                 age, sex, photo_url, dupr_id, dupr_level,
                 category, skill_level, partner_name, notes,
-                fee, amount_paid, payment_id, order_id, status, created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, 'pending', ?)`,
+                fee, amount_paid, payment_id, order_id, source, status, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, 'checkout', 'pending', ?)`,
         args: [
           uuid(), tournament_id, session?.id ?? null, player_name, email, phone,
           age, sex, photo_url, dupr_id || null, dupr_level || null,

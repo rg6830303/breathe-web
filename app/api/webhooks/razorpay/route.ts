@@ -122,8 +122,8 @@ export async function POST(req: Request) {
     await turso.execute({
       sql: `INSERT INTO tournament_registrations (
               id, tournament_id, user_id, player_name, email, phone,
-              category, notes, fee, amount_paid, payment_id, order_id, status, created_at
-            ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?)`,
+              category, notes, fee, amount_paid, payment_id, order_id, source, status, created_at
+            ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'webhook', 'confirmed', ?)`,
       args: [
         uuid(),
         tournamentId,

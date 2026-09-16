@@ -63,6 +63,7 @@ const CREATE_TABLES: string[] = [
     amount_paid INTEGER NOT NULL DEFAULT 0,
     payment_id TEXT,
     order_id TEXT,
+    source TEXT,
     status TEXT NOT NULL DEFAULT 'confirmed',
     created_at BIGINT NOT NULL
   )`,
@@ -80,6 +81,10 @@ const STATEMENTS: string[] = [
   // Written when the Razorpay order is created, so a payment can always be
   // matched back to the entry it belongs to — by the browser or by the webhook.
   `ALTER TABLE tournament_registrations ADD COLUMN order_id TEXT`,
+  // How the row got here: 'checkout' (the registration form), 'webhook'
+  // (Razorpay told us), 'manual' (an admin typed it), 'recovered' (imported
+  // from a payment). Lets the console separate real entries from imports.
+  `ALTER TABLE tournament_registrations ADD COLUMN source TEXT`,
   // Poster artwork shown on the public tournaments tab.
   `ALTER TABLE tournaments ADD COLUMN poster_url TEXT`,
   // 1 = reachable by direct link only: hidden from /api/tournaments and so from

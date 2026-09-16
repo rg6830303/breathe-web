@@ -10,8 +10,13 @@ export const dynamic = "force-dynamic";
 
 /**
  * Admin: tournament entries, newest first. Optional ?tournament_id= filter.
- * Joined to `tournaments` so the console can show the event name without a
- * second round trip.
+ *
+ * By default this returns REAL entries only: a tournament checkout always
+ * charges exactly the event's fee, so a confirmed row whose captured amount is
+ * anything else did not come from one — it is an unrelated payment that was
+ * imported by mistake, and showing it as an entry misstates both the head-count
+ * and the money. Those rows are counted and returned separately as `mismatched`
+ * so they can still be reviewed and removed; ?include=all returns everything.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -21,8 +26,16 @@ export async function GET(req: NextRequest) {
     await ensureTournamentSchema().catch(() => {});
 
     const tournamentId = req.nextUrl.searchParams.get("tournament_id");
-    const where = tournamentId ? "WHERE r.tournament_id = ?" : "";
-    const args = tournamentId ? [tournamentId] : [];
+    const includeAll = req.nextUrl.searchParams.get("include") === "all";
+    const clauses: string[] = [];
+    const args: unknown[] = [];
+    if (tournamentId) {
+      clauses.push("r.tournament_id = ?");
+      args.push(tournamentId);
+    }
+    // A pending row has paid nothing yet, so it is exempt from the fee check.
+    if (!includeAll) clauses.push("(r.status <> 'confirmed' OR r.amount_paid = r.fee)");
+    const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
     const r = await turso.execute({
       // r.* rather than a column list: if a column migration has not landed on
@@ -39,7 +52,23 @@ export async function GET(req: NextRequest) {
       args,
     });
 
-    return NextResponse.json({ registrations: r.rows });
+    // How many real-looking rows are being withheld, so the console can offer a
+    // review rather than hiding money without saying so.
+    let mismatched = 0;
+    try {
+      const m = await turso.execute({
+        sql: `SELECT COUNT(*) AS n FROM tournament_registrations
+              WHERE status = 'confirmed' AND amount_paid <> fee${
+                tournamentId ? " AND tournament_id = ?" : ""
+              }`,
+        args: tournamentId ? [tournamentId] : [],
+      });
+      mismatched = Number(m.rows[0]?.n ?? 0);
+    } catch {
+      // Cosmetic.
+    }
+
+    return NextResponse.json({ registrations: r.rows, mismatched, includeAll });
   } catch (err) {
     console.error("[admin tournament registrations error]", err);
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
@@ -156,8 +185,8 @@ export async function POST(req: NextRequest) {
                 id, tournament_id, user_id, player_name, email, phone,
                 age, sex, photo_url, dupr_id, dupr_level,
                 category, skill_level, partner_name, notes,
-                fee, amount_paid, payment_id, status, created_at
-              ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, 'confirmed', ?)`,
+                fee, amount_paid, payment_id, source, status, created_at
+              ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, 'manual', 'confirmed', ?)`,
         args: [
           id, tournamentId, playerName, email, phone || null,
           age, sex, duprId, duprLevel, category,

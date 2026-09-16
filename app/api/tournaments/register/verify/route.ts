@@ -95,8 +95,8 @@ export async function POST(req: Request) {
                 id, tournament_id, user_id, player_name, email, phone,
                 age, sex, photo_url, dupr_id, dupr_level,
                 category, skill_level, partner_name, notes,
-                fee, amount_paid, payment_id, status, created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?)`;
+                fee, amount_paid, payment_id, source, status, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'checkout', 'confirmed', ?)`;
     const argsFor = (userId: string | null) => [
       id, tournament_id, userId, userName, userEmail, phone,
       age, sex, photo_url, dupr_id || null, dupr_level || null,
@@ -158,8 +158,8 @@ export async function POST(req: Request) {
     const LEGACY_SQL = `INSERT INTO tournament_registrations (
                 id, tournament_id, user_id, player_name, email, phone,
                 category, skill_level, partner_name, notes,
-                fee, amount_paid, payment_id, status, created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?)`;
+                fee, amount_paid, payment_id, source, status, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'checkout', 'confirmed', ?)`;
     const legacyArgs = (userId: string | null) => [
       id, tournament_id, userId, userName, userEmail, phone,
       category, skill_level, partner_name || null,

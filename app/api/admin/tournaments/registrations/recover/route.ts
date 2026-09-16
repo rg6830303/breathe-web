@@ -251,8 +251,8 @@ export async function POST(req: NextRequest) {
                 id, tournament_id, user_id, player_name, email, phone,
                 age, sex, photo_url, dupr_id, dupr_level,
                 category, skill_level, partner_name, notes,
-                fee, amount_paid, payment_id, status, created_at
-              ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, 'confirmed', ?)`,
+                fee, amount_paid, payment_id, source, status, created_at
+              ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, 'recovered', 'confirmed', ?)`,
         args: [
           id, tournamentId, playerName, email, phone || null,
           age, sex, duprId, duprLevel, category,
