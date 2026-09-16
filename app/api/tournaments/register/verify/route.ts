@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
+import Razorpay from "razorpay";
 import { v4 as uuid } from "uuid";
 import { getSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
@@ -100,8 +101,53 @@ export async function POST(req: Request) {
       id, tournament_id, userId, userName, userEmail, phone,
       age, sex, photo_url, dupr_id || null, dupr_level || null,
       category, skill_level, partner_name || null, notes || null,
-      fee, fee, paymentId || null, now,
+      fee, amountPaid, paymentId || null, now,
     ];
+
+    /**
+     * What was ACTUALLY captured, asked of Razorpay rather than assumed from
+     * the event's fee. If the gateway cannot be reached we fall back to the
+     * fee, and the admin console shows any mismatch between the two.
+     */
+    let amountPaid = fee;
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID;
+    if (secret && keyId && paymentId) {
+      try {
+        const rzp = new Razorpay({ key_id: keyId, key_secret: secret });
+        const p = (await rzp.payments.fetch(paymentId)) as unknown as { amount?: number };
+        const paise = Number(p?.amount ?? 0);
+        if (paise > 0) amountPaid = Math.round(paise / 100);
+      } catch (rzpErr) {
+        console.error("[tournament verify amount fetch error]", rzpErr);
+      }
+    }
+
+    /**
+     * Complete the entry that create-order parked against this order. This is
+     * the normal path: the row already holds the entrant's whole form, so
+     * confirming it needs no re-insert and cannot lose anything.
+     */
+    if (orderId) {
+      try {
+        const done = await turso.execute({
+          sql: `UPDATE tournament_registrations
+                SET status = 'confirmed', payment_id = ?, amount_paid = ?
+                WHERE order_id = ? AND status = 'pending'`,
+          args: [paymentId || null, amountPaid, orderId],
+        });
+        if (done.rowsAffected) {
+          const existing = await turso.execute({
+            sql: "SELECT id FROM tournament_registrations WHERE order_id = ? LIMIT 1",
+            args: [orderId],
+          });
+          const rowId = existing.rows[0] ? String(existing.rows[0].id) : id;
+          notifyEntry(rowId, userName, userEmail, t, category, skill_level, partner_name, amountPaid, session?.id);
+          return NextResponse.json({ ok: true, id: rowId, fee: amountPaid, tournamentName: String(t.name) });
+        }
+      } catch (dbErr) {
+        console.error("[tournament verify confirm pending error]", dbErr);
+      }
+    }
 
     /**
      * Write the entry. The player has ALREADY paid by this point, so an entry
@@ -121,7 +167,7 @@ export async function POST(req: Request) {
       [notes || "", `age ${age}`, sex, dupr_id ? `DUPR ${dupr_id}` : "", dupr_level ? `level ${dupr_level}` : ""]
         .filter(Boolean)
         .join(" · "),
-      fee, fee, paymentId || null, now,
+      fee, amountPaid, paymentId || null, now,
     ];
 
     type Attempt = { label: string; sql: string; args: unknown[] };
@@ -189,43 +235,59 @@ export async function POST(req: Request) {
     }
     if (wrote !== "full") console.warn(`[tournament verify insert used fallback: ${wrote}]`);
 
-    // Confirmation email + inbox/push, in the background so a slow SMTP never
-    // blocks (or fails) the response.
-    try {
-      const { notifyTournamentRegistration, notifyAdminAction } = require("@/lib/notifications");
-      const { waitUntil } = require("@vercel/functions");
-      const run = (async () => {
-        if (notifyTournamentRegistration) {
-          await notifyTournamentRegistration({
-            id,
-            userId: session?.id ?? undefined,
-            userEmail,
-            userName,
-            tournamentName: String(t.name),
-            eventDate: t.event_date ? String(t.event_date) : null,
-            category,
-            skillLevel: skill_level,
-            partnerName: partner_name || null,
-            fee,
-          }).catch((e: unknown) => console.error("[tournament notify error]", e));
-        }
-        if (notifyAdminAction) {
-          await notifyAdminAction(
-            "Tournament registration",
-            `${userName} · ${String(t.name)} · ${category.replace("_", " ")} · ₹${fee}`,
-            { url: "/admin" },
-          ).catch(() => {});
-        }
-      })();
-      if (waitUntil) waitUntil(run);
-      else await run;
-    } catch (e) {
-      console.warn("[tournament notify dispatch skipped]", e);
-    }
+    notifyEntry(id, userName, userEmail, t, category, skill_level, partner_name, amountPaid, session?.id);
 
-    return NextResponse.json({ ok: true, id, fee, tournamentName: String(t.name) });
+    return NextResponse.json({ ok: true, id, fee: amountPaid, tournamentName: String(t.name) });
   } catch (err) {
     console.error("[tournament verify error]", err);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+  }
+}
+
+/**
+ * Confirmation email + inbox/push + admin ping, fired in the background so a
+ * slow SMTP never delays (or fails) the response the entrant is waiting on.
+ * Shared by both completion paths: confirming the pending row, and inserting.
+ */
+function notifyEntry(
+  id: string,
+  userName: string,
+  userEmail: string,
+  t: Record<string, unknown>,
+  category: string,
+  skillLevel: string | undefined,
+  partnerName: string | undefined,
+  amountPaid: number,
+  userId?: string,
+) {
+  try {
+    const { notifyTournamentRegistration, notifyAdminAction } = require("@/lib/notifications");
+    const { waitUntil } = require("@vercel/functions");
+    const run = (async () => {
+      if (notifyTournamentRegistration) {
+        await notifyTournamentRegistration({
+          id,
+          userId,
+          userEmail,
+          userName,
+          tournamentName: String(t.name),
+          eventDate: t.event_date ? String(t.event_date) : null,
+          category,
+          skillLevel,
+          partnerName: partnerName || null,
+          fee: amountPaid,
+        }).catch((e: unknown) => console.error("[tournament notify error]", e));
+      }
+      if (notifyAdminAction) {
+        await notifyAdminAction(
+          "Tournament registration",
+          `${userName} · ${String(t.name)} · ${category.replace("_", " ")} · ₹${amountPaid}`,
+          { url: "/admin" },
+        ).catch(() => {});
+      }
+    })();
+    if (waitUntil) waitUntil(run);
+  } catch (e) {
+    console.warn("[tournament notify dispatch skipped]", e);
   }
 }

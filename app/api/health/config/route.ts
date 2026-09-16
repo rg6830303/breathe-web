@@ -28,6 +28,9 @@ export async function GET() {
     razorpay: {
       keyIdPresent: keyId,
       keySecretPresent: keySecret,
+      // Without this the webhook rejects everything, and a captured payment is
+      // only recorded if the entrant's browser completes the handshake.
+      webhookSecretPresent: !!process.env.RAZORPAY_WEBHOOK_SECRET,
       mode: keyId ? (keySecret ? "order (verified)" : "direct (single-key)") : "NOT CONFIGURED",
     },
     db: { postgresUrlPresent: present(process.env.POSTGRES_URL) },

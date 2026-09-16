@@ -157,7 +157,10 @@ export const SCHEMA_TABLES: string[] = [
     fee INTEGER NOT NULL DEFAULT 0,
     amount_paid INTEGER NOT NULL DEFAULT 0,
     payment_id TEXT,
-    status TEXT NOT NULL DEFAULT 'confirmed' CHECK (status IN ('confirmed','cancelled')),
+    order_id TEXT,
+    -- 'pending' is written when the Razorpay order is created, before any money
+    -- moves, so an entry exists to complete even if the browser never comes back.
+    status TEXT NOT NULL DEFAULT 'confirmed' CHECK (status IN ('pending','confirmed','cancelled')),
     created_at INTEGER NOT NULL
   )`,
 ];

@@ -126,7 +126,9 @@ function StatusPill({ status }: { status: string }) {
       ? "bg-lime/20 text-lime-dark dark:bg-lime/15 dark:text-lime"
       : status === "cancelled"
         ? "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"
-        : "bg-ink/5 text-ink/60 dark:bg-white/10 dark:text-white/60";
+        : status === "pending"
+          ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+          : "bg-ink/5 text-ink/60 dark:bg-white/10 dark:text-white/60";
   return (
     <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${tone}`}>
       {status}
@@ -1471,6 +1473,7 @@ type TournamentReg = {
   partner_name: string | null;
   fee: number;
   amount_paid: number;
+  payment_id: string | null;
   status: string;
   created_at: number;
 };
@@ -1531,6 +1534,9 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
     [rows, kind],
   );
   const confirmed = useMemo(() => shown.filter((r) => r.status === "confirmed"), [shown]);
+  // Started checkout but never completed payment. Worth seeing — an unusual
+  // number of these means the payment step is failing — but never counted.
+  const pending = useMemo(() => shown.filter((r) => r.status === "pending").length, [shown]);
   const collected = useMemo(
     () => confirmed.reduce((a, r) => a + (Number(r.amount_paid) || 0), 0),
     [confirmed],
@@ -1867,6 +1873,11 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
                     {Number(r.fee) !== Number(r.amount_paid) && (
                       <span className="block text-[11px] font-bold text-amber-600 dark:text-amber-400">
                         of {money(r.fee)}
+                      </span>
+                    )}
+                    {r.payment_id && (
+                      <span className="block text-[10px] font-normal text-ink/40 dark:text-white/35">
+                        {r.payment_id}
                       </span>
                     )}
                   </td>

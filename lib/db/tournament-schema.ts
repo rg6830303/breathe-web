@@ -62,6 +62,7 @@ const CREATE_TABLES: string[] = [
     fee INTEGER NOT NULL DEFAULT 0,
     amount_paid INTEGER NOT NULL DEFAULT 0,
     payment_id TEXT,
+    order_id TEXT,
     status TEXT NOT NULL DEFAULT 'confirmed',
     created_at BIGINT NOT NULL
   )`,
@@ -76,6 +77,9 @@ const STATEMENTS: string[] = [
   `ALTER TABLE tournament_registrations ADD COLUMN photo_url TEXT`,
   `ALTER TABLE tournament_registrations ADD COLUMN dupr_id TEXT`,
   `ALTER TABLE tournament_registrations ADD COLUMN dupr_level TEXT`,
+  // Written when the Razorpay order is created, so a payment can always be
+  // matched back to the entry it belongs to — by the browser or by the webhook.
+  `ALTER TABLE tournament_registrations ADD COLUMN order_id TEXT`,
   // Poster artwork shown on the public tournaments tab.
   `ALTER TABLE tournaments ADD COLUMN poster_url TEXT`,
   // 1 = reachable by direct link only: hidden from /api/tournaments and so from
@@ -89,6 +93,14 @@ const STATEMENTS: string[] = [
  * fresh by newer code paths, and Postgres is the production engine.
  */
 const NULLABLE_USER_ID = `ALTER TABLE tournament_registrations ALTER COLUMN user_id DROP NOT NULL`;
+
+/**
+ * A database created from the older SCHEMA_TABLES has CHECK (status IN
+ * ('confirmed','cancelled')), which rejects the 'pending' row written at order
+ * time. Drop the constraint by its Postgres default name; absent is fine.
+ */
+const DROP_STATUS_CHECK = `ALTER TABLE tournament_registrations
+  DROP CONSTRAINT IF EXISTS tournament_registrations_status_check`;
 
 /**
  * Duplicate guard that works for guests: user_id is NULL for them and NULL is
@@ -196,6 +208,10 @@ export function ensureTournamentSchema(): Promise<void> {
       for (const sql of CREATE_TABLES) await quietly(sql);
       for (const sql of STATEMENTS) await quietly(sql);
       await quietly(NULLABLE_USER_ID);
+      await quietly(DROP_STATUS_CHECK);
+      await quietly(
+        `CREATE INDEX IF NOT EXISTS idx_tournament_regs_order ON tournament_registrations (order_id)`,
+      );
       await quietly(EMAIL_UNIQUE);
       await seedShowdown();
       await dropStaleShowdownDuplicates();

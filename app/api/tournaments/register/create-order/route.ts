@@ -20,9 +20,13 @@ export const runtime = "nodejs";
  *
  * Mirrors /api/bookings/create-order, including the single-key fallback: with a
  * RAZORPAY_KEY_SECRET we create a verifiable Order; with only the public key id
- * we return amount+keyId for direct checkout. Nothing is written to
- * tournament_registrations here — the row is only created after payment in
- * ../verify, so an abandoned checkout leaves no phantom entry.
+ * we return amount+keyId for direct checkout.
+ *
+ * A 'pending' row IS written here, carrying the whole form. It holds no money
+ * and is never counted as an entry, but it means a payment can always be
+ * matched back to the person who made it — by ../verify, by the Razorpay
+ * webhook, or by an admin reconciling later. Without it, a browser that dies
+ * between payment and confirmation takes the entrant's details with it.
  */
 export async function POST(req: Request) {
   try {
@@ -44,7 +48,10 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: formatZodError(parsed.error) }, { status: 400 });
     }
-    const { tournament_id, category, email } = parsed.data;
+    const {
+      tournament_id, category, email, player_name, phone, age, sex,
+      photo_url, dupr_id, dupr_level, skill_level, partner_name, notes,
+    } = parsed.data;
 
     // Tournament must exist and still be open for entries.
     let row: Record<string, unknown> | undefined;
@@ -111,6 +118,28 @@ export async function POST(req: Request) {
     } catch (rzpErr) {
       console.error("[tournament create-order razorpay error]", rzpErr);
       return NextResponse.json({ error: "Could not start the payment. Please try again." }, { status: 502 });
+    }
+
+    // Park the entry against the order. Best-effort: a failure here must not
+    // stop the payment — ../verify and the webhook both fall back to inserting
+    // a fresh row when no pending one is found.
+    try {
+      await turso.execute({
+        sql: `INSERT INTO tournament_registrations (
+                id, tournament_id, user_id, player_name, email, phone,
+                age, sex, photo_url, dupr_id, dupr_level,
+                category, skill_level, partner_name, notes,
+                fee, amount_paid, payment_id, order_id, status, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, 'pending', ?)`,
+        args: [
+          uuid(), tournament_id, session?.id ?? null, player_name, email, phone,
+          age, sex, photo_url, dupr_id || null, dupr_level || null,
+          category, skill_level, partner_name || null, notes || null,
+          fee, order.id, Date.now(),
+        ],
+      });
+    } catch (dbErr) {
+      console.error("[tournament create-order pending row error]", dbErr);
     }
 
     return NextResponse.json({
