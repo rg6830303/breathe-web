@@ -39,6 +39,8 @@ type Orphan = {
   tournament_id: string | null;
   tournament_name: string | null;
   category: string;
+  /** False when the payment carries no tournament notes — it may be unrelated. */
+  labelled: boolean;
 };
 
 function rzpClient() {
@@ -78,6 +80,7 @@ export async function GET(req: NextRequest) {
     }
 
     const days = Math.min(90, Math.max(1, Number(req.nextUrl.searchParams.get("days") ?? 30)));
+    const includeUnlabelled = req.nextUrl.searchParams.get("all") === "1";
     const to = Math.floor(Date.now() / 1000);
     const from = to - days * 24 * 60 * 60;
 
@@ -120,9 +123,12 @@ export async function GET(req: NextRequest) {
       if (String(p.status ?? "") !== "captured") continue;
 
       const notes = await notesFor(rzp, p);
-      // A court booking is not a tournament entry. When the notes are missing
-      // entirely we still surface it, so nothing paid-for stays invisible —
-      // the admin decides from the amount and the event list.
+      // A court booking is not a tournament entry. Payments with no notes at
+      // all are excluded by default: they are as likely to be a booking or a
+      // test charge as an entry, and importing one mislabels it as a paid
+      // registration. ?all=1 surfaces them, flagged, for a deliberate look.
+      const labelled = notes.kind === "tournament";
+      if (!labelled && !(notes.kind === undefined && includeUnlabelled)) continue;
       if (notes.kind && notes.kind !== "tournament") continue;
 
       orphans.push({
@@ -135,6 +141,7 @@ export async function GET(req: NextRequest) {
         tournament_id: notes.tournament_id ?? null,
         tournament_name: notes.tournament_id ? names.get(notes.tournament_id) ?? null : null,
         category: notes.category ?? "singles",
+        labelled,
       });
     }
 
@@ -203,6 +210,21 @@ export async function POST(req: NextRequest) {
 
     const amountPaid = Math.round(Number(payment.amount ?? 0) / 100) || fee;
 
+    // A captain entry is ₹3,000; a payment of ₹200 is not one. Refuse the
+    // mismatch rather than filing it under the wrong event, unless the admin
+    // has looked at it and said to import it anyway.
+    if (amountPaid !== fee && b.confirm_mismatch !== true) {
+      return NextResponse.json(
+        {
+          error:
+            `This payment is ₹${amountPaid.toLocaleString("en-IN")} but that event's entry fee is ` +
+            `₹${fee.toLocaleString("en-IN")}. Check it is the right event before importing.`,
+          mismatch: { amount_paid: amountPaid, fee },
+        },
+        { status: 409 },
+      );
+    }
+
     // Idempotent: importing the same payment twice must not create a second entry.
     try {
       const dup = await turso.execute({
@@ -218,7 +240,10 @@ export async function POST(req: NextRequest) {
 
     const id = uuid();
     const createdAt = Number(payment.created_at ?? 0) * 1000 || Date.now();
-    const note = `Recovered from Razorpay payment ${paymentId} by ${admin.email}. Photo and any DUPR/age details were not captured by the gateway.`;
+    const note =
+      `Recovered from Razorpay payment ${paymentId} by ${admin.email}. ` +
+      `Photo and any DUPR/age details were not captured by the gateway.` +
+      (amountPaid !== fee ? ` Amount paid (₹${amountPaid}) does not match the ₹${fee} entry fee.` : "");
 
     try {
       await turso.execute({

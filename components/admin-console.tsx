@@ -1539,6 +1539,32 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
   // head-count is only readable if the two are broken out.
   const captains = useMemo(() => confirmed.filter((r) => r.category === "captain").length, [confirmed]);
 
+  /** Remove a row that should never have existed (a mis-imported payment). */
+  async function removeEntry(r: TournamentReg) {
+    if (
+      !confirm(
+        `Permanently delete ${r.player_name}'s entry for ${r.tournament_name}?
+
+` +
+          `Use this only for an entry recorded by mistake. It does not refund anything — ` +
+          `the payment still stands in Razorpay. To withdraw a genuine entry, cancel it instead.`,
+      )
+    )
+      return;
+    setBusy(r.id);
+    const res = await fetch(`/api/admin/tournaments/registrations?id=${encodeURIComponent(r.id)}`, {
+      method: "DELETE",
+    });
+    setBusy(null);
+    if (res.ok) {
+      toast.show("Entry deleted", "success");
+      load(filter);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.show(d.error ?? "Could not delete that entry.", "error");
+    }
+  }
+
   async function setStatus(r: TournamentReg, status: "cancelled" | "confirmed") {
     const verb = status === "cancelled" ? "Cancel" : "Reinstate";
     if (!confirm(`${verb} ${r.player_name}'s entry for ${r.tournament_name}?`)) return;
@@ -1576,7 +1602,15 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
   }
 
   /** Rebuild one entry from its payment. */
-  async function importPayment(o: Orphan, playerName: string, tournamentId: string) {
+  async function importPayment(o: Orphan, playerName: string, tournamentId: string, mismatch: boolean) {
+    if (
+      mismatch &&
+      !confirm(
+        `This payment is ${money(o.amount)} but the event's entry fee is different. ` +
+          `Import it anyway?`,
+      )
+    )
+      return;
     setImporting(o.payment_id);
     const res = await fetch("/api/admin/tournaments/registrations/recover", {
       method: "POST",
@@ -1586,6 +1620,7 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
         player_name: playerName,
         tournament_id: tournamentId,
         category: o.category,
+        confirm_mismatch: mismatch,
       }),
     });
     const d = await res.json().catch(() => ({}));
@@ -1827,7 +1862,14 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
                     )}
                   </td>
                   <td className="p-3 text-ink/70 dark:text-white/60">{r.partner_name ?? "—"}</td>
-                  <td className="p-3 text-right font-extrabold text-lime-dark dark:text-lime">{money(r.amount_paid)}</td>
+                  <td className="p-3 text-right font-extrabold text-lime-dark dark:text-lime">
+                    {money(r.amount_paid)}
+                    {Number(r.fee) !== Number(r.amount_paid) && (
+                      <span className="block text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                        of {money(r.fee)}
+                      </span>
+                    )}
+                  </td>
                   <td className="p-3"><StatusPill status={r.status} /></td>
                   <td className="p-3 text-[11px] text-ink/50 dark:text-white/50">
                     {new Date(Number(r.created_at)).toLocaleDateString("en-IN")}
@@ -1852,6 +1894,15 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
                       )}
                       {cancelled ? "Reinstate" : "Cancel"}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => removeEntry(r)}
+                      disabled={busy === r.id}
+                      title="Delete an entry recorded by mistake"
+                      className="ml-2 inline-flex items-center gap-1 rounded-lg border border-ink/10 px-2 py-1.5 text-xs font-bold text-ink/50 transition hover:text-red-600 disabled:opacity-60 dark:border-white/10 dark:text-white/50"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
                   </td>
                 </tr>
                 );
@@ -1874,6 +1925,8 @@ type Orphan = {
   tournament_id: string | null;
   tournament_name: string | null;
   category: string;
+  /** False when the payment carries no tournament tag — it may be unrelated. */
+  labelled: boolean;
 };
 
 /** One unrecorded payment, with the two things the gateway could not tell us. */
@@ -1886,10 +1939,14 @@ function OrphanRow({
   orphan: Orphan;
   tournaments: Tournament[];
   busy: boolean;
-  onImport: (o: Orphan, playerName: string, tournamentId: string) => void;
+  onImport: (o: Orphan, playerName: string, tournamentId: string, mismatch: boolean) => void;
 }) {
   const [name, setName] = useState(orphan.email ? orphan.email.split("@")[0] : "");
-  const [tid, setTid] = useState(orphan.tournament_id ?? tournaments[0]?.id ?? "");
+  // Never guess the event. A defaulted dropdown is what filed three unrelated
+  // ₹200 payments under the ₹3,000 captain entry.
+  const [tid, setTid] = useState(orphan.tournament_id ?? "");
+  const chosen = tournaments.find((t) => t.id === tid);
+  const mismatch = !!chosen && Number(chosen.fee) !== orphan.amount;
   const cls =
     "w-full rounded-lg border border-ink/10 bg-white px-2.5 py-1.5 text-xs text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
 
@@ -1906,16 +1963,29 @@ function OrphanRow({
         </div>
       </div>
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Player name" className={cls} />
-      <select value={tid} onChange={(e) => setTid(e.target.value)} className={cls}>
-        {tournaments.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.name}
-          </option>
-        ))}
-      </select>
+      <div>
+        <select value={tid} onChange={(e) => setTid(e.target.value)} className={cls}>
+          <option value="">Which event?…</option>
+          {tournaments.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name} · {money(Number(t.fee) || 0)}
+            </option>
+          ))}
+        </select>
+        {mismatch && (
+          <p className="mt-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+            Paid {money(orphan.amount)}, entry fee is {money(Number(chosen!.fee) || 0)} — probably not this event.
+          </p>
+        )}
+        {!orphan.labelled && (
+          <p className="mt-1 text-[11px] text-ink/50 dark:text-white/45">
+            No tournament tag on this payment — it may be a booking or a test charge.
+          </p>
+        )}
+      </div>
       <button
         type="button"
-        onClick={() => onImport(orphan, name, tid)}
+        onClick={() => onImport(orphan, name, tid, mismatch)}
         disabled={busy || !tid}
         className="btn-primary px-3 py-2 text-xs disabled:opacity-50"
       >

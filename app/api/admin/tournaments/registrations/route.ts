@@ -195,3 +195,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
   }
 }
+
+/**
+ * Admin: permanently remove an entry — `?id=`.
+ *
+ * Cancelling is the normal action and keeps the record of a fee that was paid.
+ * This exists for a row that should never have been there: a payment imported
+ * against the wrong event, or a mistaken manual entry. It is not a refund and
+ * does not touch Razorpay — the payment still stands in the gateway.
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const admin = await getAdminSession();
+    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    await ensureSchema().catch(() => {});
+
+    const id = req.nextUrl.searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "Registration id is required." }, { status: 400 });
+
+    try {
+      const r = await turso.execute({ sql: "DELETE FROM tournament_registrations WHERE id = ?", args: [id] });
+      if (!r.rowsAffected) return NextResponse.json({ error: "Registration not found." }, { status: 404 });
+    } catch (dbErr) {
+      console.error("[admin tournament registration delete error]", dbErr);
+      return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, id });
+  } catch (err) {
+    console.error("[admin tournament registration delete error]", err);
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+  }
+}
