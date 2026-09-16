@@ -42,6 +42,73 @@ function loadRazorpay(): Promise<boolean> {
   });
 }
 
+/**
+ * A payment that has been made but not yet confirmed by the server.
+ *
+ * Stashed in localStorage the instant Razorpay hands back a payment id, and
+ * cleared only once the entry is recorded. Without a webhook this is what stops
+ * a dropped connection, a closed tab or a failed request from stranding a paid
+ * entry: the next visit to the form finishes the job.
+ */
+const UNCONFIRMED_KEY = "breathe:tournament:unconfirmed";
+
+type Unconfirmed = { payload: Record<string, unknown>; orderId?: string; paymentId?: string; signature?: string };
+
+function stash(u: Unconfirmed) {
+  try {
+    localStorage.setItem(UNCONFIRMED_KEY, JSON.stringify(u));
+  } catch {
+    // Private mode / blocked storage — the server-side sweep still covers it.
+  }
+}
+
+function unstash(): Unconfirmed | null {
+  try {
+    const raw = localStorage.getItem(UNCONFIRMED_KEY);
+    return raw ? (JSON.parse(raw) as Unconfirmed) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearStash() {
+  try {
+    localStorage.removeItem(UNCONFIRMED_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Confirm the entry, retrying a few times with a widening gap. A blip on the
+ * entrant's connection should not cost them their place after they have paid.
+ */
+async function confirmWithRetry(body: Record<string, unknown>, attempts = 4): Promise<Record<string, unknown>> {
+  let lastErr: Error | null = null;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch("/api/tournaments/register/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) return data;
+      // A duplicate means it is already recorded — that is a success, not a retry.
+      if (res.status === 409) return { ok: true, duplicate: true, ...data };
+      // 4xx other than 409 will not improve by trying again.
+      if (res.status < 500) throw new Error(String(data.error ?? "We couldn't confirm your entry."));
+      lastErr = new Error(String(data.error ?? "Server error"));
+    } catch (err) {
+      lastErr = err instanceof Error ? err : new Error("Network error");
+      // A hard 4xx is final — rethrow rather than burn the remaining attempts.
+      if (lastErr.message && !/network|fetch|server error/i.test(lastErr.message)) throw lastErr;
+    }
+    await new Promise((r) => setTimeout(r, 800 * 2 ** i));
+  }
+  throw lastErr ?? new Error("We couldn't confirm your entry.");
+}
+
 function formatDate(d: string | null) {
   if (!d) return "Date to be announced";
   const parsed = new Date(d);
@@ -122,6 +189,28 @@ export function TournamentEntryForm({
     dupr_id: "",
     dupr_level: "",
   });
+
+  // A payment from a previous visit that never got confirmed — finish it before
+  // the entrant does anything else, and tell them it is done.
+  useEffect(() => {
+    const pendingPayment = unstash();
+    if (!pendingPayment?.paymentId) return;
+    (async () => {
+      try {
+        const v = await confirmWithRetry({
+          ...pendingPayment.payload,
+          orderId: pendingPayment.orderId,
+          paymentId: pendingPayment.paymentId,
+          signature: pendingPayment.signature,
+        });
+        clearStash();
+        setDoneRef(String(v.id ?? "").slice(0, 8).toUpperCase());
+      } catch {
+        // Leave it stashed: the next visit tries again, and the club's nightly
+        // reconcile picks it up from Razorpay regardless.
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -240,19 +329,22 @@ export function TournamentEntryForm({
           razorpay_payment_id?: string;
           razorpay_signature?: string;
         }) => {
+          // Written BEFORE the confirm call: from here on the money is gone,
+          // so the payment must survive anything that happens to this tab.
+          stash({
+            payload,
+            orderId: resp.razorpay_order_id,
+            paymentId: resp.razorpay_payment_id,
+            signature: resp.razorpay_signature,
+          });
           try {
-            const vr = await fetch("/api/tournaments/register/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                ...payload,
-                orderId: resp.razorpay_order_id,
-                paymentId: resp.razorpay_payment_id,
-                signature: resp.razorpay_signature,
-              }),
+            const v = await confirmWithRetry({
+              ...payload,
+              orderId: resp.razorpay_order_id,
+              paymentId: resp.razorpay_payment_id,
+              signature: resp.razorpay_signature,
             });
-            const v = await vr.json();
-            if (!vr.ok) throw new Error(v.error ?? "We couldn't confirm your entry.");
+            clearStash();
             // Paid conversion — tagged so it's separable from court bookings.
             trackFb("Purchase", {
               value: Number(v.fee) || selected.fee,
@@ -262,7 +354,11 @@ export function TournamentEntryForm({
             });
             setDoneRef(String(v.id ?? "").slice(0, 8).toUpperCase());
           } catch (err) {
-            setError(err instanceof Error ? err.message : "We couldn't confirm your entry.");
+            setError(
+              (err instanceof Error ? err.message : "We couldn't confirm your entry.") +
+                " Your payment went through — reopen this page and we'll finish your registration, " +
+                "or contact the club with your payment reference.",
+            );
           } finally {
             setPaying(false);
           }

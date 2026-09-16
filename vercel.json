@@ -1,10 +1,16 @@
 {
   "framework": "nextjs",
-  "regions": ["iad1"],
+  "regions": [
+    "iad1"
+  ],
   "crons": [
     {
       "path": "/api/cron/after-play",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-tournaments",
+      "schedule": "0 2 * * *"
     }
   ]
 }

@@ -1511,6 +1511,7 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
   // tab: they did not come from a tournament checkout. Counted, not hidden.
   const [mismatched, setMismatched] = useState(0);
   const [showAll, setShowAll] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
   const inputCls =
     "w-full rounded-xl border-2 border-ink/10 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand dark:border-white/10 dark:bg-[#111c38] dark:text-white";
 
@@ -1596,6 +1597,29 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
       const d = await res.json().catch(() => ({}));
       toast.show(d.error ?? `Could not ${verb.toLowerCase()} that entry.`, "error");
     }
+  }
+
+  /**
+   * Complete any entry whose payment was captured while the entrant's browser
+   * was gone. Same sweep the nightly cron runs — this is the "don't wait until
+   * tomorrow" button, and the reason the system does not need a webhook.
+   */
+  async function reconcileNow() {
+    setReconciling(true);
+    const res = await fetch("/api/admin/tournaments/registrations/reconcile", { method: "POST" });
+    const d = await res.json().catch(() => ({}));
+    setReconciling(false);
+    if (!res.ok) {
+      toast.show(d.error ?? "Could not reconcile payments.", "error");
+      return;
+    }
+    toast.show(
+      d.confirmed
+        ? `${d.confirmed} paid ${d.confirmed === 1 ? "entry" : "entries"} recovered`
+        : `Checked ${d.checked ?? 0} — nothing outstanding`,
+      "success",
+    );
+    load(filter, showAll);
   }
 
   /** Ask Razorpay what a payment actually was, for a row whose figure looks wrong. */
@@ -1736,6 +1760,10 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
         </button>
         <button type="button" onClick={() => setAdding((v) => !v)} className="btn-outline px-2.5 py-2 text-xs">
           <Plus className="h-3.5 w-3.5" /> Add entry
+        </button>
+        <button type="button" onClick={reconcileNow} disabled={reconciling} className="btn-outline px-2.5 py-2 text-xs">
+          {reconciling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          Reconcile payments
         </button>
         <button type="button" onClick={scanPayments} disabled={scanning} className="btn-outline px-2.5 py-2 text-xs">
           {scanning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
