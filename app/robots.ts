@@ -24,7 +24,13 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/admin/", "/dashboard", "/api/", "/login", "/signup", "/reset-password", "/forgot-password", "/offline"],
+        // The captain entry and its confirmation are handed out by link only —
+        // unlike the player registration, which is meant to be found.
+        disallow: [
+          "/admin", "/admin/", "/dashboard", "/api/", "/login", "/signup",
+          "/reset-password", "/forgot-password", "/offline",
+          "/tournaments/captain", "/tournaments/confirmation", "/33showdown",
+        ],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

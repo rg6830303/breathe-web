@@ -1514,6 +1514,7 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
   // Rows whose captured amount is not the event's fee are withheld from the
   // tab: they did not come from a tournament checkout. Counted, not hidden.
   const [mismatched, setMismatched] = useState(0);
+  const [pendingHeld, setPendingHeld] = useState(0);
   const [showAll, setShowAll] = useState(false);
   const [reconciling, setReconciling] = useState(false);
   const inputCls =
@@ -1529,6 +1530,7 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
       .then((d) => {
         setRows(d.registrations ?? []);
         setMismatched(Number(d.mismatched ?? 0));
+        setPendingHeld(Number(d.pending ?? 0));
         if (!tournamentId && !all) setAdminCache("tournregs", d.registrations ?? []);
       })
       .finally(() => setLoading(false));
@@ -1847,11 +1849,17 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
         </form>
       )}
 
-      {mismatched > 0 && (
+      {mismatched + pendingHeld > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-400/40 bg-amber-50/60 px-4 py-2.5 text-xs dark:bg-amber-500/5">
           <span className="text-ink/70 dark:text-white/60">
-            {showAll ? "Showing" : "Hiding"} {mismatched} payment{mismatched === 1 ? "" : "s"} that {mismatched === 1 ? "does" : "do"}{" "}
-            not match an entry fee — not from a tournament checkout.
+            {showAll ? "Showing" : "Not showing"}
+            {mismatched > 0 &&
+              ` ${mismatched} payment${mismatched === 1 ? "" : "s"} that ${
+                mismatched === 1 ? "does" : "do"
+              } not match an entry fee`}
+            {mismatched > 0 && pendingHeld > 0 ? " and" : ""}
+            {pendingHeld > 0 && ` ${pendingHeld} unpaid checkout${pendingHeld === 1 ? "" : "s"}`}. The list is paid
+            entries only.
           </span>
           <button
             type="button"

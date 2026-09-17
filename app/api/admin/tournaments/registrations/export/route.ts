@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       clauses.push("r.tournament_id = ?");
       args.push(tournamentId);
     }
-    if (!includeAll) clauses.push("(r.status <> 'confirmed' OR r.amount_paid = r.fee)");
+    if (!includeAll) clauses.push("r.status = 'confirmed' AND r.amount_paid = r.fee");
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
     const res = await turso.execute({

@@ -16,26 +16,14 @@ import { verifyToken } from "@/lib/auth";
  */
 const ADMIN_HOST = process.env.NEXT_PUBLIC_ADMIN_HOST?.trim().toLowerCase();
 
-/**
- * Standalone host for the 33 Showdown team-captain entry. Its root serves the
- * captain form directly, so the URL can be handed out on its own without the
- * rest of the site around it. Override with NEXT_PUBLIC_CAPTAIN_HOST.
- */
+/** The retired captain host, kept only so links already shared still land. */
 const CAPTAIN_HOST = (process.env.NEXT_PUBLIC_CAPTAIN_HOST ?? "33showdown.vercel.app").trim().toLowerCase();
 
 /**
- * Razorpay's live mode refuses a checkout opened from a domain that is not
- * registered on the account ("Payment blocked as website does not match
- * registered website(s)"), and 33showdown.vercel.app is not one. So by default
- * the captain host REDIRECTS to the captain page on the registered domain
- * rather than serving the form itself: the entrant keeps the short link, and
- * the payment sheet opens somewhere Razorpay accepts.
- *
- * Register the vercel.app domain with Razorpay (Account & Settings → Website
- * and app settings) and set NEXT_PUBLIC_CAPTAIN_HOST_MODE=rewrite to serve the
- * form on the short domain itself again.
+ * The captain entry lives on the registered domain, because Razorpay refuses a
+ * checkout opened from a domain that is not registered on the account. The old
+ * captain host only forwards there now.
  */
-const CAPTAIN_MODE = (process.env.NEXT_PUBLIC_CAPTAIN_HOST_MODE ?? "redirect").trim().toLowerCase();
 const CAPTAIN_CANONICAL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in").replace(/\/$/, "");
 
 function hostOf(req: NextRequest): string {
@@ -91,53 +79,42 @@ export async function middleware(req: NextRequest) {
     });
   }
 
-  // --- Captain host: this domain is the captain entry form and nothing else ---
-  if (CAPTAIN_HOST && host === CAPTAIN_HOST) {
-    // Default: hand the visitor to the registered domain, because Razorpay will
-    // not process a payment started here. The confirmation page keeps its path
-    // and query so a receipt link still resolves; everything else lands on the
-    // form. Assets and API calls are left alone.
-    if (CAPTAIN_MODE === "redirect") {
-      const isAsset =
-        pathname.startsWith("/api/") ||
-        pathname.startsWith("/_next/") ||
-        pathname.startsWith("/icons/") ||
-        pathname.startsWith("/photos/") ||
-        /\.(png|jpg|jpeg|gif|svg|webp|ico|json|js|css|txt|xml|webmanifest)$/i.test(pathname);
-      if (!isAsset) {
-        const keepPath = pathname.startsWith("/tournaments/confirmation");
-        const dest = new URL(
-          `${CAPTAIN_CANONICAL}${keepPath ? pathname : "/tournaments/captain"}`,
-        );
-        if (keepPath) dest.search = req.nextUrl.search;
-        const res = NextResponse.redirect(dest, 307);
-        res.headers.set("X-Robots-Tag", "noindex, nofollow");
-        return res;
-      }
-    }
+  // --- Short link for the captain entry ---
+  // /33showdown is the link that gets handed out. It rewrites (not redirects)
+  // to the captain form, so the address stays short and the page served is the
+  // standalone form — no site chrome, nothing that leads into the website.
+  if (pathname === "/33showdown" || pathname === "/33showdown/") {
+    const res = NextResponse.rewrite(new URL("/tournaments/captain", req.url));
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return res;
+  }
 
-    // Every page path rewrites to the form, so the rest of the website is
-    // simply not reachable here — /about, /pricing, /book and the player
-    // registration all land on the captain form instead of exposing the site
-    // behind this link. Rewrite, not redirect, so the URL stays put.
-    //
-    // Left alone: /api/* (the form's own fetches and the Razorpay round-trip),
-    // Next internals and static assets, which the form needs to render.
-    const passThrough =
-      // The entry form sends both endings here, so it has to be reachable.
-      pathname.startsWith("/tournaments/confirmation") ||
+  // --- Retired captain host ---
+  // 33showdown.vercel.app is no longer used to serve the form: Razorpay will
+  // not process a payment from a domain that is not registered on the account.
+  // Any link already shared is sent to the captain page on the registered
+  // domain, so an old link still works and that host never exposes the site.
+  if (CAPTAIN_HOST && host === CAPTAIN_HOST) {
+    const isAsset =
       pathname.startsWith("/api/") ||
       pathname.startsWith("/_next/") ||
       pathname.startsWith("/icons/") ||
       pathname.startsWith("/photos/") ||
-      pathname === "/favicon.ico" ||
-      pathname === "/robots.txt" ||
       /\.(png|jpg|jpeg|gif|svg|webp|ico|json|js|css|txt|xml|webmanifest)$/i.test(pathname);
+    if (!isAsset) {
+      const keepPath = pathname.startsWith("/tournaments/confirmation");
+      const dest = new URL(`${CAPTAIN_CANONICAL}${keepPath ? pathname : "/tournaments/captain"}`);
+      if (keepPath) dest.search = req.nextUrl.search;
+      const res = NextResponse.redirect(dest, 307);
+      res.headers.set("X-Robots-Tag", "noindex, nofollow");
+      return res;
+    }
+  }
 
-    const res = passThrough
-      ? NextResponse.next()
-      : NextResponse.rewrite(new URL("/tournaments/captain", req.url));
-    // A one-event link, not a page to index.
+  // The captain entry and its confirmation are link-only pages: never indexed,
+  // never linked from the site, unlike the player registration.
+  if (pathname.startsWith("/tournaments/captain") || pathname.startsWith("/tournaments/confirmation")) {
+    const res = NextResponse.next();
     res.headers.set("X-Robots-Tag", "noindex, nofollow");
     return res;
   }

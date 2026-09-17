@@ -11,12 +11,12 @@ export const dynamic = "force-dynamic";
 /**
  * Admin: tournament entries, newest first. Optional ?tournament_id= filter.
  *
- * By default this returns REAL entries only: a tournament checkout always
- * charges exactly the event's fee, so a confirmed row whose captured amount is
- * anything else did not come from one — it is an unrelated payment that was
- * imported by mistake, and showing it as an entry misstates both the head-count
- * and the money. Those rows are counted and returned separately as `mismatched`
- * so they can still be reviewed and removed; ?include=all returns everything.
+ * By default this returns entries that were actually paid for — confirmed, for
+ * the event's full fee. Two kinds of row are withheld: a 'pending' one, which
+ * is a checkout that was started and never paid, and a confirmed one whose
+ * captured amount is not the fee, which cannot have come from this checkout and
+ * would misstate both the head-count and the money. Both are counted so the
+ * console can offer a review; ?include=all returns everything.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -33,8 +33,10 @@ export async function GET(req: NextRequest) {
       clauses.push("r.tournament_id = ?");
       args.push(tournamentId);
     }
-    // A pending row has paid nothing yet, so it is exempt from the fee check.
-    if (!includeAll) clauses.push("(r.status <> 'confirmed' OR r.amount_paid = r.fee)");
+    // Default view is entries that were actually paid for: confirmed, and for
+    // the event's full fee. A pending row is an abandoned checkout that took no
+    // money, and an amount that is not the fee did not come from this checkout.
+    if (!includeAll) clauses.push("r.status = 'confirmed' AND r.amount_paid = r.fee");
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
     const r = await turso.execute({
@@ -52,23 +54,30 @@ export async function GET(req: NextRequest) {
       args,
     });
 
-    // How many real-looking rows are being withheld, so the console can offer a
-    // review rather than hiding money without saying so.
+    // What is being withheld, so the console can say so rather than hiding
+    // money and attempts without a word.
     let mismatched = 0;
+    let pending = 0;
     try {
+      const scope = tournamentId ? " AND tournament_id = ?" : "";
+      const scopeArgs = tournamentId ? [tournamentId] : [];
       const m = await turso.execute({
         sql: `SELECT COUNT(*) AS n FROM tournament_registrations
-              WHERE status = 'confirmed' AND amount_paid <> fee${
-                tournamentId ? " AND tournament_id = ?" : ""
-              }`,
-        args: tournamentId ? [tournamentId] : [],
+              WHERE status = 'confirmed' AND amount_paid <> fee${scope}`,
+        args: scopeArgs,
       });
       mismatched = Number(m.rows[0]?.n ?? 0);
+      const p = await turso.execute({
+        sql: `SELECT COUNT(*) AS n FROM tournament_registrations
+              WHERE status = 'pending'${scope}`,
+        args: scopeArgs,
+      });
+      pending = Number(p.rows[0]?.n ?? 0);
     } catch {
       // Cosmetic.
     }
 
-    return NextResponse.json({ registrations: r.rows, mismatched, includeAll });
+    return NextResponse.json({ registrations: r.rows, mismatched, pending, includeAll });
   } catch (err) {
     console.error("[admin tournament registrations error]", err);
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
