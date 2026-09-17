@@ -23,6 +23,21 @@ const ADMIN_HOST = process.env.NEXT_PUBLIC_ADMIN_HOST?.trim().toLowerCase();
  */
 const CAPTAIN_HOST = (process.env.NEXT_PUBLIC_CAPTAIN_HOST ?? "33showdown.vercel.app").trim().toLowerCase();
 
+/**
+ * Razorpay's live mode refuses a checkout opened from a domain that is not
+ * registered on the account ("Payment blocked as website does not match
+ * registered website(s)"), and 33showdown.vercel.app is not one. So by default
+ * the captain host REDIRECTS to the captain page on the registered domain
+ * rather than serving the form itself: the entrant keeps the short link, and
+ * the payment sheet opens somewhere Razorpay accepts.
+ *
+ * Register the vercel.app domain with Razorpay (Account & Settings → Website
+ * and app settings) and set NEXT_PUBLIC_CAPTAIN_HOST_MODE=rewrite to serve the
+ * form on the short domain itself again.
+ */
+const CAPTAIN_MODE = (process.env.NEXT_PUBLIC_CAPTAIN_HOST_MODE ?? "redirect").trim().toLowerCase();
+const CAPTAIN_CANONICAL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in").replace(/\/$/, "");
+
 function hostOf(req: NextRequest): string {
   return (req.headers.get("host") ?? "").split(":")[0].toLowerCase();
 }
@@ -78,6 +93,29 @@ export async function middleware(req: NextRequest) {
 
   // --- Captain host: this domain is the captain entry form and nothing else ---
   if (CAPTAIN_HOST && host === CAPTAIN_HOST) {
+    // Default: hand the visitor to the registered domain, because Razorpay will
+    // not process a payment started here. The confirmation page keeps its path
+    // and query so a receipt link still resolves; everything else lands on the
+    // form. Assets and API calls are left alone.
+    if (CAPTAIN_MODE === "redirect") {
+      const isAsset =
+        pathname.startsWith("/api/") ||
+        pathname.startsWith("/_next/") ||
+        pathname.startsWith("/icons/") ||
+        pathname.startsWith("/photos/") ||
+        /\.(png|jpg|jpeg|gif|svg|webp|ico|json|js|css|txt|xml|webmanifest)$/i.test(pathname);
+      if (!isAsset) {
+        const keepPath = pathname.startsWith("/tournaments/confirmation");
+        const dest = new URL(
+          `${CAPTAIN_CANONICAL}${keepPath ? pathname : "/tournaments/captain"}`,
+        );
+        if (keepPath) dest.search = req.nextUrl.search;
+        const res = NextResponse.redirect(dest, 307);
+        res.headers.set("X-Robots-Tag", "noindex, nofollow");
+        return res;
+      }
+    }
+
     // Every page path rewrites to the form, so the rest of the website is
     // simply not reachable here — /about, /pricing, /book and the player
     // registration all land on the captain form instead of exposing the site
