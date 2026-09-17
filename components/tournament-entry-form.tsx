@@ -46,10 +46,12 @@ function loadRazorpay(): Promise<boolean> {
 /**
  * A payment that has been made but not yet confirmed by the server.
  *
- * Stashed in localStorage the instant Razorpay hands back a payment id, and
- * cleared only once the entry is recorded. Without a webhook this is what stops
- * a dropped connection, a closed tab or a failed request from stranding a paid
- * entry: the next visit to the form finishes the job.
+ * Stashed BEFORE the payment sheet opens — not when Razorpay hands back a
+ * payment id. On mobile UPI the tab hands off to GPay or PhonePe and often
+ * never runs the checkout callback at all, so anything written inside that
+ * callback is never written. Holding the order id from the start means the
+ * entry can always be completed afterwards by asking the gateway about that
+ * order. Cleared only once the entry is recorded.
  */
 const UNCONFIRMED_KEY = "breathe:tournament:unconfirmed";
 
@@ -195,24 +197,31 @@ export function TournamentEntryForm({
     dupr_level: "",
   });
 
-  // A payment from a previous visit that never got confirmed — finish it before
-  // the entrant does anything else, and tell them it is done.
+  // An order from a previous visit that was never confirmed — most often a UPI
+  // payment whose app-switch killed the tab before the callback could run.
+  // Ask the server to settle it against the gateway before anything else.
   useEffect(() => {
-    const pendingPayment = unstash();
-    if (!pendingPayment?.paymentId) return;
+    const previous = unstash();
+    if (!previous?.orderId) return;
     (async () => {
       try {
-        const v = await confirmWithRetry({
-          ...pendingPayment.payload,
-          orderId: pendingPayment.orderId,
-          paymentId: pendingPayment.paymentId,
-          signature: pendingPayment.signature,
+        const res = await fetch("/api/tournaments/register/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: previous.orderId }),
         });
-        clearStash();
-        goToConfirmation(`ref=${encodeURIComponent(String(v.id ?? ""))}`);
+        const d = await res.json().catch(() => ({}));
+        if (d.state === "confirmed" && d.id) {
+          clearStash();
+          goToConfirmation(`ref=${encodeURIComponent(String(d.id))}`);
+          return;
+        }
+        // Nothing captured against it — an abandoned checkout, not a lost
+        // payment. Drop it so the form is not haunted by an old attempt.
+        if (d.state === "unknown" || d.state === "cancelled") clearStash();
       } catch {
-        // Leave it stashed: the next visit tries again, and the club's nightly
-        // reconcile picks it up from Razorpay regardless.
+        // Offline: leave it stashed. The next visit tries again, and the
+        // club's reconcile sweep settles it from Razorpay regardless.
       }
     })();
   }, []);
@@ -308,6 +317,10 @@ export function TournamentEntryForm({
       const order = await orderRes.json();
       if (!orderRes.ok) throw new Error(order.error ?? "Could not start the payment.");
 
+      // Written BEFORE the sheet opens: from here a payment can happen, and
+      // the tab may not survive it.
+      stash({ payload, orderId: order.orderId });
+
       const loaded = await loadRazorpay();
       if (!loaded) throw new Error("Could not load the payment window. Check your connection.");
 
@@ -334,11 +347,11 @@ export function TournamentEntryForm({
           razorpay_payment_id?: string;
           razorpay_signature?: string;
         }) => {
-          // Written BEFORE the confirm call: from here on the money is gone,
-          // so the payment must survive anything that happens to this tab.
+          // Enrich the stash with what the callback knows, so a retry can use
+          // the signed path rather than re-asking the gateway.
           stash({
             payload,
-            orderId: resp.razorpay_order_id,
+            orderId: resp.razorpay_order_id ?? order.orderId,
             paymentId: resp.razorpay_payment_id,
             signature: resp.razorpay_signature,
           });
@@ -359,6 +372,22 @@ export function TournamentEntryForm({
             });
             goToConfirmation(`ref=${encodeURIComponent(String(v.id ?? ""))}`);
           } catch (err) {
+            // The signed path failed — ask the gateway about the order instead.
+            try {
+              const res = await fetch("/api/tournaments/register/claim", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId: resp.razorpay_order_id ?? order.orderId }),
+              });
+              const d = await res.json().catch(() => ({}));
+              if (d.state === "confirmed" && d.id) {
+                clearStash();
+                goToConfirmation(`ref=${encodeURIComponent(String(d.id))}`);
+                return;
+              }
+            } catch {
+              // fall through to the message below
+            }
             setError(
               (err instanceof Error ? err.message : "We couldn't confirm your entry.") +
                 " Your payment went through — reopen this page and we'll finish your registration, " +
@@ -368,7 +397,27 @@ export function TournamentEntryForm({
             setPaying(false);
           }
         },
-        modal: { ondismiss: () => setPaying(false) },
+        modal: {
+          // A dismissed sheet does not mean no payment: a UPI app can complete
+          // in the background while the sheet is closed. Ask the gateway.
+          ondismiss: async () => {
+            setPaying(false);
+            try {
+              const res = await fetch("/api/tournaments/register/claim", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId: order.orderId }),
+              });
+              const d = await res.json().catch(() => ({}));
+              if (d.state === "confirmed" && d.id) {
+                clearStash();
+                goToConfirmation(`ref=${encodeURIComponent(String(d.id))}`);
+              }
+            } catch {
+              // The stash and the reconcile sweep both still cover it.
+            }
+          },
+        },
       });
       rzp.on("payment.failed", (r) => {
         setPaying(false);

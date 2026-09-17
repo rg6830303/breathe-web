@@ -47,6 +47,10 @@ function formatDate(d?: string | null) {
 function ConfirmationBody() {
   const params = useSearchParams();
   const ref = params.get("ref") ?? "";
+  // Razorpay's redirect flow returns the order rather than our entry id, and a
+  // UPI app-switch can land here with nothing else. Settling the order against
+  // the gateway is what records the entry in that case.
+  const orderId = params.get("order_id") ?? params.get("razorpay_order_id") ?? "";
   const failed = params.get("state") === "failed";
   const reason = params.get("reason") ?? "";
   // The captain page is handed out as a standalone link, so it must not grow
@@ -54,7 +58,7 @@ function ConfirmationBody() {
   const standalone = params.get("ctx") === "captain";
 
   const [status, setStatus] = useState<Status | null>(null);
-  const [loading, setLoading] = useState(!!ref);
+  const [loading, setLoading] = useState(!!ref || !!orderId);
   const [tries, setTries] = useState(0);
 
   const check = useCallback(async () => {
@@ -63,8 +67,15 @@ function ConfirmationBody() {
       const res = await fetch(`/api/tournaments/register/status?ref=${encodeURIComponent(ref)}`);
       const d = (await res.json()) as Status;
       setStatus(d);
-      // Still settling — look again shortly.
+      // Still settling — nudge the gateway, then look again shortly.
       if ((d.state === "pending" || d.state === "unknown") && tries < 4) {
+        if (orderId) {
+          fetch("/api/tournaments/register/claim", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId }),
+          }).catch(() => {});
+        }
         setTimeout(() => setTries((t) => t + 1), 2500);
       }
     } catch {
@@ -72,11 +83,37 @@ function ConfirmationBody() {
     } finally {
       setLoading(false);
     }
-  }, [ref, tries]);
+  }, [ref, tries, orderId]);
 
   useEffect(() => {
     check();
   }, [check]);
+
+  // Arrived with an order but no entry reference: ask the server to complete
+  // the pending entry from the gateway, then show the result.
+  useEffect(() => {
+    if (ref || !orderId) return;
+    (async () => {
+      try {
+        const res = await fetch("/api/tournaments/register/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId }),
+        });
+        const d = await res.json().catch(() => ({}));
+        if (d.id) {
+          const s = await fetch(`/api/tournaments/register/status?ref=${encodeURIComponent(String(d.id))}`);
+          setStatus((await s.json()) as Status);
+        } else {
+          setStatus({ state: "unknown" });
+        }
+      } catch {
+        setStatus({ state: "unknown" });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [ref, orderId]);
 
   const state: Status["state"] = failed ? "cancelled" : (status?.state ?? "unknown");
   const due = status?.due ?? 0;
