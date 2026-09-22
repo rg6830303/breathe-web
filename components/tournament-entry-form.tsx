@@ -642,9 +642,11 @@ export function TournamentEntryForm({
               </div>
             </div>
 
-            {/* Profile photo */}
+            {/* Profile photo — compulsory: used on the draw sheet and at check-in. */}
             <div>
-              <label className={LABEL}>Profile photo</label>
+              <label className={LABEL}>
+                Profile photo <span className="normal-case text-red-600 dark:text-red-400">(required)</span>
+              </label>
               <div className="flex items-center gap-4">
                 <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-ink/10 bg-ink/5 dark:border-white/15 dark:bg-white/10">
                   {form.photo_url ? (
@@ -795,7 +797,13 @@ export function TournamentEntryForm({
 
             <button
               type="submit"
-              disabled={paying || uploading || !selected || (payMethod === "cash" && !couponCode.trim())}
+              disabled={
+                paying ||
+                uploading ||
+                !selected ||
+                !form.photo_url ||
+                (payMethod === "cash" && !couponCode.trim())
+              }
               className="btn-primary w-full justify-center"
             >
               {paying ? (
