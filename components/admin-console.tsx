@@ -1478,9 +1478,16 @@ type TournamentReg = {
   fee: number;
   amount_paid: number;
   payment_id: string | null;
+  source: string | null;
   status: string;
   created_at: number;
 };
+
+// Kept as a local literal on purpose: lib/tournaments/cash-coupon.ts reads
+// process.env at module scope for the server-only coupon check, and there's no
+// existing case in this codebase of that pattern being imported into a "use
+// client" file — not worth being the first. Keep in sync with that file.
+const CASH_AT_VENUE_SOURCE = "cash_at_venue";
 
 /** Paid tournament entries — filter, cancel/reinstate, and export a live .xlsx. */
 function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament[] }) {
@@ -1515,6 +1522,7 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
   // tab: they did not come from a tournament checkout. Counted, not hidden.
   const [mismatched, setMismatched] = useState(0);
   const [pendingHeld, setPendingHeld] = useState(0);
+  const [cashDue, setCashDue] = useState(0);
   const [showAll, setShowAll] = useState(false);
   const [reconciling, setReconciling] = useState(false);
   const inputCls =
@@ -1531,6 +1539,7 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
         setRows(d.registrations ?? []);
         setMismatched(Number(d.mismatched ?? 0));
         setPendingHeld(Number(d.pending ?? 0));
+        setCashDue(Number(d.cashDue ?? 0));
         if (!tournamentId && !all) setAdminCache("tournregs", d.registrations ?? []);
       })
       .finally(() => setLoading(false));
@@ -1602,6 +1611,25 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
     } else {
       const d = await res.json().catch(() => ({}));
       toast.show(d.error ?? `Could not ${verb.toLowerCase()} that entry.`, "error");
+    }
+  }
+
+  /** Record a cash-at-venue entry's fee as collected once the player pays at the club. */
+  async function markCashReceived(r: TournamentReg) {
+    if (!confirm(`Mark ${money(r.fee)} cash received from ${r.player_name}?`)) return;
+    setBusy(r.id);
+    const res = await fetch("/api/admin/tournaments/registrations", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: r.id, mark_cash_received: true }),
+    });
+    setBusy(null);
+    if (res.ok) {
+      toast.show("Cash payment recorded.", "success");
+      load(filter);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      toast.show(d.error ?? "Could not record that payment.", "error");
     }
   }
 
@@ -1734,8 +1762,8 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
         subtitle={`${confirmed.length} confirmed (${confirmed.length - captains} player${
           confirmed.length - captains === 1 ? "" : "s"
         } · ${captains} captain${captains === 1 ? "" : "s"}) · ${money(collected)} collected${
-          shown.length !== confirmed.length ? ` · ${shown.length - confirmed.length} cancelled` : ""
-        }`}
+          cashDue > 0 ? ` · ${money(cashDue)} cash due at venue` : ""
+        }${shown.length !== confirmed.length ? ` · ${shown.length - confirmed.length} cancelled` : ""}`}
       >
         <select
           value={filter}
@@ -2008,26 +2036,55 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
                   </td>
                   <td className="p-3 text-ink/70 dark:text-white/60">{r.partner_name ?? "—"}</td>
                   <td className="p-3 text-right font-extrabold text-lime-dark dark:text-lime">
-                    {money(r.amount_paid)}
-                    {Number(r.fee) !== Number(r.amount_paid) && (
-                      <span className="block text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                        of {money(r.fee)}
-                      </span>
-                    )}
-                    {r.payment_id && (
-                      <span className="block text-[10px] font-normal text-ink/40 dark:text-white/35">
-                        {r.payment_id}
-                      </span>
-                    )}
-                    {r.payment_id && Number(r.fee) !== Number(r.amount_paid) && (
-                      <button
-                        type="button"
-                        onClick={() => inspectPayment(r.payment_id!)}
-                        disabled={inspecting === r.payment_id}
-                        className="mt-1 text-[10px] font-bold uppercase tracking-wide text-brand underline dark:text-lime"
-                      >
-                        {inspecting === r.payment_id ? "Checking…" : "What was this?"}
-                      </button>
+                    {r.source === CASH_AT_VENUE_SOURCE ? (
+                      <>
+                        <span className="mb-0.5 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+                          Cash at venue
+                        </span>
+                        <span className="block">
+                          {Number(r.amount_paid) >= Number(r.fee) ? (
+                            <span className="text-lime-dark dark:text-lime">{money(r.fee)} collected</span>
+                          ) : (
+                            <span className="font-extrabold text-amber-600 dark:text-amber-400">
+                              {money(Number(r.fee) - Number(r.amount_paid))} due
+                            </span>
+                          )}
+                        </span>
+                        {Number(r.amount_paid) < Number(r.fee) && r.status === "confirmed" && (
+                          <button
+                            type="button"
+                            onClick={() => markCashReceived(r)}
+                            disabled={busy === r.id}
+                            className="mt-1 text-[10px] font-bold uppercase tracking-wide text-brand underline dark:text-lime"
+                          >
+                            Mark received
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {money(r.amount_paid)}
+                        {Number(r.fee) !== Number(r.amount_paid) && (
+                          <span className="block text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                            of {money(r.fee)}
+                          </span>
+                        )}
+                        {r.payment_id && (
+                          <span className="block text-[10px] font-normal text-ink/40 dark:text-white/35">
+                            {r.payment_id}
+                          </span>
+                        )}
+                        {r.payment_id && Number(r.fee) !== Number(r.amount_paid) && (
+                          <button
+                            type="button"
+                            onClick={() => inspectPayment(r.payment_id!)}
+                            disabled={inspecting === r.payment_id}
+                            className="mt-1 text-[10px] font-bold uppercase tracking-wide text-brand underline dark:text-lime"
+                          >
+                            {inspecting === r.payment_id ? "Checking…" : "What was this?"}
+                          </button>
+                        )}
+                      </>
                     )}
                   </td>
                   <td className="p-3"><StatusPill status={r.status} /></td>

@@ -89,6 +89,13 @@ export const tournamentRegistrationSchema = z
     notes: z.string().trim().max(500).optional().or(z.literal("")),
   });
 
+/** Same entry, paid in person at the club instead of online — gated by an
+ *  invite coupon the club hands out (checked server-side, see lib/tournaments/
+ *  cash-coupon.ts). */
+export const tournamentCashRegistrationSchema = tournamentRegistrationSchema.extend({
+  coupon_code: z.string().trim().min(1, "Please enter the coupon code.").max(40),
+});
+
 export function formatZodError(err: z.ZodError): string {
   const first = err.issues[0];
   return first ? first.message : "Invalid input.";

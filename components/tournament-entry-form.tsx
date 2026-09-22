@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Camera, Loader2, Trophy, X } from "lucide-react";
+import { Camera, Lock, Loader2, Trophy, Wallet, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Container } from "@/components/ui";
 import { trackFb, CURRENCY } from "@/lib/analytics";
@@ -197,6 +197,11 @@ export function TournamentEntryForm({
     dupr_level: "",
   });
 
+  // "Cash at venue" skips Razorpay entirely and is gated by an invite coupon
+  // the club hands out — validated server-side only (see the cash route).
+  const [payMethod, setPayMethod] = useState<"online" | "cash">("online");
+  const [couponCode, setCouponCode] = useState("");
+
   // An order from a previous visit that was never confirmed — most often a UPI
   // payment whose app-switch killed the tab before the callback could run.
   // Ask the server to settle it against the gateway before anything else.
@@ -279,6 +284,34 @@ export function TournamentEntryForm({
     }
   }
 
+  /** Cash-at-venue path: no Razorpay at all — write the entry directly, gated
+   *  server-side by the coupon code. */
+  async function submitCash(payload: Record<string, unknown>) {
+    setPaying(true);
+    try {
+      const res = await fetch("/api/tournaments/register/cash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, coupon_code: couponCode.trim() }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error ?? "Could not complete your registration.");
+      // A promise to pay, not a completed purchase — track it as a lead so ad
+      // reporting doesn't count unpaid entries as revenue.
+      trackFb("Lead", {
+        value: Number(d.fee) || selected?.fee || 0,
+        currency: CURRENCY,
+        content_category: "tournament_cash",
+        content_name: selected?.name,
+      });
+      goToConfirmation(`ref=${encodeURIComponent(String(d.id ?? ""))}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setPaying(false);
+    }
+  }
+
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -294,21 +327,31 @@ export function TournamentEntryForm({
       setError("Please select your sex.");
       return;
     }
+    if (payMethod === "cash" && !couponCode.trim()) {
+      setError("Please enter the coupon code, or switch to paying online.");
+      return;
+    }
+
+    const payload = {
+      tournament_id: form.tournament_id,
+      player_name: form.player_name.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+      age: Number(form.age),
+      sex: form.sex,
+      photo_url: form.photo_url,
+      dupr_id: form.dupr_id.trim(),
+      dupr_level: form.dupr_level.trim(),
+      category,
+    };
+
+    if (payMethod === "cash") {
+      await submitCash(payload);
+      return;
+    }
+
     setPaying(true);
     try {
-      const payload = {
-        tournament_id: form.tournament_id,
-        player_name: form.player_name.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        age: Number(form.age),
-        sex: form.sex,
-        photo_url: form.photo_url,
-        dupr_id: form.dupr_id.trim(),
-        dupr_level: form.dupr_level.trim(),
-        category,
-      };
-
       const orderRes = await fetch("/api/tournaments/register/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -684,6 +727,66 @@ export function TournamentEntryForm({
               </div>
             )}
 
+            {/* Payment method — cash at venue is invite-only, gated by coupon */}
+            <div>
+              <label className={LABEL}>Payment</label>
+              <div className="grid gap-2.5 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setPayMethod("online")}
+                  className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                    payMethod === "online"
+                      ? "border-brand bg-brand/5 text-ink dark:border-lime dark:bg-lime/10 dark:text-white"
+                      : "border-ink/10 text-ink/70 hover:border-ink/20 dark:border-white/15 dark:text-white/60"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4" /> Pay online now
+                  </span>
+                  <span className="mt-0.5 block text-xs font-normal text-slatey dark:text-white/45">
+                    Razorpay — confirmed instantly
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayMethod("cash")}
+                  className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                    payMethod === "cash"
+                      ? "border-brand bg-brand/5 text-ink dark:border-lime dark:bg-lime/10 dark:text-white"
+                      : "border-ink/10 text-ink/70 hover:border-ink/20 dark:border-white/15 dark:text-white/60"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4" /> Cash at the venue
+                  </span>
+                  <span className="mt-0.5 flex items-center gap-1 text-xs font-normal text-slatey dark:text-white/45">
+                    <Lock className="h-3 w-3" /> Requires an invite code
+                  </span>
+                </button>
+              </div>
+
+              {payMethod === "cash" && (
+                <div className="mt-3">
+                  <label className={LABEL} htmlFor="coupon">
+                    Coupon code
+                  </label>
+                  <input
+                    id="coupon"
+                    className={FIELD}
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    placeholder="Ask the club for the invite code"
+                    autoCapitalize="characters"
+                    required
+                  />
+                  <p className="mt-2 text-[11px] text-slatey dark:text-white/40">
+                    Your spot is held once submitted, and the ₹{selected ? selected.fee.toLocaleString("en-IN") : "—"}
+                    {" "}fee is paid in cash at the venue.
+                  </p>
+                </div>
+              )}
+            </div>
+
             {error && (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400">
                 {error}
@@ -692,16 +795,28 @@ export function TournamentEntryForm({
 
             <button
               type="submit"
-              disabled={paying || uploading || !selected}
+              disabled={paying || uploading || !selected || (payMethod === "cash" && !couponCode.trim())}
               className="btn-primary w-full justify-center"
             >
-              {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
-              {selected ? `Pay ₹${selected.fee.toLocaleString("en-IN")} & confirm entry` : "Confirm entry"}
+              {paying ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : payMethod === "cash" ? (
+                <Wallet className="h-4 w-4" />
+              ) : (
+                <Trophy className="h-4 w-4" />
+              )}
+              {selected
+                ? payMethod === "cash"
+                  ? `Confirm entry — pay ₹${selected.fee.toLocaleString("en-IN")} cash at venue`
+                  : `Pay ₹${selected.fee.toLocaleString("en-IN")} & confirm entry`
+                : "Confirm entry"}
             </button>
 
             <p className="text-center text-[11px] leading-relaxed text-slatey dark:text-white/40">
-              Your spot is confirmed only once payment succeeds — there is no pay-later option. Entry fees are
-              non-refundable within 48 hours of the event.
+              {payMethod === "cash"
+                ? "Your spot is held once submitted — bring the entry fee in cash to the venue."
+                : "Your spot is confirmed only once payment succeeds — there is no pay-later option."}{" "}
+              Entry fees are non-refundable within 48 hours of the event.
             </p>
           </form>
         )}

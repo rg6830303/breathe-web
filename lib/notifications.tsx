@@ -626,8 +626,12 @@ export async function notifyTournamentRegistration(r: {
   skillLevel?: string;
   partnerName?: string | null;
   fee: number;
+  /** "online" (default) is worded as paid; "cash_at_venue" makes clear the fee
+   *  is still owed, so the entrant doesn't read a ₹0 receipt as "nothing to pay". */
+  paymentMethod?: "online" | "cash_at_venue";
 }): Promise<{ emailed: boolean }> {
   try {
+    const cash = r.paymentMethod === "cash_at_venue";
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.breathepickleball.in";
     const firstName = (r.userName || "there").trim().split(" ")[0];
     const shortRef = r.id.slice(0, 8).toUpperCase();
@@ -652,16 +656,26 @@ export async function notifyTournamentRegistration(r: {
       (r.partnerName
         ? `<tr><td style="padding:6px 0;color:#64748b">Partner</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#0d1426">${r.partnerName}</td></tr>`
         : "") +
-      `<tr><td style="padding:6px 0;color:#64748b">Entry fee paid</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#22c55e">₹${r.fee.toLocaleString("en-IN")}</td></tr>`;
+      (cash
+        ? `<tr><td style="padding:6px 0;color:#64748b">Entry fee — due at venue</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#b45309">₹${r.fee.toLocaleString("en-IN")}</td></tr>`
+        : `<tr><td style="padding:6px 0;color:#64748b">Entry fee paid</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#22c55e">₹${r.fee.toLocaleString("en-IN")}</td></tr>`);
+
+    const introLine = cash
+      ? `Hi ${firstName}, your tournament entry is confirmed. You chose to pay in cash — please bring ` +
+        `<strong>₹${r.fee.toLocaleString("en-IN")}</strong> to the venue on the day to complete your registration. Here are your details:`
+      : `Hi ${firstName}, your tournament entry is confirmed and your fee has been received. Here are your details:`;
+    const cashNotice = cash
+      ? `<p style="background:#fef3c7;color:#92400e;padding:12px;border-radius:12px;font-size:13px;line-height:1.5;margin:16px 0">Your spot is held, but this entry is <strong>not yet paid</strong> — bring ₹${r.fee.toLocaleString("en-IN")} in cash to the venue. We'll email the schedule closer to the date either way.</p>`
+      : `<p style="background:#dcfce7;color:#166534;padding:12px;border-radius:12px;font-size:13px;line-height:1.5;margin:16px 0">We'll email you the match schedule and bracket closer to the date. Bring your A-game — paddles and balls are on us.</p>`;
 
     const html =
       `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0d1426">` +
       `<div style="text-align:center;margin-bottom:16px"><img src="${siteUrl}/icons/icon-192.png" alt="Breathe Pickleball" width="56" height="56" style="border-radius:14px"/></div>` +
       `<h2 style="text-align:center;margin:0 0 4px">You're in! 🏆</h2>` +
       `<p style="text-align:center;color:#64748b;margin:0 0 20px">Entry ${shortRef}</p>` +
-      `<p style="color:#475569;line-height:1.6">Hi ${firstName}, your tournament entry is confirmed and your fee has been received. Here are your details:</p>` +
+      `<p style="color:#475569;line-height:1.6">${introLine}</p>` +
       `<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">${rows}</table>` +
-      `<p style="background:#dcfce7;color:#166534;padding:12px;border-radius:12px;font-size:13px;line-height:1.5;margin:16px 0">We'll email you the match schedule and bracket closer to the date. Bring your A-game — paddles and balls are on us.</p>` +
+      cashNotice +
       `<p style="color:#475569;font-size:13px;line-height:1.6"><strong>Venue:</strong> ${VENUE_ADDRESS}</p>` +
       `<hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0"/>` +
       `<p style="color:#94a3b8;font-size:12px">Breathe Club · Panchwati Complex, Kaikhali, Kolkata</p>` +
@@ -671,7 +685,10 @@ export async function notifyTournamentRegistration(r: {
       `Hi ${firstName},\n\nYour tournament entry is confirmed.\n\n` +
       `Tournament: ${r.tournamentName}\nDate: ${dateStr}\nCategory: ${categoryLabel}\n` +
       (r.partnerName ? `Partner: ${r.partnerName}\n` : "") +
-      `Entry fee paid: Rs. ${r.fee.toLocaleString("en-IN")}\nEntry ref: ${shortRef}\n\n` +
+      (cash
+        ? `Entry fee (due at venue, cash): Rs. ${r.fee.toLocaleString("en-IN")}\nEntry ref: ${shortRef}\n\n` +
+          `Please bring this amount in cash to the venue on the day to complete your registration.\n\n`
+        : `Entry fee paid: Rs. ${r.fee.toLocaleString("en-IN")}\nEntry ref: ${shortRef}\n\n`) +
       `We'll email the schedule closer to the date.\n\nVenue: ${VENUE_ADDRESS}`;
 
     const result = await sendMail({
@@ -682,7 +699,9 @@ export async function notifyTournamentRegistration(r: {
     });
 
     try {
-      const body = `${r.tournamentName} · ${categoryLabel} · ${dateStr}`;
+      const body = cash
+        ? `${r.tournamentName} · ${categoryLabel} · bring ₹${r.fee.toLocaleString("en-IN")} cash to the venue`
+        : `${r.tournamentName} · ${categoryLabel} · ${dateStr}`;
       if (r.userId) {
         await sendPushToUser(r.userId, {
           title: "Tournament entry confirmed 🏆",

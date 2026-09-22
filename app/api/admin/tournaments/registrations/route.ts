@@ -4,6 +4,7 @@ import { getAdminSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
 import { ensureTournamentSchema } from "@/lib/db/tournament-schema";
+import { CASH_AT_VENUE_SOURCE } from "@/lib/tournaments/cash-coupon";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,11 +13,13 @@ export const dynamic = "force-dynamic";
  * Admin: tournament entries, newest first. Optional ?tournament_id= filter.
  *
  * By default this returns entries that were actually paid for — confirmed, for
- * the event's full fee. Two kinds of row are withheld: a 'pending' one, which
- * is a checkout that was started and never paid, and a confirmed one whose
- * captured amount is not the fee, which cannot have come from this checkout and
- * would misstate both the head-count and the money. Both are counted so the
- * console can offer a review; ?include=all returns everything.
+ * the event's full fee — PLUS cash-at-venue entries, which are deliberately
+ * ₹0 paid and would otherwise look identical to a broken online payment. Two
+ * kinds of row are withheld: a 'pending' one, which is a checkout that was
+ * started and never paid, and a confirmed ONLINE one whose captured amount is
+ * not the fee, which cannot have come from this checkout and would misstate
+ * both the head-count and the money. Both are counted so the console can offer
+ * a review; ?include=all returns everything.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -33,10 +36,14 @@ export async function GET(req: NextRequest) {
       clauses.push("r.tournament_id = ?");
       args.push(tournamentId);
     }
-    // Default view is entries that were actually paid for: confirmed, and for
-    // the event's full fee. A pending row is an abandoned checkout that took no
-    // money, and an amount that is not the fee did not come from this checkout.
-    if (!includeAll) clauses.push("r.status = 'confirmed' AND r.amount_paid = r.fee");
+    // Default view is entries that were actually paid for online (confirmed,
+    // full fee), or a deliberate cash-at-venue entry (confirmed, ₹0 paid is
+    // expected there, not a mismatch). A pending row is an abandoned checkout
+    // that took no money.
+    if (!includeAll) {
+      clauses.push("r.status = 'confirmed' AND (r.amount_paid = r.fee OR r.source = ?)");
+      args.push(CASH_AT_VENUE_SOURCE);
+    }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
     const r = await turso.execute({
@@ -55,16 +62,19 @@ export async function GET(req: NextRequest) {
     });
 
     // What is being withheld, so the console can say so rather than hiding
-    // money and attempts without a word.
+    // money and attempts without a word. A cash-at-venue entry is deliberately
+    // ₹0 paid, so it must never count as a "mismatched" payment.
     let mismatched = 0;
     let pending = 0;
+    let cashDue = 0;
     try {
       const scope = tournamentId ? " AND tournament_id = ?" : "";
       const scopeArgs = tournamentId ? [tournamentId] : [];
       const m = await turso.execute({
         sql: `SELECT COUNT(*) AS n FROM tournament_registrations
-              WHERE status = 'confirmed' AND amount_paid <> fee${scope}`,
-        args: scopeArgs,
+              WHERE status = 'confirmed' AND amount_paid <> fee
+                AND (source IS NULL OR source <> ?)${scope}`,
+        args: [CASH_AT_VENUE_SOURCE, ...scopeArgs],
       });
       mismatched = Number(m.rows[0]?.n ?? 0);
       const p = await turso.execute({
@@ -73,11 +83,17 @@ export async function GET(req: NextRequest) {
         args: scopeArgs,
       });
       pending = Number(p.rows[0]?.n ?? 0);
+      const c = await turso.execute({
+        sql: `SELECT COALESCE(SUM(fee - amount_paid), 0) AS n FROM tournament_registrations
+              WHERE status = 'confirmed' AND source = ? AND amount_paid < fee${scope}`,
+        args: [CASH_AT_VENUE_SOURCE, ...scopeArgs],
+      });
+      cashDue = Number(c.rows[0]?.n ?? 0);
     } catch {
       // Cosmetic.
     }
 
-    return NextResponse.json({ registrations: r.rows, mismatched, pending, includeAll });
+    return NextResponse.json({ registrations: r.rows, mismatched, pending, cashDue, includeAll });
   } catch (err) {
     console.error("[admin tournament registrations error]", err);
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
@@ -85,12 +101,17 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Admin: cancel or reinstate an entry — `{ id, status: 'cancelled'|'confirmed' }`.
+ * Admin: cancel/reinstate an entry, or mark a cash-at-venue entry as collected.
  *
- * We never hard-delete: the row is the record that a fee was paid. Cancelling
- * also frees the player to re-enter that category, because the uniqueness index
- * is partial (WHERE status='confirmed'). Reinstating can therefore collide with
- * a newer entry, which is reported as a conflict rather than a 500.
+ *   { id, status: 'cancelled'|'confirmed' }  — cancel or reinstate
+ *   { id, mark_cash_received: true }         — record the cash fee as collected
+ *
+ * We never hard-delete: the row is the record that a fee was paid (or is owed).
+ * Cancelling also frees the player to re-enter that category, because the
+ * uniqueness index is partial (WHERE status='confirmed'). Reinstating can
+ * therefore collide with a newer entry, which is reported as a conflict rather
+ * than a 500. `mark_cash_received` is restricted to rows actually tagged
+ * cash-at-venue, so it can't be misused to silently rewrite an online payment.
  */
 export async function PATCH(req: NextRequest) {
   try {
@@ -100,8 +121,29 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}));
     const id = String(body.id ?? "");
-    const status = String(body.status ?? "");
     if (!id) return NextResponse.json({ error: "Registration id is required." }, { status: 400 });
+
+    if (body.mark_cash_received === true) {
+      try {
+        const r = await turso.execute({
+          sql: `UPDATE tournament_registrations SET amount_paid = fee
+                WHERE id = ? AND source = ? AND status = 'confirmed'`,
+          args: [id, CASH_AT_VENUE_SOURCE],
+        });
+        if (!r.rowsAffected) {
+          return NextResponse.json(
+            { error: "That isn't a cash-at-venue entry, or it wasn't found." },
+            { status: 404 },
+          );
+        }
+      } catch (dbErr) {
+        console.error("[admin tournament registration mark-cash error]", dbErr);
+        return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true, id, cashReceived: true });
+    }
+
+    const status = String(body.status ?? "");
     if (status !== "cancelled" && status !== "confirmed") {
       return NextResponse.json({ error: "Status must be 'cancelled' or 'confirmed'." }, { status: 400 });
     }

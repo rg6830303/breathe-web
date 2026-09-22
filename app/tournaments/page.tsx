@@ -47,21 +47,11 @@ function formatDate(d: string | null) {
  */
 function OpenTournaments() {
   const [items, setItems] = useState<OpenTournament[]>([]);
-  const [captainItem, setCaptainItem] = useState<OpenTournament | null>(null);
 
   useEffect(() => {
     fetch("/api/tournaments")
       .then((r) => (r.ok ? r.json() : { tournaments: [] }))
       .then((d) => setItems(d.tournaments ?? []))
-      .catch(() => {});
-
-    fetch("/api/tournaments/captain")
-      .then((r) => (r.ok ? r.json() : { tournaments: [] }))
-      .then((d) => {
-        if (d.tournaments && d.tournaments.length > 0) {
-          setCaptainItem(d.tournaments[0]);
-        }
-      })
       .catch(() => {});
   }, []);
 
@@ -128,14 +118,6 @@ function OpenTournaments() {
                         <strong className="font-extrabold text-ink dark:text-white">₹{t.fee.toLocaleString("en-IN")}</strong> per player (individual entry)
                       </span>
                     </li>
-                    {captainItem && (
-                      <li className="flex items-start gap-2 text-ink dark:text-white/80">
-                        <Crown className="mt-0.5 h-4 w-4 shrink-0 text-brand dark:text-brand-300" />
-                        <span>
-                          <strong className="font-extrabold text-ink dark:text-white">₹{captainItem.fee.toLocaleString("en-IN")}</strong> team captain entry (leads 5 players)
-                        </span>
-                      </li>
-                    )}
                   </ul>
                   <div className="mt-8 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3.5">
                     <Link
@@ -145,15 +127,6 @@ function OpenTournaments() {
                       <span>Register as Player</span>
                       <span className="opacity-70 font-normal">·</span>
                       <span>₹{t.fee.toLocaleString("en-IN")}</span>
-                    </Link>
-                    <Link
-                      href="/tournaments/captain"
-                      className="btn-outline border-2 border-ink/20 dark:border-lime/40 text-ink dark:text-white hover:border-brand dark:hover:border-lime inline-flex items-center justify-center gap-2 font-extrabold"
-                    >
-                      <Crown className="h-4 w-4 text-brand dark:text-lime" />
-                      <span>Register as Captain</span>
-                      <span className="opacity-60 font-normal">·</span>
-                      <span>₹{captainItem ? captainItem.fee.toLocaleString("en-IN") : "3,000"}</span>
                     </Link>
                   </div>
                 </div>
