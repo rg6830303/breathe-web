@@ -3,6 +3,7 @@ import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
 import { ensureTournamentSchema } from "@/lib/db/tournament-schema";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { CASH_AT_VENUE_SOURCE } from "@/lib/tournaments/cash-coupon";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
     await ensureTournamentSchema().catch(() => {});
 
     const r = await turso.execute({
-      sql: `SELECT reg.id, reg.player_name, reg.email, reg.category, reg.status,
+      sql: `SELECT reg.id, reg.player_name, reg.email, reg.category, reg.status, reg.source,
                    reg.fee, reg.amount_paid, reg.payment_id, reg.created_at,
                    t.name AS tournament_name, t.event_date
             FROM tournament_registrations reg
@@ -50,11 +51,23 @@ export async function GET(req: NextRequest) {
     const paid = Number(row.amount_paid) || 0;
     const due = Math.max(0, fee - paid);
     const status = String(row.status);
+    const isCashAtVenue = String(row.source ?? "") === CASH_AT_VENUE_SOURCE;
 
     // 'pending' means the checkout was started but no payment has been matched
-    // to it yet — either still in flight, or abandoned.
+    // to it yet — either still in flight, or abandoned. A cash-at-venue entry
+    // with money still owed is NOT a broken/partial online payment — it's a
+    // successful registration with the fee due at the club — so it gets its
+    // own state rather than falling into "partial" (which reads as an error).
     const state =
-      status === "cancelled" ? "cancelled" : status === "pending" ? "pending" : due > 0 ? "partial" : "confirmed";
+      status === "cancelled"
+        ? "cancelled"
+        : status === "pending"
+          ? "pending"
+          : due > 0
+            ? isCashAtVenue
+              ? "cash_due"
+              : "partial"
+            : "confirmed";
 
     const email = String(row.email ?? "");
     const maskedEmail = email.replace(/^(.).*?(@.*)$/, (_m, a, b) => `${a}•••${b}`);

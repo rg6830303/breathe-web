@@ -4,12 +4,12 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Loader2, Wallet, XCircle } from "lucide-react";
 import { Container } from "@/components/ui";
 import { site } from "@/lib/site";
 
 type Status = {
-  state: "confirmed" | "partial" | "pending" | "cancelled" | "unknown";
+  state: "confirmed" | "cash_due" | "partial" | "pending" | "cancelled" | "unknown";
   ref?: string;
   playerName?: string;
   email?: string;
@@ -121,13 +121,15 @@ function ConfirmationBody() {
   const tone =
     state === "confirmed"
       ? { icon: CheckCircle2, colour: "text-lime", title: "Registration confirmed" }
-      : state === "partial"
-        ? { icon: AlertTriangle, colour: "text-amber-500", title: "Registration incomplete — payment due" }
-        : state === "pending"
-          ? { icon: Clock, colour: "text-amber-500", title: "Waiting for your payment to clear" }
-          : failed
-            ? { icon: XCircle, colour: "text-red-500", title: "Payment not completed" }
-            : { icon: AlertTriangle, colour: "text-amber-500", title: "We couldn't find that registration" };
+      : state === "cash_due"
+        ? { icon: Wallet, colour: "text-lime", title: "Registration successful — payment due" }
+        : state === "partial"
+          ? { icon: AlertTriangle, colour: "text-amber-500", title: "Registration incomplete — payment due" }
+          : state === "pending"
+            ? { icon: Clock, colour: "text-amber-500", title: "Waiting for your payment to clear" }
+            : failed
+              ? { icon: XCircle, colour: "text-red-500", title: "Payment not completed" }
+              : { icon: AlertTriangle, colour: "text-amber-500", title: "We couldn't find that registration" };
   const Icon = tone.icon;
 
   return (
@@ -159,6 +161,32 @@ function ConfirmationBody() {
                   ["Paid", money(status?.amountPaid ?? 0)],
                   ["Confirmation to", status?.email ?? "—"],
                   ["Payment ref", status?.paymentId ?? "—"],
+                ].map(([k, v]) => (
+                  <div key={String(k)} className="flex justify-between gap-4">
+                    <dt className="text-slatey dark:text-white/50">{k}</dt>
+                    <dd className="text-right font-semibold text-ink dark:text-white">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          )}
+
+          {/* ── Cash at the venue: a successful registration, fee owed in person ── */}
+          {!loading && state === "cash_due" && (
+            <>
+              <p className="mt-2 text-sm text-slatey dark:text-white/60">
+                You&apos;re in{status?.playerName ? `, ${status.playerName.split(" ")[0]}` : ""}! Entry{" "}
+                <span className="font-bold text-ink dark:text-white">{status?.ref}</span> for{" "}
+                {status?.tournamentName ?? "this event"} is confirmed. Please bring{" "}
+                <span className="font-bold text-ink dark:text-white">{money(due)}</span> in cash to the venue to
+                complete your payment.
+              </p>
+              <dl className="mt-6 grid gap-2 rounded-xl bg-ink/[0.03] p-4 text-left text-sm dark:bg-white/5">
+                {[
+                  ["Event", status?.tournamentName ?? "—"],
+                  ["Date", formatDate(status?.eventDate) ?? "To be announced"],
+                  ["Due at venue (cash)", money(due)],
+                  ["Confirmation to", status?.email ?? "—"],
                 ].map(([k, v]) => (
                   <div key={String(k)} className="flex justify-between gap-4">
                     <dt className="text-slatey dark:text-white/50">{k}</dt>
