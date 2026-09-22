@@ -6,7 +6,6 @@ import { Award, Crown, Medal, Trophy, Users, Check } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { Nav } from "@/components/nav";
 import { CTABand, Container, SectionDivider } from "@/components/ui";
-import { PageHero } from "@/components/ui/page-hero";
 import { ScrollReveal } from "@/components/motion/scroll-reveal";
 import { StatCounter } from "@/components/motion/stat-counter";
 import { TiltCard } from "@/components/motion/tilt-card";
@@ -21,17 +20,6 @@ const formats = [
   { icon: Users, title: "Beginner Brackets", text: "A friendly, lower-pressure draw so new players can taste competition." },
   { icon: Medal, title: "Mixed Doubles", text: "Pair up and play in one of the most fun and fast-growing formats." },
   { icon: Award, title: "Social Ladders", text: "Ongoing weekly ladders that keep the competition alive all month." },
-];
-
-const particles = [
-  { top: "20%", left: "15%", size: 4, duration: 6, delay: 0 },
-  { top: "45%", left: "80%", size: 3, duration: 8, delay: 1 },
-  { top: "70%", left: "30%", size: 5, duration: 7, delay: 0.5 },
-  { top: "30%", left: "65%", size: 2, duration: 9, delay: 2 },
-  { top: "85%", left: "75%", size: 6, duration: 6.5, delay: 1.5 },
-  { top: "15%", left: "45%", size: 4, duration: 7.5, delay: 0.2 },
-  { top: "60%", left: "10%", size: 3, duration: 8.5, delay: 2.2 },
-  { top: "50%", left: "50%", size: 5, duration: 5.5, delay: 0.7 },
 ];
 
 type OpenTournament = {
@@ -59,32 +47,48 @@ function formatDate(d: string | null) {
  */
 function OpenTournaments() {
   const [items, setItems] = useState<OpenTournament[]>([]);
+  const [captainItem, setCaptainItem] = useState<OpenTournament | null>(null);
 
   useEffect(() => {
     fetch("/api/tournaments")
       .then((r) => (r.ok ? r.json() : { tournaments: [] }))
       .then((d) => setItems(d.tournaments ?? []))
       .catch(() => {});
+
+    fetch("/api/tournaments/captain")
+      .then((r) => (r.ok ? r.json() : { tournaments: [] }))
+      .then((d) => {
+        if (d.tournaments && d.tournaments.length > 0) {
+          setCaptainItem(d.tournaments[0]);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   if (items.length === 0) return null;
 
   return (
-    <section className="bg-white px-4 py-20 text-ink dark:bg-ink dark:text-white sm:px-6 lg:px-8">
+    <section className="relative overflow-hidden bg-white px-4 pt-10 pb-16 text-ink dark:bg-ink dark:text-white sm:px-6 sm:pt-14 sm:pb-20 lg:px-8">
+      {/* Court-tape accent at top edge */}
+      <div aria-hidden className="tape-stripe absolute left-0 top-0 h-1.5 w-full opacity-90" />
+
+      {/* Subtle corner glow */}
+      <div aria-hidden className="pointer-events-none absolute -right-20 top-0 h-72 w-72 rounded-full bg-lime/10 blur-3xl" />
+
       <Container className="!px-0">
         <ScrollReveal direction="up">
-          <div className="mb-10 text-center">
+          <div className="mb-8 sm:mb-12 text-center">
             <span className="eyebrow justify-center text-brand dark:text-lime">Registrations open</span>
-            <h2 className="heading-lg mt-4 text-ink dark:text-white">
+            <h1 className="heading-xl mt-3 text-ink dark:text-white">
               Enter the <span className="mark-lime">next event</span>
-            </h2>
+            </h1>
           </div>
         </ScrollReveal>
 
         <div className="grid gap-8">
           {items.map((t, i) => (
             <ScrollReveal key={t.id} delay={i * 0.1} direction="up">
-              <div className="card-sport grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-center">
+              <div className="card-sport relative overflow-hidden rounded-3xl border-2 border-brand/20 bg-white p-6 dark:border-lime/30 dark:bg-[#111c38] shadow-[0_12px_40px_-12px_rgba(198,244,50,0.18)] grid gap-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-center">
                 {t.poster_url && (
                   /* Poster artwork is uploaded per event, so it is rendered as a
                      plain <img> rather than through the curated photo set. */
@@ -92,16 +96,22 @@ function OpenTournaments() {
                   <img
                     src={t.poster_url}
                     alt={`${t.name} poster`}
-                    className="w-full rounded-2xl border border-ink/10 object-cover dark:border-white/10"
+                    className="w-full rounded-2xl border border-ink/10 object-cover shadow-md dark:border-white/10"
                   />
                 )}
                 <div>
-                  <h3 className="font-display text-2xl font-extrabold text-ink dark:text-white sm:text-3xl">{t.name}</h3>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className="tag-sport">Upcoming Tournament</span>
+                    <span className="rounded-full bg-lime/20 px-2.5 py-0.5 text-[0.65rem] font-extrabold uppercase tracking-wide text-lime-dark dark:text-lime">
+                      Live for Entries
+                    </span>
+                  </div>
+                  <h2 className="font-display text-2xl font-extrabold text-ink dark:text-white sm:text-3xl lg:text-4xl">{t.name}</h2>
                   <p className="mt-2 text-sm font-bold text-brand dark:text-lime">{formatDate(t.event_date)}</p>
                   {t.description && (
                     <p className="mt-4 text-sm leading-relaxed text-slatey dark:text-white/65">{t.description}</p>
                   )}
-                  <ul className="mt-6 grid gap-2 text-sm">
+                  <ul className="mt-6 grid gap-2.5 text-sm">
                     {t.format && (
                       <li className="flex items-start gap-2 text-ink dark:text-white/80">
                         <Check className="mt-0.5 h-4 w-4 shrink-0 text-lime" /> {t.format}
@@ -113,13 +123,39 @@ function OpenTournaments() {
                       </li>
                     )}
                     <li className="flex items-start gap-2 text-ink dark:text-white/80">
-                      <Medal className="mt-0.5 h-4 w-4 shrink-0 text-lime" /> ₹{t.fee.toLocaleString("en-IN")} per player
-                      · limited slots
+                      <Medal className="mt-0.5 h-4 w-4 shrink-0 text-lime" />
+                      <span>
+                        <strong className="font-extrabold text-ink dark:text-white">₹{t.fee.toLocaleString("en-IN")}</strong> per player (individual entry)
+                      </span>
                     </li>
+                    {captainItem && (
+                      <li className="flex items-start gap-2 text-ink dark:text-white/80">
+                        <Crown className="mt-0.5 h-4 w-4 shrink-0 text-brand dark:text-brand-300" />
+                        <span>
+                          <strong className="font-extrabold text-ink dark:text-white">₹{captainItem.fee.toLocaleString("en-IN")}</strong> team captain entry (leads 5 players)
+                        </span>
+                      </li>
+                    )}
                   </ul>
-                  <Link href="/tournaments/register" className="btn-accent mt-7 inline-flex">
-                    Register now · ₹{t.fee.toLocaleString("en-IN")}
-                  </Link>
+                  <div className="mt-8 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3.5">
+                    <Link
+                      href="/tournaments/register"
+                      className="btn-accent inline-flex items-center justify-center gap-2"
+                    >
+                      <span>Register as Player</span>
+                      <span className="opacity-70 font-normal">·</span>
+                      <span>₹{t.fee.toLocaleString("en-IN")}</span>
+                    </Link>
+                    <Link
+                      href="/tournaments/captain"
+                      className="btn-outline border-2 border-ink/20 dark:border-lime/40 text-ink dark:text-white hover:border-brand dark:hover:border-lime inline-flex items-center justify-center gap-2 font-extrabold"
+                    >
+                      <Crown className="h-4 w-4 text-brand dark:text-lime" />
+                      <span>Register as Captain</span>
+                      <span className="opacity-60 font-normal">·</span>
+                      <span>₹{captainItem ? captainItem.fee.toLocaleString("en-IN") : "3,000"}</span>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </ScrollReveal>
@@ -135,45 +171,6 @@ export default function TournamentsPage() {
     <>
       <Nav />
       <main className="overflow-x-hidden">
-        {/* Page Hero with floating lime particles */}
-        <div className="relative">
-          <PageHero
-            dark={true}
-            label="Tournaments"
-            title="Compete for real prizes at Breathe"
-            subtitle="We regularly host open tournaments with cash prizes alongside beginner-friendly brackets — bringing together the best of Kolkata's pickleball community for a day of serious, joyful competition."
-          />
-
-          {/* Seeded particles */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
-            {particles.map((p, i) => (
-              <motion.div
-                key={i}
-                style={{
-                  position: "absolute",
-                  top: p.top,
-                  left: p.left,
-                  width: p.size,
-                  height: p.size,
-                  borderRadius: "50%",
-                  backgroundColor: "#C6F432",
-                  opacity: 0.25,
-                }}
-                animate={{
-                  y: [0, -30, 0],
-                  x: [0, 15, -15, 0],
-                }}
-                transition={{
-                  duration: p.duration,
-                  delay: p.delay,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
         <OpenTournaments />
 
         {/* ── TOURNAMENT FORMATS — light / ink (dark) ── */}

@@ -453,6 +453,18 @@ export function TournamentEntryForm({
           </div>
         ) : (
           <form onSubmit={submit} className="card-sport space-y-5 p-6 sm:p-8">
+            {/* Header badge */}
+            <div className="flex items-center justify-between border-b border-ink/5 pb-3 dark:border-white/10">
+              <span className="tag-sport">
+                {category === "captain" ? "Team Captain Registration" : "Player Registration"}
+              </span>
+              {selected && (
+                <span className="text-xs font-extrabold text-brand dark:text-lime">
+                  ₹{selected.fee.toLocaleString("en-IN")}
+                </span>
+              )}
+            </div>
+
             {/* Poster for the selected event */}
             {selected?.poster_url && (
               // eslint-disable-next-line @next/next/no-img-element
