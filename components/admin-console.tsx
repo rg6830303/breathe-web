@@ -1783,11 +1783,20 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
 
   /**
    * Download every visible entry's photo, one file per entrant. There is no
-   * zip step — each photo is fetched and saved individually via the same
-   * blob-download path as the single-photo viewer, with a short stagger
-   * because browsers throttle or block a burst of same-tick downloads.
-   * Rows with no photo, or a photo the browser can't fetch (CORS), are
-   * skipped and counted rather than failing the whole batch.
+   * zip step — each photo gets its own plain anchor click (href + download +
+   * target="_blank"), staggered so the browser's download manager treats them
+   * as separate saves rather than one burst it throttles.
+   *
+   * Deliberately NOT fetch() + blob() + object URL: that path does network I/O
+   * before touching the DOM, and doing that inside an async loop leaves each
+   * click running with no trusted user gesture behind it at all. A browser
+   * that responds to an untrusted click by navigating instead of downloading
+   * would do that navigation IN THIS TAB — the admin console — which is what
+   * was knocking the console out of its session. A plain anchor with
+   * target="_blank" keeps every one of those attempts in its own new tab,
+   * whatever the browser decides to do with the URL, so the admin tab itself
+   * is never at risk. See components/admin/photo-lightbox.tsx for the same fix
+   * on the single-photo download.
    */
   async function downloadAllPhotos() {
     const withPhotos = shown.filter((r) => r.photo_url);
@@ -1796,39 +1805,23 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
       return;
     }
     setBulkDownloading(true);
-    let ok = 0;
-    let failed = 0;
     for (const r of withPhotos) {
-      try {
-        const res = await fetch(r.photo_url!);
-        if (!res.ok) throw new Error(String(res.status));
-        const blob = await res.blob();
-        const ext = /^data:image\/(\w+)/.exec(r.photo_url!)?.[1] ?? blob.type.split("/")[1] ?? "jpg";
-        const slug =
-          r.player_name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "entry";
-        const objectUrl = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = objectUrl;
-        a.download = `${slug}.${ext === "jpeg" ? "jpg" : ext}`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(objectUrl);
-        ok++;
-      } catch {
-        failed++;
-      }
-      // Stagger so the browser treats each as its own user-initiated download
-      // rather than collapsing/blocking a rapid burst.
+      const ext = /^data:image\/(\w+)/.exec(r.photo_url!)?.[1] ?? r.photo_url!.split(".").pop()?.split("?")[0] ?? "jpg";
+      const slug =
+        r.player_name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "entry";
+      const a = document.createElement("a");
+      a.href = r.photo_url!;
+      a.download = `${slug}.${ext === "jpeg" ? "jpg" : ext}`;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      // Stagger so the browser doesn't collapse/block a rapid burst of tabs.
       await new Promise((res) => setTimeout(res, 350));
     }
     setBulkDownloading(false);
-    toast.show(
-      failed === 0
-        ? `Downloaded ${ok} photo${ok === 1 ? "" : "s"}.`
-        : `Downloaded ${ok}, ${failed} couldn't be fetched (opened separately may be needed).`,
-      failed === 0 ? "success" : "error",
-    );
+    toast.show(`Opened ${withPhotos.length} photo${withPhotos.length === 1 ? "" : "s"} to download.`, "success");
   }
 
   /** Streams a real .xlsx built server-side from live data (not the cached rows). */

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Download, ExternalLink, Loader2, X } from "lucide-react";
+import { Download, ExternalLink, X } from "lucide-react";
 
 type Props = {
   url: string;
@@ -21,47 +21,28 @@ function safeFilename(name: string, url: string) {
 /**
  * Full-size view of one entrant's profile photo, with a real download.
  *
+ * The download MUST happen synchronously inside the click handler — no
+ * `await` before the anchor is clicked. An earlier version did
+ * `await fetch(url)` first to build a blob: URL, and that gap between the tap
+ * and the actual DOM action breaks the browser's "this came from a trusted
+ * user gesture" chain. Once broken, an installed/PWA admin console can treat
+ * the resulting action as a real navigation rather than a download — which is
+ * what was knocking the console out of its window and back to the login
+ * screen. `target="_blank" rel="noopener noreferrer"` is the hard guarantee
+ * underneath that: whatever the browser decides to do with the URL, it
+ * happens in a separate tab/context, so the admin tab and its session are
+ * never touched, whether or not the `download` attribute is honoured.
+ *
  * Photos are stored either as a Vercel Blob URL (hosted) or, when no Blob
  * store is attached, as an inline base64 data: URL — see
- * app/api/tournaments/register/photo/route.ts. Both need a different download
- * path: a data: URL becomes a Blob directly; a hosted URL is fetched first so
- * the browser saves a file instead of just navigating to the image. If the
- * fetch is blocked by CORS, the fallback opens the original URL in a new tab
- * so the photo is never unreachable, just not auto-downloaded.
+ * app/api/tournaments/register/photo/route.ts. Both work with a plain anchor.
  */
 export function PhotoLightbox({ url, name, onClose }: Props) {
-  const [downloading, setDownloading] = useState(false);
-  const [downloadError, setDownloadError] = useState(false);
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
-
-  async function download() {
-    setDownloading(true);
-    setDownloadError(false);
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(String(res.status));
-      const blob = await res.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = objectUrl;
-      a.download = safeFilename(name, url);
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(objectUrl);
-    } catch {
-      // Cross-origin fetch blocked, or the host is offline — open it instead.
-      setDownloadError(true);
-      window.open(url, "_blank", "noopener,noreferrer");
-    } finally {
-      setDownloading(false);
-    }
-  }
 
   if (typeof document === "undefined") return null;
 
@@ -95,26 +76,23 @@ export function PhotoLightbox({ url, name, onClose }: Props) {
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t-2 border-ink/10 px-4 py-3 dark:border-white/10">
-          {downloadError ? (
-            <p className="text-[11px] text-amber-600 dark:text-amber-400">
-              Couldn&apos;t download directly — opened the photo in a new tab instead.
-            </p>
-          ) : (
-            <span />
-          )}
+          <p className="text-[11px] text-ink/40 dark:text-white/35">Opens in a new tab — this page stays open.</p>
           <div className="flex shrink-0 gap-2">
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-outline px-3 py-1.5 text-xs"
-            >
+            <a href={url} target="_blank" rel="noopener noreferrer" className="btn-outline px-3 py-1.5 text-xs">
               <ExternalLink className="h-3.5 w-3.5" /> Open
             </a>
-            <button type="button" onClick={download} disabled={downloading} className="btn-primary px-3 py-1.5 text-xs">
-              {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-              Download
-            </button>
+            {/* Plain anchor, no JS in between: whatever the browser does with
+                this — save it, or just display it — happens in the new tab
+                the `target` opens, never in the admin console itself. */}
+            <a
+              href={url}
+              download={safeFilename(name, url)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary px-3 py-1.5 text-xs"
+            >
+              <Download className="h-3.5 w-3.5" /> Download
+            </a>
           </div>
         </div>
       </div>
