@@ -10,6 +10,7 @@ import { EmailPanel } from "@/components/admin/email-panel";
 import { WalkInModal } from "@/components/admin/walk-in-modal";
 import { BulkBlockModal } from "@/components/admin/bulk-block-modal";
 import { AddUserModal } from "@/components/admin/add-user-modal";
+import { PhotoLightbox } from "@/components/admin/photo-lightbox";
 import { NotificationBell } from "@/components/notification-bell";
 import { getAdminCache, setAdminCache } from "@/lib/admin-cache";
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -31,6 +32,7 @@ import {
   Trophy,
   Trash2,
   Plus,
+  Images,
   HandCoins,
   Check,
   ChevronLeft,
@@ -188,6 +190,35 @@ const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: s
   { key: "email", label: "Email", icon: Mail },
 ];
 
+/**
+ * Small "which build is this?" badge — the deployed commit SHA, read from the
+ * already-public /api/health/config (booleans + SHA only, no secret). Lets an
+ * admin confirm a fix has actually shipped without opening Diagnostics.
+ */
+function DeployBadge() {
+  const [commit, setCommit] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/health/config")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setCommit(d?.commit ?? null))
+      .catch(() => {});
+  }, []);
+
+  if (!commit) return null;
+
+  return (
+    <a
+      href="/admin/diagnostics"
+      title="Deployed commit — click for diagnostics"
+      className="hidden items-center gap-1.5 rounded-full border border-ink/10 px-2.5 py-1 font-mono text-[10px] font-bold text-ink/50 transition hover:border-brand hover:text-brand sm:inline-flex dark:border-white/10 dark:text-white/40 dark:hover:text-brand-300"
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-lime" aria-hidden />
+      {commit}
+    </a>
+  );
+}
+
 export function AdminConsole() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
@@ -213,8 +244,9 @@ export function AdminConsole() {
       <div className="card-sport sticky top-0 z-30 min-w-0 overflow-hidden rounded-2xl p-0 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-[#0d1730]/85">
         {/* Top action bar */}
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 border-b-2 border-ink/10 bg-ink/[0.03] px-3 py-2.5 sm:px-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div className="mr-auto">
+          <div className="mr-auto flex items-center gap-3">
             <NotificationBell />
+            <DeployBadge />
           </div>
           <button
             type="button"
@@ -1506,6 +1538,8 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
     notes: "",
   };
   const [entry, setEntry] = useState(blankEntry);
+  // Full-size photo viewer/downloader, opened from the avatar in the table.
+  const [lightbox, setLightbox] = useState<{ url: string; name: string } | null>(null);
   const [orphans, setOrphans] = useState<Orphan[] | null>(null);
   const [scanning, setScanning] = useState(false);
   const [importing, setImporting] = useState<string | null>(null);
@@ -1717,6 +1751,58 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
     }
   }
 
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+
+  /**
+   * Download every visible entry's photo, one file per entrant. There is no
+   * zip step — each photo is fetched and saved individually via the same
+   * blob-download path as the single-photo viewer, with a short stagger
+   * because browsers throttle or block a burst of same-tick downloads.
+   * Rows with no photo, or a photo the browser can't fetch (CORS), are
+   * skipped and counted rather than failing the whole batch.
+   */
+  async function downloadAllPhotos() {
+    const withPhotos = shown.filter((r) => r.photo_url);
+    if (withPhotos.length === 0) {
+      toast.show("No photos to download for this view.", "error");
+      return;
+    }
+    setBulkDownloading(true);
+    let ok = 0;
+    let failed = 0;
+    for (const r of withPhotos) {
+      try {
+        const res = await fetch(r.photo_url!);
+        if (!res.ok) throw new Error(String(res.status));
+        const blob = await res.blob();
+        const ext = /^data:image\/(\w+)/.exec(r.photo_url!)?.[1] ?? blob.type.split("/")[1] ?? "jpg";
+        const slug =
+          r.player_name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "entry";
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = objectUrl;
+        a.download = `${slug}.${ext === "jpeg" ? "jpg" : ext}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(objectUrl);
+        ok++;
+      } catch {
+        failed++;
+      }
+      // Stagger so the browser treats each as its own user-initiated download
+      // rather than collapsing/blocking a rapid burst.
+      await new Promise((res) => setTimeout(res, 350));
+    }
+    setBulkDownloading(false);
+    toast.show(
+      failed === 0
+        ? `Downloaded ${ok} photo${ok === 1 ? "" : "s"}.`
+        : `Downloaded ${ok}, ${failed} couldn't be fetched (opened separately may be needed).`,
+      failed === 0 ? "success" : "error",
+    );
+  }
+
   /** Streams a real .xlsx built server-side from live data (not the cached rows). */
   function exportExcel() {
     const params = new URLSearchParams();
@@ -1760,6 +1846,16 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
         </select>
         <button type="button" onClick={exportExcel} disabled={rows.length === 0} className="btn-outline px-2.5 py-2 text-xs disabled:opacity-50">
           <Download className="h-3.5 w-3.5" /> Download Excel
+        </button>
+        <button
+          type="button"
+          onClick={downloadAllPhotos}
+          disabled={bulkDownloading || shown.filter((r) => r.photo_url).length === 0}
+          className="btn-outline px-2.5 py-2 text-xs disabled:opacity-50"
+          title="Download every visible entry's profile photo"
+        >
+          {bulkDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Images className="h-3.5 w-3.5" />}
+          Download photos
         </button>
         <button type="button" onClick={() => load(filter)} className="btn-outline px-2.5 py-2 text-xs">
           <RefreshCw className="h-3.5 w-3.5" /> Refresh
@@ -1959,14 +2055,19 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
                       {/* Entry photo. Hosted URL or inline data URL — plain <img>
                           either way, since next/image can't optimise a data URL. */}
                       {r.photo_url ? (
-                        <a href={r.photo_url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setLightbox({ url: r.photo_url!, name: r.player_name })}
+                          title="View / download photo"
+                          className="shrink-0 rounded-full ring-offset-2 transition hover:ring-2 hover:ring-brand focus:outline-none focus:ring-2 focus:ring-brand dark:ring-offset-[#111c38]"
+                        >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={r.photo_url}
                             alt={r.player_name}
                             className="h-9 w-9 rounded-full border border-ink/10 object-cover dark:border-white/15"
                           />
-                        </a>
+                        </button>
                       ) : (
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink/5 text-[10px] font-bold text-ink/40 dark:bg-white/10 dark:text-white/40">
                           —
@@ -2070,6 +2171,10 @@ function TournamentRegistrationsPanel({ tournaments }: { tournaments: Tournament
             </tbody>
           </table>
         </div>
+      )}
+
+      {lightbox && (
+        <PhotoLightbox url={lightbox.url} name={lightbox.name} onClose={() => setLightbox(null)} />
       )}
     </div>
   );
