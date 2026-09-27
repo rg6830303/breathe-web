@@ -4,6 +4,7 @@ import { getAdminSession } from "@/lib/auth";
 import { turso } from "@/lib/turso";
 import { ensureSchema } from "@/lib/db/ensure";
 import { ensureTournamentSchema } from "@/lib/db/tournament-schema";
+import { CASH_AT_VENUE_SOURCE } from "@/lib/tournaments/cash-coupon";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +33,10 @@ export async function GET(req: NextRequest) {
       clauses.push("r.tournament_id = ?");
       args.push(tournamentId);
     }
-    if (!includeAll) clauses.push("r.status = 'confirmed' AND r.amount_paid = r.fee");
+    if (!includeAll) {
+      clauses.push("r.status = 'confirmed' AND (r.amount_paid = r.fee OR r.source = ?)");
+      args.push(CASH_AT_VENUE_SOURCE);
+    }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
     const res = await turso.execute({
@@ -66,6 +70,8 @@ export async function GET(req: NextRequest) {
       Partner: r.partner_name ? String(r.partner_name) : "",
       "Entry fee": Number(r.fee) || 0,
       "Amount paid": Number(r.amount_paid) || 0,
+      "Payment method": String(r.source ?? "") === CASH_AT_VENUE_SOURCE ? "Cash at venue" : "Online",
+      "Due at venue": Math.max(0, (Number(r.fee) || 0) - (Number(r.amount_paid) || 0)),
       Status: title(String(r.status ?? "")),
       // Excel-friendly real Date so it sorts/filters as a date, not text.
       Registered: r.created_at ? new Date(Number(r.created_at)) : "",
@@ -80,7 +86,7 @@ export async function GET(req: NextRequest) {
       { wch: 24 }, { wch: 12 }, { wch: 22 }, { wch: 28 }, { wch: 14 },
       { wch: 6 }, { wch: 9 }, { wch: 14 }, { wch: 11 }, { wch: 34 },
       { wch: 14 }, { wch: 13 }, { wch: 20 }, { wch: 10 }, { wch: 12 },
-      { wch: 11 }, { wch: 18 }, { wch: 20 }, { wch: 30 },
+      { wch: 14 }, { wch: 12 }, { wch: 11 }, { wch: 18 }, { wch: 20 }, { wch: 30 },
     ];
     sheet["!autofilter"] = { ref: XLSX.utils.encode_range(XLSX.utils.decode_range(sheet["!ref"] || "A1")) };
     sheet["!freeze"] = { xSplit: 0, ySplit: 1 };
